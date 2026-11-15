@@ -1,0 +1,1692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Step & Repeat</title>
+<script>try{var _k=localStorage.getItem("sr-skin");if(_k)document.documentElement.dataset.skin=_k}catch(e){}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#eceff2;--panel:#f7f8fa;--border:#d3d9e0;
+  --accent:#d4006f;--hot:#a45a00;--text:#121a22;--mat:#173a33;
+  --muted:#5f6b78;--in-bg:#fff;
+  --col1:#3d9bff;--col2:#f0457f;--col3:#3fae4a;--col4:#ff8a1f;
+  --col5:#b44ad0;--col6:#19b3a1;--col7:#d9a521;--col8:#ff5a52;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--ui),sans-serif}
+body{display:grid;grid-template-columns:370px 1fr;grid-template-rows:56px 1fr;min-height:100vh}
+
+/* HEADER */
+header{
+  grid-column:1/-1;background:var(--panel);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:14px;padding:0 28px;
+}
+.logo{
+  width:30px;height:30px;display:grid;
+  grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+  gap:3px;padding:5px;background:var(--accent);border-radius:5px;flex-shrink:0;
+}
+.logo span{background:var(--bg);border-radius:1px}
+header h1{font-size:17px;font-weight:800;letter-spacing:-.4px}
+header h1 em{color:var(--accent);font-style:normal}
+.badge{
+  margin-left:auto;background:rgba(230,0,126,.1);
+  border:1px solid rgba(230,0,126,.25);color:var(--accent);
+  font-family:var(--num),monospace;font-size:11px;
+  padding:3px 10px;border-radius:20px;letter-spacing:1px;white-space:nowrap;
+}
+
+/* SIDEBAR */
+aside{
+  background:var(--panel);border-right:1px solid var(--border);
+  padding:20px 18px;display:flex;flex-direction:column;gap:18px;overflow-y:auto;
+}
+.sec-label{
+  font-family:var(--num),monospace;font-size:11px;
+  letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;
+}
+
+/* MODE TOGGLE */
+.mode-toggle{display:flex;border:1px solid var(--border);border-radius:7px;overflow:hidden}
+.mode-btn{
+  flex:1;padding:8px;background:transparent;border:none;color:var(--muted);
+  font-family:var(--num),monospace;font-size:11px;cursor:pointer;transition:all .15s;
+}
+.mode-btn.active{background:var(--accent);color:var(--bg);font-weight:700}
+
+/* COLUMN SLOTS */
+#col-slots{display:flex;flex-direction:column;gap:6px}
+.col-slot{
+  border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color .2s;
+}
+.col-slot.has-file{border-color:var(--slot-color,var(--accent))}
+
+.slot-header{
+  display:flex;align-items:center;gap:8px;
+  padding:8px 10px;background:var(--in-bg);
+  position:relative;min-height:42px;
+}
+.slot-header.empty{cursor:pointer}
+.slot-color-bar{width:3px;height:24px;border-radius:2px;background:var(--slot-color,var(--border));flex-shrink:0}
+.slot-meta{flex:1;min-width:0}
+.slot-col-label{font-family:var(--num),monospace;font-size:11px;color:var(--text);font-weight:700}
+.slot-filename{
+  font-family:var(--num),monospace;font-size:10.5px;
+  color:var(--slot-color,var(--muted));white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:180px;
+}
+.slot-empty-hint{font-family:var(--num),monospace;font-size:11px;color:var(--muted)}
+.slot-file-input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.col-slot.has-file .slot-file-input{display:none}
+
+/* slot controls row (page + rotation) */
+.slot-controls{
+  display:none;padding:7px 10px;border-top:1px solid var(--border);
+  background:rgba(0,0,0,.25);gap:8px;flex-direction:column;
+}
+.col-slot.has-file .slot-controls{display:flex}
+.slot-ctrl-row{display:flex;align-items:center;gap:7px}
+.slot-ctrl-label{font-family:var(--num),monospace;font-size:11px;color:var(--muted);white-space:nowrap;width:42px}
+.slot-ctrl-row select{
+  flex:1;background:var(--in-bg);border:1px solid var(--border);
+  border-radius:5px;color:var(--text);font-family:var(--num),monospace;
+  font-size:11px;padding:5px 22px 5px 8px;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 12 12'%3E%3Cpath fill='%235f6b78' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 7px center;
+  cursor:pointer;
+}
+.slot-ctrl-row select:focus{outline:none;border-color:var(--accent)}
+
+/* rotation pill buttons */
+.rot-pills{display:flex;gap:4px;flex:1}
+.rot-pill{
+  flex:1;padding:5px 2px;background:var(--in-bg);border:1px solid var(--border);
+  border-radius:5px;color:var(--muted);font-family:var(--num),monospace;
+  font-size:11px;cursor:pointer;text-align:center;transition:all .15s;
+}
+.rot-pill:hover{border-color:var(--accent);color:var(--accent)}
+.rot-pill.active{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:700}
+
+/* slot remove */
+.slot-remove{
+  background:transparent;border:none;color:var(--muted);cursor:pointer;
+  font-size:13px;padding:3px 5px;border-radius:3px;transition:color .15s;display:none;flex-shrink:0;
+}
+.slot-remove:hover{color:var(--err)}
+.col-slot.has-file .slot-remove{display:block}
+
+/* ADD COLUMN BUTTON */
+.btn-add-col{
+  width:100%;padding:9px;background:transparent;
+  border:1.5px dashed var(--border);border-radius:7px;
+  color:var(--muted);font-family:var(--num),monospace;
+  font-size:11px;cursor:pointer;letter-spacing:.5px;transition:all .15s;
+}
+.btn-add-col:hover{border-color:var(--accent);color:var(--accent)}
+
+/* SINGLE DROP */
+#single-drop-wrap .drop-zone{
+  border:1.5px dashed var(--border);border-radius:8px;
+  padding:22px 14px;text-align:center;cursor:pointer;
+  position:relative;transition:border-color .2s,background .2s;
+}
+#single-drop-wrap .drop-zone:hover,#single-drop-wrap .drop-zone.over{
+  border-color:var(--accent);background:rgba(230,0,126,.03);
+}
+#single-drop-wrap .drop-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.drop-icon{font-size:22px;margin-bottom:7px}
+.drop-zone p{font-size:12px;color:var(--muted);line-height:1.5}
+.drop-zone p strong{color:var(--accent)}
+#single-file-name{font-family:var(--num),monospace;font-size:11px;color:var(--hot);margin-top:5px;word-break:break-all}
+
+/* single file controls */
+#single-controls{display:none;flex-direction:column;gap:8px;margin-top:10px}
+#single-controls.visible{display:flex}
+.ctrl-row{display:flex;align-items:center;gap:8px}
+.ctrl-row-label{font-family:var(--num),monospace;font-size:11px;color:var(--muted);width:50px;flex-shrink:0}
+
+/* SELECTS */
+select{
+  width:100%;background:var(--in-bg);border:1px solid var(--border);
+  border-radius:6px;color:var(--text);font-family:var(--num),monospace;
+  font-size:12px;padding:9px 28px 9px 11px;cursor:pointer;
+  transition:border-color .15s;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235f6b78' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;
+}
+select:focus{outline:none;border-color:var(--accent)}
+
+/* INPUTS */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{
+  font-family:var(--num),monospace;font-size:11px;color:var(--muted);
+  display:flex;justify-content:space-between;
+}
+.field label span{color:var(--accent)}
+.field input[type="number"]{
+  background:var(--in-bg);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-family:var(--num),monospace;font-size:16px;font-weight:500;
+  padding:9px 11px;width:100%;transition:border-color .15s;-moz-appearance:textfield;
+}
+.field input[type="number"]::-webkit-inner-spin-button,
+.field input[type="number"]::-webkit-outer-spin-button{-webkit-appearance:none}
+.field input[type="number"]:focus{outline:none;border-color:var(--accent)}
+
+/* PILLS */
+.pills{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+.pill{
+  background:var(--in-bg);border:1px solid var(--border);border-radius:20px;
+  padding:4px 11px;font-family:var(--num),monospace;font-size:11.5px;
+  cursor:pointer;color:var(--muted);transition:all .15s;
+}
+.pill:hover{border-color:var(--accent);color:var(--accent)}
+.pill.active{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:500}
+
+.divider{height:1px;background:var(--border)}
+
+/* BUTTONS */
+.btn-prev{
+  width:100%;padding:11px;background:transparent;border:1.5px solid var(--border);
+  border-radius:7px;color:var(--text);font-family:var(--ui),sans-serif;
+  font-size:13px;font-weight:600;cursor:pointer;letter-spacing:.3px;
+  transition:border-color .15s,color .15s;
+}
+.btn-prev:hover{border-color:var(--accent);color:var(--accent)}
+.btn-export{
+  width:100%;padding:13px;background:var(--accent);border:none;border-radius:7px;
+  color:var(--bg);font-family:var(--ui),sans-serif;font-size:14px;font-weight:800;
+  cursor:pointer;letter-spacing:.2px;transition:background .2s,transform .15s;
+  display:flex;align-items:center;justify-content:center;gap:7px;
+}
+.btn-export:hover{background:#a8005a;transform:translateY(-1px)}
+.btn-export:active{transform:none}
+.btn-export:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.prog-wrap{width:100%;height:2px;background:var(--border);border-radius:2px;overflow:hidden;display:none}
+.prog-bar{height:100%;background:var(--accent);width:0%;transition:width .3s ease}
+#status{font-family:var(--num),monospace;font-size:11.5px;color:var(--muted);text-align:center;min-height:15px}
+#status.ok{color:var(--accent)}#status.err{color:#c62828}#status.busy{color:var(--hot)}
+.vec-note{font-family:var(--num),monospace;font-size:10.5px;color:var(--muted);text-align:center;letter-spacing:.5px}
+.vec-note strong{color:var(--accent)}
+
+/* MAIN */
+main{
+  display:flex;align-items:center;justify-content:center;
+  padding:28px;overflow:auto;background:#09090b;
+  background-image:radial-gradient(ellipse at 50% 40%,#111118 0%,#09090b 65%);
+}
+.empty-state{text-align:center;opacity:.25;pointer-events:none}
+.empty-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  gap:5px;width:72px;height:72px;margin:0 auto 18px;
+}
+.empty-grid span{background:var(--text);border-radius:2px}
+.empty-state h2{font-size:18px;font-weight:700;letter-spacing:-.5px}
+.empty-state p{font-family:var(--num),monospace;font-size:11px;color:var(--muted);margin-top:5px}
+#preview-wrap{display:none;flex-direction:column;align-items:center;gap:10px;width:100%}
+#preview-info{font-family:var(--num),monospace;font-size:11px;color:var(--muted);letter-spacing:.5px;text-align:center}
+#preview-canvas{border:1px solid var(--border);border-radius:4px;max-width:100%;box-shadow:0 24px 64px rgba(0,0,0,.7)}
+#col-legend{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.legend-item{display:flex;align-items:center;gap:5px;font-family:var(--num),monospace;font-size:11px;color:var(--muted)}
+.legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* THEME v4 — CutterMaker workbench: spot 7 magenta = primary, spot 8 cyan = active/focus */
+:root{color-scheme:dark;--bg:#0e1116;--well:#0b0d11;--panel:#161a20;--panel2:#1c2129;--field:#0c0f13;--line:#262d37;--line2:#333b47;
+--tx:#e7eaef;--mut:#9aa3b2;--dim:#6b7486;--m7:#e6007e;--c8:#22cbe9;--c8bg:#0d333c;--warn:#ffb020;
+--m7hi:#ff1a92;--m7lo:#c4006a;--onm7:#fff;--glow:34,203,233;--err:#ff6b6b;--shadow:0,0,0;--hover:#43505f;--guide:230,0,126;--grid:255,255,255;--ga:.03;--gb:.055;--thumb:#333c49;
+--arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239aa3b2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+--border:var(--line);--in-bg:var(--field);--accent:var(--c8);--hot:var(--m7);--text:var(--tx);--muted:var(--mut);--mat:var(--well);
+--ui:"Segoe UI Variable Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+--head:"Bahnschrift SemiCondensed","Bahnschrift","Segoe UI Variable Display","Segoe UI",Roboto,sans-serif;
+--num:"Cascadia Mono","Cascadia Code",Consolas,"Roboto Mono","DejaVu Sans Mono",monospace}
+*{scrollbar-width:thin;scrollbar-color:var(--thumb) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--thumb);border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+body{height:100dvh;min-height:0;overflow:hidden;grid-template-columns:372px minmax(0,1fr);grid-template-rows:52px 1fr;font:14px/1.4 var(--ui);background:var(--bg);color:var(--tx)}
+header{background:var(--panel);border-bottom:1px solid var(--line);color:var(--tx);gap:12px;padding:0 14px}
+header h1{font:600 21px/1 var(--head);letter-spacing:.2px;text-transform:none;color:var(--tx)}
+.logo{width:26px;height:26px;gap:3px;padding:0;background:none}
+.logo span{background:var(--c8);border-radius:3px;clip-path:none}
+.logo span:nth-child(1),.logo span:nth-child(4){background:var(--m7);border-radius:3px!important}
+.badge{background:transparent;border:1px solid var(--line2);color:var(--dim);font:12px var(--num);letter-spacing:0;padding:3px 8px;border-radius:5px}
+aside{background:var(--panel);border-right:1px solid var(--line);padding:16px 16px 28px;gap:18px;min-height:0;overflow-y:auto}
+.divider{height:1px;background:var(--line)}
+.sec-label{display:block;font:600 15px/1.2 var(--head);letter-spacing:.1px;text-transform:none;color:var(--tx)}
+.sec-label::before{content:none}
+.field label{color:var(--mut);font-size:12px;font-weight:400}
+.field label span{color:var(--tx);font-family:var(--num)}
+.field input[type=number],#single-dpi,#single-wmm,.slot-dpi,select{font:inherit;color:var(--tx);background-color:var(--field);border:1px solid var(--line2);border-radius:5px;height:34px;padding:0 8px;transition:border-color .12s,box-shadow .12s}
+.field input[type=number],#single-dpi,.slot-dpi{font-family:var(--num);font-size:13.5px;text-align:right;font-weight:400;flex:1;width:100%}
+select{appearance:none;-webkit-appearance:none;padding-right:26px;cursor:pointer;background-image:var(--arrow);background-repeat:no-repeat;background-position:right 9px center}
+option{background:var(--panel2);color:var(--tx)}
+input:hover,select:hover{border-color:var(--hover)}
+input:focus,select:focus{outline:none;background-color:var(--field);border-color:var(--c8);box-shadow:0 0 0 3px rgba(var(--glow),.18)}
+:focus-visible{outline:2px solid var(--c8);outline-offset:2px}
+.mode-toggle{background:none;border:0;padding:0;gap:0}
+.mode-btn{background:var(--panel2);border:1px solid var(--line2);border-radius:0;margin-left:-1px;color:var(--tx);font-size:13.5px;font-weight:400;border-right:1px solid var(--line2)}
+.mode-btn:first-child{border-radius:5px 0 0 5px;margin-left:0}.mode-btn:last-child{border-radius:0 5px 5px 0}
+.mode-btn:hover{border-color:var(--c8)}
+.mode-btn.active{background:var(--c8bg);border-color:var(--c8);color:var(--c8);font-weight:600;position:relative;z-index:1}
+.pill,.rot-pill{background:var(--panel2);border:1px solid var(--line2);border-radius:5px;color:var(--tx);font-size:13px;font-weight:400}
+.pill:hover,.rot-pill:hover{border-color:var(--c8);color:var(--tx);background:var(--panel2)}
+.pill.active,.rot-pill.active{background:var(--c8bg);border-color:var(--c8);color:var(--c8);font-weight:600}
+.col-slot{background:var(--panel2);border:1px solid var(--line);border-radius:6px}
+.col-slot.has-file{border-color:var(--line2);border-left:3px solid var(--slot-color,var(--m7))}
+.slot-header,.slot-controls{background:transparent}
+.slot-controls{background:rgba(var(--shadow),.16)}
+.slot-filename{color:var(--tx)}.slot-col-label{color:var(--mut);font-weight:400}
+.btn-add-col{background:transparent;border:1px dashed var(--line2);border-radius:5px;color:var(--mut);font-weight:400}
+.btn-add-col:hover{border-color:var(--c8);color:var(--c8);background:transparent}
+#single-drop-wrap .drop-zone{background:var(--field);border:1px dashed var(--line2);border-radius:6px}
+#single-drop-wrap .drop-zone:hover,#single-drop-wrap .drop-zone.over{background:var(--c8bg);border-color:var(--c8)}
+.drop-icon{color:var(--c8)}
+.drop-zone p{color:var(--mut);font-weight:400}.drop-zone p strong{color:var(--tx);font-weight:600;font-size:inherit}
+.btn-prev{background:var(--panel2);border:1px solid var(--line2);border-radius:5px;color:var(--tx);font-weight:400;text-transform:none;letter-spacing:0;height:34px}
+.btn-prev:hover{background:var(--panel2);border-color:var(--c8);color:var(--tx)}
+.btn-export{background:var(--m7);border:1px solid var(--m7);border-radius:5px;color:var(--onm7);font-weight:600;font-size:14.5px;text-transform:none;letter-spacing:0;box-shadow:none;transform:none;height:40px}
+.btn-export:hover{background:var(--m7hi);border-color:var(--m7hi);transform:none;box-shadow:none}
+.btn-export:active{background:var(--m7lo);transform:none;box-shadow:none}
+.btn-export:disabled{background:var(--m7);opacity:.4;color:var(--onm7);box-shadow:none}
+.prog-wrap{height:4px;background:var(--field);border:0;border-radius:3px}.prog-bar{background:var(--m7)}
+#status{color:var(--mut);font:12px/1.5 var(--num);font-weight:400}#status.ok{color:var(--c8)}#status.err{color:var(--err)}#status.busy{color:var(--warn)}
+.vec-note{color:var(--mut)}.vec-note strong{color:var(--tx)}
+main{min-height:0;padding:32px;background-color:var(--well);background-image:linear-gradient(rgba(var(--grid),var(--ga)) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--grid),var(--ga)) 1px,transparent 1px),linear-gradient(rgba(var(--grid),var(--gb)) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--grid),var(--gb)) 1px,transparent 1px);background-size:20px 20px,20px 20px,100px 100px,100px 100px}
+.empty-state{opacity:1;color:var(--mut)}
+.empty-grid{width:96px;height:96px;gap:6px;margin-bottom:20px}
+.empty-grid span{background:var(--line2);border-radius:3px!important}
+.empty-grid span:nth-child(1),.empty-grid span:nth-child(9){background:var(--c8)}
+.empty-grid span:nth-child(5){background:var(--m7)}
+.empty-state h2{font:600 20px/1.2 var(--head);letter-spacing:.1px;text-transform:none;color:var(--tx)}
+.empty-state p{color:var(--mut);font-weight:400}
+#preview-info{color:var(--mut);font:12px var(--num);font-weight:400}
+.legend-item{color:var(--mut);font-weight:400;font-size:12px}
+.legend-dot{width:9px;height:9px;border:0;border-radius:2px!important}
+#preview-canvas{border:1px solid var(--line2);border-radius:2px;max-height:calc(100dvh - 190px);box-shadow:0 20px 48px rgba(var(--shadow),.6)}
+@media(max-width:880px){body{grid-template-columns:1fr;grid-template-rows:52px auto minmax(70vh,1fr);height:auto;overflow:auto}aside{border-right:0;border-bottom:1px solid var(--line);overflow:visible}}
+.sheet-size{height:34px;display:flex;align-items:center;padding:0 8px;background:var(--field);border:1px solid var(--line2);border-radius:5px;font:13px var(--num);color:var(--c8);white-space:nowrap}
+.badge{margin-left:0}
+#skins{margin-left:auto;display:flex;gap:8px;align-items:center}
+#skins button{width:22px;height:22px;min-width:22px;padding:0;border-radius:50%!important;border:2px solid var(--line2);cursor:pointer;background:linear-gradient(135deg,var(--s1) 50%,var(--s2) 50%)}
+#skins button:hover{border-color:var(--tx)}
+#skins button[aria-pressed=true]{outline:2px solid var(--c8);outline-offset:2px;border-color:var(--panel)}
+:root[data-skin=light]{color-scheme:light;--bg:#eef1f5;--well:#d3d9e1;--panel:#ffffff;--panel2:#f3f5f8;--field:#ffffff;--line:#dde2e9;--line2:#c3cad4;--tx:#18202b;--mut:#566273;--dim:#8793a3;--m7:#d6006f;--c8:#0a7fa0;--c8bg:#dff3f8;--warn:#b86e00;--m7hi:#f0007f;--m7lo:#b0005b;--onm7:#fff;--glow:10,127,160;--err:#c62828;--shadow:30,45,70;--hover:#9fabb9;--guide:214,0,111;--grid:20,30,50;--ga:.06;--gb:.1;--thumb:#c3cad4;--arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23566273' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+:root[data-skin=neon]{color-scheme:dark;--bg:#0a0612;--well:#070411;--panel:#120a22;--panel2:#1a0f33;--field:#0b0618;--line:#2b1a52;--line2:#43297d;--tx:#f4eeff;--mut:#b7a6e6;--dim:#7e6bb5;--m7:#ff2bd6;--c8:#00f0ff;--c8bg:#06303a;--warn:#fff200;--m7hi:#ff66e6;--m7lo:#c800a4;--onm7:#fff;--glow:0,240,255;--err:#ff4d6d;--shadow:0,0,0;--hover:#6a47c0;--guide:255,0,170;--grid:180,120,255;--ga:.05;--gb:.09;--thumb:#43297d;--arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23b7a6e6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+:root[data-skin=neon] header{border-bottom-color:var(--m7);box-shadow:0 1px 18px rgba(255,43,214,.35)}
+:root[data-skin=neon] header h1{text-shadow:0 0 12px rgba(0,240,255,.65)}
+:root[data-skin=neon] .btn-export{box-shadow:0 0 18px rgba(255,43,214,.6)}
+:root[data-skin=neon] .mode-btn.active,:root[data-skin=neon] .pill.active,:root[data-skin=neon] .rot-pill.active{box-shadow:0 0 10px rgba(0,240,255,.4)}
+:root[data-skin=neon] #preview-canvas{box-shadow:0 0 0 1px var(--line2),0 0 40px rgba(255,43,214,.25)}
+:root[data-skin=bauhaus]{color-scheme:light;--bg:#f2efe6;--well:#f7c600;--panel:#f2efe6;--panel2:#ffffff;--field:#ffffff;--line:#111111;--line2:#111111;--tx:#111111;--mut:#444444;--dim:#666666;--m7:#e63222;--c8:#1d3fbb;--c8bg:#dde5ff;--warn:#b45309;--m7hi:#ff4433;--m7lo:#b81f12;--onm7:#fff;--glow:29,63,187;--err:#e63222;--shadow:17,17,17;--hover:#111111;--guide:230,50,34;--grid:17,17,17;--ga:.12;--gb:.22;--thumb:#111111;--arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23444444' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+:root[data-skin=bauhaus] *{border-radius:0!important}
+:root[data-skin=bauhaus] #skins button{border-radius:50%!important}
+:root[data-skin=bauhaus] header{background:#111;border-bottom:4px solid var(--m7)}
+:root[data-skin=bauhaus] header h1{color:#f2efe6}
+:root[data-skin=bauhaus] .badge{color:#f2efe6;border-color:#f2efe6}
+:root[data-skin=bauhaus] aside{border-right:4px solid #111}
+:root[data-skin=bauhaus] input,:root[data-skin=bauhaus] select,:root[data-skin=bauhaus] .mode-btn,:root[data-skin=bauhaus] .pill,:root[data-skin=bauhaus] .rot-pill,:root[data-skin=bauhaus] .btn-prev,:root[data-skin=bauhaus] .col-slot,:root[data-skin=bauhaus] .sheet-size{border-width:2px}
+:root[data-skin=bauhaus] .btn-export{border:2px solid #111;box-shadow:4px 4px 0 #111}
+:root[data-skin=bauhaus] .btn-export:hover{box-shadow:6px 6px 0 #111;transform:translate(-2px,-2px)}
+:root[data-skin=bauhaus] .btn-export:active{box-shadow:1px 1px 0 #111;transform:translate(3px,3px)}
+:root[data-skin=bauhaus] #preview-canvas{border:3px solid #111;box-shadow:8px 8px 0 #111}
+:root[data-skin=bauhaus] .empty-state,:root[data-skin=bauhaus] .empty-state p,:root[data-skin=bauhaus] #preview-info,:root[data-skin=bauhaus] .legend-item{color:#111}
+:root[data-skin=bauhaus] .empty-state h2,:root[data-skin=bauhaus] .sec-label{text-transform:uppercase;font-weight:800;letter-spacing:.6px}
+:root[data-skin=blueprint]{color-scheme:dark;--bg:#0b2a4a;--well:#0a2342;--panel:#0f335c;--panel2:#143e6c;--field:#0a2747;--line:#245585;--line2:#3b72a6;--tx:#eaf4ff;--mut:#a8c8e8;--dim:#7ea3c8;--m7:#ffd23f;--c8:#7fd4ff;--c8bg:#0f4a7a;--warn:#ffd23f;--m7hi:#ffe27a;--m7lo:#d9a800;--onm7:#0b2a4a;--glow:127,212,255;--err:#ff8a80;--shadow:0,0,0;--hover:#5b92c4;--guide:0,90,200;--grid:200,230,255;--ga:.05;--gb:.1;--thumb:#3b72a6;--arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a8c8e8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+.bar-ck{display:flex;align-items:center;gap:9px;margin-top:8px;font-size:13px;color:var(--tx);cursor:pointer}
+.bar-ck input{width:16px;height:16px;accent-color:var(--c8);cursor:pointer}
+.bar-opts{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.bar-opts.off{opacity:.4;pointer-events:none}
+#bar-w{display:flex;gap:6px}
+#bar-w .pill{flex:1;text-align:center;padding:7px 0;cursor:pointer;user-select:none}
+.tile-note{font:12px var(--num);color:var(--mut);margin-top:6px;line-height:1.5}
+#single-wmm{font-family:var(--num);font-size:13.5px;text-align:right;width:100%}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><span></span><span></span><span></span><span></span></div>
+  <h1>Step &amp; Repeat</h1>
+  <span class="badge">Vector-safe export</span>
+  <div id="skins" role="group" aria-label="Colour skin"><button type="button" data-skin="workbench" title="Workbench (dark)" aria-label="Workbench (dark)" aria-pressed="false" style="--s1:#161a20;--s2:#e6007e"></button><button type="button" data-skin="light" title="Light" aria-label="Light" aria-pressed="false" style="--s1:#ffffff;--s2:#d6006f"></button><button type="button" data-skin="neon" title="Neon" aria-label="Neon" aria-pressed="false" style="--s1:#120a22;--s2:#ff2bd6"></button><button type="button" data-skin="bauhaus" title="Bauhaus" aria-label="Bauhaus" aria-pressed="false" style="--s1:#f7c600;--s2:#e63222"></button><button type="button" data-skin="blueprint" title="Blueprint" aria-label="Blueprint" aria-pressed="false" style="--s1:#0f335c;--s2:#ffd23f"></button></div>
+</header>
+
+<aside>
+
+  <!-- 01 MODE -->
+  <div>
+    <div class="sec-label">01 — Mode</div>
+    <div class="mode-toggle">
+      <button class="mode-btn active" data-mode="single">Single file</button>
+      <button class="mode-btn" data-mode="multi">Multi file</button>
+    </div>
+  </div>
+
+  <!-- 02 SINGLE -->
+  <div id="single-drop-wrap">
+    <div class="sec-label">02 — Source File</div>
+    <div class="drop-zone" id="single-drop">
+      <input type="file" id="single-file-input" accept=".pdf,.eps,.png,.jpg,.jpeg">
+      <div class="drop-icon">⬡</div>
+      <p><strong>Drop file here</strong><br><span style="font-family:var(--num),monospace;font-size:10.5px;color:var(--muted)">PDF · EPS · PNG · JPEG</span></p>
+      <div id="single-file-name"></div>
+    </div>
+    <div id="single-controls">
+      <div id="single-dpi-row" style="display:none">
+        <div class="sec-label" style="margin-bottom:5px">Resolution (ppi)</div>
+        <input type="number" id="single-dpi" min="36" max="2400" step="any" value="96">
+        <div class="field" style="margin-top:8px">
+          <label>Tile width (mm)</label>
+          <input type="number" id="single-wmm" min="1" step="0.1">
+        </div>
+        <div id="single-tilemm" class="tile-note"></div>
+      </div>
+      <div id="single-page-row" style="display:none">
+        <div class="sec-label" style="margin-bottom:5px">Page</div>
+        <select id="single-page-sel"></select>
+      </div>
+      <div>
+        <div class="sec-label" style="margin-bottom:5px">Rotation</div>
+        <div class="rot-pills" id="single-rot-pills">
+          <div class="rot-pill active" data-rot="0">0°</div>
+          <div class="rot-pill" data-rot="90">90°</div>
+          <div class="rot-pill" data-rot="180">180°</div>
+          <div class="rot-pill" data-rot="270">270°</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 MULTI -->
+  <div id="multi-files-wrap" style="display:none">
+    <div class="sec-label">02 — Column Files <span style="color:var(--accent);font-size:10.5px">(1 file = 1 column)</span></div>
+    <div id="col-slots"></div>
+    <button class="btn-add-col" id="btn-add-col" style="margin-top:6px">＋ Add column</button>
+  </div>
+
+  <!-- 03 GRID -->
+  <div>
+    <div class="sec-label">03 — Grid</div>
+    <div class="row2">
+      <div class="field" id="cols-field">
+        <label>Across <span id="lbl-cols">3</span></label>
+        <input type="number" id="cols" value="3" min="1" max="50">
+      </div>
+      <div class="field">
+        <label>Around <span id="lbl-rows">3</span></label>
+        <input type="number" id="rows" value="3" min="1" max="50">
+      </div>
+    </div>
+    <p id="cols-hint" style="display:none;font-family:var(--num),monospace;font-size:10.5px;color:var(--muted);margin-top:5px">
+      Columns auto-set by number of loaded PDFs
+    </p>
+  </div>
+
+  <!-- 04 GAPS -->
+  <div>
+    <div class="sec-label">04 — Gaps &amp; Margins (mm)</div>
+    <div class="row2" style="margin-bottom:8px">
+      <div class="field">
+        <label>H Gap <span id="lbl-gx">5</span>mm</label>
+        <input type="number" id="gap-x" value="5" min="0" max="500" step="0.5">
+      </div>
+      <div class="field">
+        <label>V Gap <span id="lbl-gy">5</span>mm</label>
+        <input type="number" id="gap-y" value="5" min="0" max="500" step="0.5">
+      </div>
+    </div>
+    <div class="row2" style="margin-bottom:8px">
+      <div class="field">
+        <label>H Margin <span id="lbl-mx">10</span>mm</label>
+        <input type="number" id="mar-x" value="10" min="0" max="500" step="0.5">
+      </div>
+      <div class="field">
+        <label>V Margin <span id="lbl-my">10</span>mm</label>
+        <input type="number" id="mar-y" value="10" min="0" max="500" step="0.5">
+      </div>
+    </div>
+    <div id="centre-gap-row" style="display:none">
+      <div class="field" style="width:100%">
+        <label style="display:flex;align-items:center;gap:6px">
+          Centre Gap <span id="lbl-cgx">0</span>mm
+          <span style="font-family:var(--num),monospace;font-size:10px;color:var(--accent);letter-spacing:.4px">+EXTRA AT CENTRE</span>
+        </label>
+        <input type="number" id="gap-cx" value="0" min="0" max="500" step="0.5">
+      </div>
+    </div>
+  </div>
+
+  <!-- 05 OUTPUT -->
+  <div>
+    <div class="sec-label">05 — Output Sheet</div>
+    <div class="row2">
+      <div class="field">
+        <label>Sheet (auto-fit)</label>
+        <div id="sheet-size" class="sheet-size">—</div>
+      </div>
+      <div class="field">
+        <label>Background</label>
+        <select id="bg-col">
+          <option value="white">White</option>
+          <option value="none">Transparent</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 06 BEARER BARS -->
+  <div>
+    <div class="sec-label">06 — Bearer Bars</div>
+    <label class="bar-ck"><input type="checkbox" id="bar-on"> Add bearer bars (left &amp; right)</label>
+    <div id="bar-opts" class="bar-opts off">
+      <div class="field">
+        <label>Bar width (mm)</label>
+        <div class="pills" id="bar-w">
+          <div class="pill" data-bw="1">1</div><div class="pill" data-bw="2">2</div><div class="pill" data-bw="3">3</div><div class="pill" data-bw="4">4</div><div class="pill active" data-bw="5">5</div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Gap between bars (mm)</label>
+          <input type="number" id="bar-gap" min="0" step="0.5" placeholder="auto">
+        </div>
+        <div class="field">
+          <label>Height adjust (±mm)</label>
+          <input type="number" id="bar-adj" step="0.5" value="0">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Crosshair hole Ø (mm)</label>
+          <input type="number" id="bar-hole" min="0" step="0.1" placeholder="auto">
+        </div>
+        <div class="field">
+          <label>Top/bottom inset (mm)</label>
+          <input type="number" id="bar-inset" min="0" step="0.5" value="5">
+        </div>
+      </div>
+      <p class="tile-note">Colour: spot <b style="color:var(--tx)">REGISTRATION</b> (100% of all inks)</p>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div style="display:flex;flex-direction:column;gap:9px">
+    <button class="btn-prev" id="btn-prev">↻  Refresh Preview</button>
+    <div class="prog-wrap" id="prog-wrap"><div class="prog-bar" id="prog-bar"></div></div>
+    <button class="btn-export" id="btn-export" disabled>↓  Export PDF</button>
+    <p class="vec-note"><strong>Vector safe</strong> — fonts &amp; paths stay as vectors</p>
+    <div id="status"></div>
+  </div>
+
+</aside>
+
+<main>
+  <div class="empty-state" id="empty-state">
+    <div class="empty-grid"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+    <h2>Step &amp; Repeat</h2>
+    <p>Drop a PDF, EPS, PNG or JPEG to begin</p>
+  </div>
+  <div id="preview-wrap">
+    <div id="col-legend"></div>
+    <div id="preview-info"></div>
+    <canvas id="preview-canvas"></canvas>
+  </div>
+</main>
+
+<script>
+// ─── PDF.js ───────────────────────────────────────────────────
+const pdfjsLib = window['pdfjs-dist/build/pdf'];
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+const PT_PER_MM = 72/25.4;
+const COL_COLORS = [
+  {css:'var(--col1)',hex:'#3d9bff'},{css:'var(--col2)',hex:'#f0457f'},
+  {css:'var(--col3)',hex:'#3fae4a'},{css:'var(--col4)',hex:'#ff8a1f'},
+  {css:'var(--col5)',hex:'#b44ad0'},{css:'var(--col6)',hex:'#19b3a1'},
+  {css:'var(--col7)',hex:'#d9a521'},{css:'var(--col8)',hex:'#ff5a52'},
+];
+
+// ─── State ────────────────────────────────────────────────────
+let mode = 'single';
+let lastContent={w:0,h:0};
+let singleDPI=96;
+
+// Single mode
+let singleRawBytes  = null;
+let singlePdfJsDoc  = null;   // set for PDF/EPS only
+let singleImgBitmap = null;   // set for PNG/JPEG only
+let singleImgW      = 0;      // natural px width  (PNG/JPEG)
+let singleImgH      = 0;      // natural px height (PNG/JPEG)
+let singleFileType  = 'pdf';  // 'pdf' | 'eps' | 'png' | 'jpg'
+let singleSelPage   = 1;
+let singleRotation  = 0;  // degrees: 0 | 90 | 180 | 270
+
+// Multi mode columns: [{rawBytes, pdfJsDoc, imgBitmap, imgW, imgH, fileType, selPage, rotation, fileName, numPages}]
+let columns = [];
+
+// ─── UI ───────────────────────────────────────────────────────
+const modeBtns       = document.querySelectorAll('.mode-btn');
+const singleWrap     = document.getElementById('single-drop-wrap');
+const multiWrap      = document.getElementById('multi-files-wrap');
+const singleDrop     = document.getElementById('single-drop');
+const singleFileIn   = document.getElementById('single-file-input');
+const singleFileName = document.getElementById('single-file-name');
+const singlePageRow  = document.getElementById('single-page-row');
+const singlePageSel  = document.getElementById('single-page-sel');
+const singleControls = document.getElementById('single-controls');
+const singleRotPills = document.getElementById('single-rot-pills');
+const colSlotsEl     = document.getElementById('col-slots');
+const btnAddCol      = document.getElementById('btn-add-col');
+const colsIn         = document.getElementById('cols');
+const rowsIn         = document.getElementById('rows');
+const colsField      = document.getElementById('cols-field');
+const colsHint       = document.getElementById('cols-hint');
+const gapXIn         = document.getElementById('gap-x');
+const gapYIn         = document.getElementById('gap-y');
+const marXIn         = document.getElementById('mar-x');
+const marYIn         = document.getElementById('mar-y');
+const bgSel          = document.getElementById('bg-col');
+const gapCXIn        = document.getElementById('gap-cx');
+const centreGapRow   = document.getElementById('centre-gap-row');
+const btnPrev        = document.getElementById('btn-prev');
+const btnExport      = document.getElementById('btn-export');
+const statusEl       = document.getElementById('status');
+const progWrap       = document.getElementById('prog-wrap');
+const progBar        = document.getElementById('prog-bar');
+const previewWrap    = document.getElementById('preview-wrap');
+const emptyState     = document.getElementById('empty-state');
+const previewInfo    = document.getElementById('preview-info');
+const previewCanvas  = document.getElementById('preview-canvas');
+const colLegend      = document.getElementById('col-legend');
+
+// ─── Live labels ──────────────────────────────────────────────
+[['cols','lbl-cols'],['rows','lbl-rows'],
+ ['gap-x','lbl-gx'],['gap-y','lbl-gy'],
+ ['mar-x','lbl-mx'],['mar-y','lbl-my'],
+ ['gap-cx','lbl-cgx']].forEach(([id,lbl])=>{
+  document.getElementById(id).addEventListener('input',e=>
+    document.getElementById(lbl).textContent=e.target.value);
+});
+
+// ─── Mode toggle ──────────────────────────────────────────────
+modeBtns.forEach(btn=>btn.addEventListener('click',()=>{
+  mode=btn.dataset.mode;
+  modeBtns.forEach(b=>b.classList.toggle('active',b===btn));
+  singleWrap.style.display  = mode==='single'?'block':'none';
+  multiWrap.style.display   = mode==='multi' ?'block':'none';
+  colsField.style.display   = mode==='single'?'flex' :'none';
+  colsHint.style.display    = mode==='multi' ?'block':'none';
+  updateCentreGapVisibility();
+  updateExportBtn();
+}));
+
+// ─── Helpers ──────────────────────────────────────────────────
+function setStatus(msg,cls=''){statusEl.textContent=msg;statusEl.className=cls}
+function setProgress(pct){
+  if(pct<=0||pct>=100){progWrap.style.display='none';return}
+  progWrap.style.display='block';progBar.style.width=pct+'%';
+}
+function getParams(){
+  return {
+    cols: Math.max(1,parseInt(colsIn.value)||1),
+    rows: Math.max(1,parseInt(rowsIn.value)||1),
+    gapX: parseFloat(gapXIn.value)||0,
+    gapY: parseFloat(gapYIn.value)||0,
+    marX: parseFloat(marXIn.value)||0,
+    marY: parseFloat(marYIn.value)||0,
+    centreGapX: parseFloat(gapCXIn.value)||0,
+    bg: bgSel.value,
+    bars: readBars(),
+  };
+}
+
+// Centre gap is only meaningful when the column count is even.
+// In single mode that's p.cols; in multi mode it's the number of loaded columns.
+function getEvenColCount(){
+  if(mode==='single'){
+    const c=Math.max(1,parseInt(colsIn.value)||1);
+    return c%2===0?c:0;
+  } else {
+    const c=columns.filter(col=>col.rawBytes).length;
+    return c%2===0&&c>0?c:0;
+  }
+}
+function updateCentreGapVisibility(){
+  centreGapRow.style.display=getEvenColCount()>0?'block':'none';
+}
+
+// Re-check visibility whenever cols changes or mode changes
+colsIn.addEventListener('input',updateCentreGapVisibility);
+function updateExportBtn(){
+  btnExport.disabled = mode==='single' ? (!singleRawBytes||(singleFileType==='eps'&&!singlePdfJsDoc)) : columns.filter(c=>c.rawBytes).length===0;
+}
+function colColor(i){return COL_COLORS[i%COL_COLORS.length]}
+
+// ─── Rotation helpers ─────────────────────────────────────────
+// Returns effective {width, height} after rotation
+// (90° and 270° swap dimensions)
+function rotatedSize(w,h,deg){
+  return (deg===90||deg===270)?{w:h,h:w}:{w,h};
+}
+
+// For PDF.js canvas preview: rotate context and draw
+function drawRotated(ctx, srcCanvas, deg, dx, dy, dw, dh){
+  ctx.save();
+  ctx.imageSmoothingQuality='high';
+  ctx.translate(dx+dw/2, dy+dh/2);
+  ctx.rotate(deg*Math.PI/180);
+  // after rotation, original dimensions are swapped back
+  const [ow,oh] = (deg===90||deg===270) ? [dh,dw] : [dw,dh];
+  ctx.drawImage(srcCanvas, -ow/2, -oh/2, ow, oh);
+  ctx.restore();
+}
+
+// For pdf-lib: build the transform to place an XObject rotated within a bounding box
+// xPt, yPt = bottom-left of the bounding cell in PDF coords
+// tileW, tileH = natural (pre-rotation) page dimensions
+// deg = 0|90|180|270
+function drawPageRotated(outPage, embPage, xPt, yPt, tileW, tileH, deg){
+  // The cell's displayed width/height (post-rotation)
+  const cellW = (deg===90||deg===270)?tileH:tileW;
+  const cellH = (deg===90||deg===270)?tileW:tileH;
+
+  // pdf-lib's drawPage draws the page at its natural size by default.
+  // We apply a manual transform via the xform option.
+  // PDF graphics operators: translate → rotate → scale to natural size
+  // cos/sin for the rotation
+  const rad   = deg * Math.PI / 180;
+  const cosA  = Math.round(Math.cos(rad));  // ±1 or 0
+  const sinA  = Math.round(Math.sin(rad));  // ±1 or 0
+
+  // The translation depends on which corner becomes the new origin after rotation:
+  // 0°:   origin stays bottom-left  → tx=0,         ty=0
+  // 90°:  origin moves to top-left  → tx=0,         ty=cellW  (= tileH post-swap)
+  // 180°: origin moves to top-right → tx=cellW,     ty=cellH
+  // 270°: origin moves to bottom-right→ tx=cellH,   ty=0
+  let tx=0, ty=0;
+  if(deg===90)  { tx=0;     ty=cellW; }
+  if(deg===180) { tx=cellW; ty=cellH; }
+  if(deg===270) { tx=cellH; ty=0;     }
+
+  // Build the 6-element CTM [a b c d e f] for pdf-lib's xform option
+  // Scale to natural tile dimensions (drawPage by default uses page's mediabox)
+  // We encode rotation + position in the transform matrix.
+  // pdf-lib drawPage accepts { x, y, width, height } — it internally sets the CTM.
+  // Since we need a rotation, we use drawPage with a scaleX/scaleY=0 trick and
+  // instead append raw PDF operators via the page's content stream.
+  //
+  // The most reliable way: use the low-level PDFPage.drawPage / pushOperators approach.
+  // pdf-lib 1.x exposes PDFPageLeaf.node — we instead build the operator sequence manually.
+
+  const {degrees} = PDFLib;
+
+  // pdf-lib drawPage supports `rotate` but it rotates the whole coordinate system
+  // which also moves the position. We instead position and rotate explicitly.
+  // Strategy: clip to cell, then place rotated XObject.
+
+  outPage.drawPage(embPage, {
+    x: xPt + tx,
+    y: yPt + ty,
+    width:  tileW,
+    height: tileH,
+    xSkew:  degrees(0),
+    ySkew:  degrees(0),
+    rotate: degrees(deg),
+  });
+}
+
+// ─── File type helpers ────────────────────────────────────────
+function fileTypeOf(file){
+  const name = file.name.toLowerCase();
+  if(name.endsWith('.eps'))              return 'eps';
+  if(name.endsWith('.png'))              return 'png';
+  if(name.endsWith('.jpg')||name.endsWith('.jpeg')) return 'jpg';
+  return 'pdf';
+}
+const ACCEPTED_TYPES = [
+  'application/pdf','image/png','image/jpeg','image/jpg',
+  'application/postscript','application/eps','image/x-eps','',
+];
+function isAccepted(file){
+  const ft=fileTypeOf(file);
+  return ft==='eps'||ft==='png'||ft==='jpg'||ft==='pdf';
+}
+
+// ─────────────────────────────────────────────────────────────
+// SINGLE MODE
+// ─────────────────────────────────────────────────────────────
+singleDrop.addEventListener('dragover',e=>{e.preventDefault();singleDrop.classList.add('over')});
+singleDrop.addEventListener('dragleave',()=>singleDrop.classList.remove('over'));
+singleDrop.addEventListener('drop',e=>{
+  e.preventDefault();singleDrop.classList.remove('over');
+  const f=e.dataTransfer.files[0];
+  if(f&&isAccepted(f)) loadSingleFile(f);
+  else setStatus('Please drop a PDF, EPS, PNG or JPEG','err');
+});
+singleFileIn.addEventListener('change',e=>{if(e.target.files[0])loadSingleFile(e.target.files[0])});
+
+async function loadSingleFile(file){
+  setStatus('Loading…','busy');
+  singleFileName.textContent=file.name;
+  singleFileType=fileTypeOf(file);
+  try{
+    singleRawBytes=await file.arrayBuffer();
+    singlePdfJsDoc=null; singleImgBitmap=null;
+    singleImgW=0; singleImgH=0;
+    document.getElementById('single-dpi-row').style.display='none';
+
+    if(singleFileType==='pdf'||singleFileType==='eps'){
+      // EPS: pdf.js can parse EPS if it has a %PDF preamble; otherwise treat as 1-page
+      let data=singleRawBytes.slice(0);
+      if(singleFileType==='eps'){
+        // Wrap bare EPS in a minimal PDF so pdf.js can render a preview
+        // (Many modern EPS files also contain a PDF preview stream)
+        // Try directly first; if pdf.js rejects it, fall back to placeholder
+        try{
+          singlePdfJsDoc=await pdfjsLib.getDocument({data}).promise;
+        }catch(_){
+          // EPS has no PDF preview — use null, preview will show placeholder
+          singlePdfJsDoc=null;
+        }
+      } else {
+        singlePdfJsDoc=await pdfjsLib.getDocument({data}).promise;
+      }
+
+      if(singlePdfJsDoc){
+        singlePageSel.innerHTML='';
+        for(let i=1;i<=singlePdfJsDoc.numPages;i++){
+          const o=document.createElement('option');
+          o.value=i;o.textContent=`Page ${i} of ${singlePdfJsDoc.numPages}`;
+          singlePageSel.appendChild(o);
+        }
+        singlePageRow.style.display=singlePdfJsDoc.numPages>1?'block':'none';
+        setStatus(`Loaded · ${singlePdfJsDoc.numPages} page${singlePdfJsDoc.numPages>1?'s':''}`, 'ok');
+      } else {
+        // EPS placeholder — parse BoundingBox for dimensions
+        singlePageRow.style.display='none';
+        setStatus('This EPS has no embedded PDF data. Convert it to PDF (e.g. ps2pdf) to export.','err');
+      }
+    } else {
+      // PNG / JPEG — decode to ImageBitmap for canvas preview
+      singlePageRow.style.display='none';
+      const blob=new Blob([singleRawBytes]);
+      const bmp=await createImageBitmap(blob);
+      singleImgBitmap=bmp; singleImgW=bmp.width; singleImgH=bmp.height;
+      singleDPI=rasterDPI(new Uint8Array(singleRawBytes),singleFileType);
+      document.getElementById('single-dpi').value=+singleDPI.toFixed(3);
+      document.getElementById('single-dpi-row').style.display='block';
+      syncTileMm(true);
+      setStatus(`Loaded · ${bmp.width}×${bmp.height}px @ ${Math.round(singleDPI)} dpi`, 'ok');
+    }
+
+    singleSelPage=1; singleRotation=0;
+    setActivePills(singleRotPills,0);
+    singleControls.classList.add('visible');
+    updateExportBtn();
+    await renderPreview();
+  }catch(e){setStatus('Error loading file: '+e.message,'err');console.error(e)}
+}
+singlePageSel.addEventListener('change',()=>{singleSelPage=parseInt(singlePageSel.value)});
+
+// Single rotation pills
+singleRotPills.querySelectorAll('.rot-pill').forEach(pill=>{
+  pill.addEventListener('click',()=>{
+    singleRotation=parseInt(pill.dataset.rot);
+    setActivePills(singleRotPills,singleRotation);
+  });
+});
+
+function setActivePills(container,val){
+  container.querySelectorAll('.rot-pill').forEach(p=>{
+    p.classList.toggle('active',parseInt(p.dataset.rot)===val);
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// MULTI MODE
+// ─────────────────────────────────────────────────────────────
+function buildSlots(){
+  colSlotsEl.innerHTML='';
+  columns.forEach((_,i)=>renderSlot(i));
+  updateCentreGapVisibility();
+}
+
+function renderSlot(i){
+  const col   = columns[i];
+  const color = colColor(i);
+  const slot  = document.createElement('div');
+  slot.className = 'col-slot'+(col.rawBytes?' has-file':'');
+  slot.style.setProperty('--slot-color',color.css);
+
+  if(col.rawBytes){
+    // Filled slot
+    slot.innerHTML=`
+      <div class="slot-header">
+        <div class="slot-color-bar"></div>
+        <div class="slot-meta">
+          <div class="slot-col-label">Col ${i+1}</div>
+          <div class="slot-filename">${esc(col.fileName)}</div>
+        </div>
+        <button class="slot-remove" title="Remove">✕</button>
+      </div>
+      <div class="slot-controls">
+        ${col.numPages>1?`
+        <div class="slot-ctrl-row">
+          <span class="slot-ctrl-label">Page</span>
+          <select class="slot-page-sel">
+            ${Array.from({length:col.numPages},(_,j)=>
+              `<option value="${j+1}"${j+1===col.selPage?' selected':''}>Page ${j+1} of ${col.numPages}</option>`
+            ).join('')}
+          </select>
+        </div>`:''}
+        ${col.imgBitmap?`<div class="slot-ctrl-row"><span class="slot-ctrl-label">PPI</span><input type="number" class="slot-dpi" min="36" max="2400" step="any" value="${+col.dpi.toFixed(3)}"></div>`:''}
+        <div class="slot-ctrl-row">
+          <span class="slot-ctrl-label">Rotate</span>
+          <div class="rot-pills slot-rot-pills">
+            ${[0,90,180,270].map(d=>`
+              <div class="rot-pill${col.rotation===d?' active':''}" data-rot="${d}">${d}°</div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    // Page select
+    const ps=slot.querySelector('.slot-page-sel');
+    if(ps) ps.addEventListener('change',e=>{columns[i].selPage=parseInt(e.target.value)});
+    const di=slot.querySelector('.slot-dpi');
+    if(di) di.addEventListener('input',e=>{columns[i].dpi=Math.min(2400,Math.max(36,parseFloat(e.target.value)||96))});
+    // Rotation pills
+    slot.querySelectorAll('.slot-rot-pills .rot-pill').forEach(pill=>{
+      pill.addEventListener('click',()=>{
+        columns[i].rotation=parseInt(pill.dataset.rot);
+        slot.querySelectorAll('.slot-rot-pills .rot-pill').forEach(p=>
+          p.classList.toggle('active',parseInt(p.dataset.rot)===columns[i].rotation));
+      });
+    });
+    // Remove
+    slot.querySelector('.slot-remove').addEventListener('click',e=>{
+      e.stopPropagation();
+      columns.splice(i,1);
+      buildSlots();updateExportBtn();
+    });
+  } else {
+    // Empty slot — clickable to load
+    slot.innerHTML=`
+      <div class="slot-header empty">
+        <input type="file" class="slot-file-input" accept=".pdf,.eps,.png,.jpg,.jpeg">
+        <div class="slot-color-bar"></div>
+        <div class="slot-meta">
+          <div class="slot-col-label">Col ${i+1}</div>
+          <div class="slot-empty-hint">click or drop a file</div>
+        </div>
+        <button class="slot-remove" title="Remove">✕</button>
+      </div>
+    `;
+    const fi=slot.querySelector('.slot-file-input');
+    fi.addEventListener('change',async e=>{
+      if(e.target.files[0]) await loadColumnFile(i,e.target.files[0]);
+    });
+    slot.addEventListener('dragover',e=>{e.preventDefault();slot.style.borderColor=color.hex});
+    slot.addEventListener('dragleave',()=>slot.style.borderColor='');
+    slot.addEventListener('drop',async e=>{
+      e.preventDefault();slot.style.borderColor='';
+      const f=e.dataTransfer.files[0];
+      if(f&&isAccepted(f)) await loadColumnFile(i,f);
+    });
+    slot.querySelector('.slot-remove').addEventListener('click',e=>{
+      e.stopPropagation();columns.splice(i,1);buildSlots();updateExportBtn();
+    });
+  }
+  colSlotsEl.appendChild(slot);
+}
+
+async function loadColumnFile(idx,file){
+  setStatus(`Loading column ${idx+1}…`,'busy');
+  const ft=fileTypeOf(file);
+  try{
+    const bytes=await file.arrayBuffer();
+    let pjsDoc=null, imgBitmap=null, imgW=0, imgH=0, numPages=1, dpi=96;
+
+    if(ft==='pdf'||ft==='eps'){
+      if(ft==='eps'){
+        try{ pjsDoc=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise; }
+        catch(_){ pjsDoc=null; }
+      } else {
+        pjsDoc=await pdfjsLib.getDocument({data:bytes.slice(0)}).promise;
+        numPages=pjsDoc.numPages;
+      }
+    } else {
+      const bmp=await createImageBitmap(new Blob([bytes]));
+      imgBitmap=bmp; imgW=bmp.width; imgH=bmp.height; dpi=rasterDPI(new Uint8Array(bytes),ft);
+    }
+
+    columns[idx]={
+      rawBytes:bytes, pdfJsDoc:pjsDoc,
+      imgBitmap, imgW, imgH, dpi, fileType:ft,
+      selPage:1, rotation:0, fileName:file.name, numPages
+    };
+    buildSlots();updateExportBtn();
+    setStatus(`Column ${idx+1} loaded — ${file.name}`,'ok');
+    await renderPreview();
+  }catch(e){setStatus('Error loading file','err');console.error(e)}
+}
+
+btnAddCol.addEventListener('click',()=>{
+  if(columns.length>=8){setStatus('Maximum 8 columns','err');return}
+  columns.push({rawBytes:null,pdfJsDoc:null,imgBitmap:null,imgW:0,imgH:0,fileType:'pdf',selPage:1,rotation:0,fileName:'',numPages:0});
+  buildSlots();
+});
+
+// Seed 2 empty slots
+columns=[
+  {rawBytes:null,pdfJsDoc:null,imgBitmap:null,imgW:0,imgH:0,fileType:'pdf',selPage:1,rotation:0,fileName:'',numPages:0},
+  {rawBytes:null,pdfJsDoc:null,imgBitmap:null,imgW:0,imgH:0,fileType:'pdf',selPage:1,rotation:0,fileName:'',numPages:0},
+];
+buildSlots();
+
+// ─────────────────────────────────────────────────────────────
+// PREVIEW
+// ─────────────────────────────────────────────────────────────
+btnPrev.addEventListener('click',renderPreview);
+
+// Render any source (PDF page via pdfjs, bitmap, or EPS placeholder) to a canvas.
+// Returns {canvas, mmW, mmH} — mmW/mmH are the natural dimensions in millimetres.
+// DPI_RASTER: raster images are embedded at this resolution.
+const DPI_RASTER = 150; // px/inch for preview scaling of raster images
+async function srcToCanvasRaw(ft, pdfJsDoc, imgBitmap, imgW, imgH, selPage, fileName, dpi=96){
+  const SCALE = 1.2;
+  if(ft==='pdf'||((ft==='eps')&&pdfJsDoc)){
+    const page = await pdfJsDoc.getPage(selPage);
+    const vp   = page.getViewport({scale:SCALE});
+    const off  = document.createElement('canvas');
+    off.width=Math.round(vp.width); off.height=Math.round(vp.height);
+    await page.render({canvasContext:off.getContext('2d'),viewport:vp}).promise;
+    // mm from 72dpi points
+    const mmW = (vp.width /SCALE)/72*25.4;
+    const mmH = (vp.height/SCALE)/72*25.4;
+    return {canvas:off, mmW, mmH};
+  }
+  if(ft==='png'||ft==='jpg'){
+    // size the preview canvas in preview px (same scale as PDF pages) so gaps stay proportional
+    const mmW=imgW/dpi*25.4, mmH=imgH/dpi*25.4, k=SCALE*72/25.4;
+    const off=document.createElement('canvas');
+    off.width=Math.max(1,Math.round(mmW*k)); off.height=Math.max(1,Math.round(mmH*k));
+    const c=off.getContext('2d'); c.imageSmoothingQuality='high';
+    c.drawImage(imgBitmap,0,0,off.width,off.height);
+    return {canvas:off, mmW, mmH};
+  }
+  // EPS with no PDF preview — draw a labelled placeholder
+  const W=220, H=160;
+  const off = document.createElement('canvas');
+  off.width=W; off.height=H;
+  const ctx = off.getContext('2d');
+  ctx.fillStyle='#2a2a36'; ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='#555'; ctx.lineWidth=1.5; ctx.strokeRect(2,2,W-4,H-4);
+  ctx.fillStyle='#888'; ctx.font='bold 13px monospace'; ctx.textAlign='center';
+  ctx.fillText('EPS',W/2,H/2-8);
+  ctx.font='9px monospace';
+  ctx.fillText(fileName.replace(/\.eps$/i,'').slice(0,24),W/2,H/2+10);
+  // parse %%BoundingBox from raw bytes for real mm dimensions
+  return {canvas:off, mmW:W/96*25.4, mmH:H/96*25.4};
+}
+
+async function renderPreviewNow(){
+  const SCALE=1.2;
+  const PX_PER_MM=SCALE*72/25.4;
+  const p=getParams();
+  btnPrev.disabled=true;
+
+  try{
+    if(mode==='single'){
+      if(!singleRawBytes){btnPrev.disabled=false;return}
+      setStatus('Rendering preview…','busy');
+
+      const {canvas:srcOff, mmW:srcMmW, mmH:srcMmH} = await srcToCanvas(
+        singleFileType, singlePdfJsDoc, singleImgBitmap,
+        singleImgW, singleImgH, singleSelPage,
+        singleFileName.textContent,singleDPI
+      );
+
+      const deg=singleRotation;
+      const naturalW=srcOff.width, naturalH=srcOff.height;
+      const cellW=(deg===90||deg===270)?naturalH:naturalW;
+      const cellH=(deg===90||deg===270)?naturalW:naturalH;
+
+      const cols=p.cols,rows=p.rows;
+      const pxGX=p.gapX*PX_PER_MM,pxGY=p.gapY*PX_PER_MM;
+      let pxMX=p.marX*PX_PER_MM;const pxMY=p.marY*PX_PER_MM;
+      const pxCGX=p.centreGapX*PX_PER_MM;
+      const centreIdx=(cols%2===0)?cols/2:0;
+
+      const bars=barLayout(p,(pxMX*2+cols*cellW+(cols-1)*pxGX+(centreIdx>0?pxCGX:0))/PX_PER_MM);pxMX+=bars.side*PX_PER_MM;
+      const totalW=pxMX*2+cols*cellW+(cols-1)*pxGX+(centreIdx>0?pxCGX:0);
+      const totalH=pxMY*2+rows*cellH+(rows-1)*pxGY;
+      const ds=Math.min(1,860/Math.max(totalW,totalH));
+
+      previewCanvas.width=Math.round(totalW*ds);lastContent={w:totalW/PX_PER_MM,h:totalH/PX_PER_MM};
+      previewCanvas.height=Math.round(totalH*ds);
+      const ctx=previewCanvas.getContext('2d');
+      paintBg(ctx,p.bg,previewCanvas.width,previewCanvas.height);
+
+      const dCW=cellW*ds,dCH=cellH*ds,gX=pxGX*ds,gY=pxGY*ds,mX=pxMX*ds,mY=pxMY*ds;
+      const cGX=pxCGX*ds;
+
+      const tileC=document.createElement('canvas');tileC.width=Math.max(1,Math.round(dCW));tileC.height=Math.max(1,Math.round(dCH));
+      drawRotated(tileC.getContext('2d'),srcOff,deg,0,0,tileC.width,tileC.height);
+      for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+        let xPos=mX+c*dCW+c*gX;
+        if(centreIdx>0&&c>=centreIdx) xPos+=cGX;
+        ctx.drawImage(tileC,xPos,mY+r*(dCH+gY),dCW,dCH);
+      }
+      drawGapGuides(ctx,cols,rows,mX,mY,dCW,dCH,gX,gY,previewCanvas.width,previewCanvas.height,centreIdx,cGX);
+      drawBarsPreview(ctx,bars,previewCanvas.width,previewCanvas.height);
+
+      colLegend.innerHTML='';
+      const {w:effW,h:effH}=rotatedSize(srcMmW,srcMmH,deg);
+      const typeLabel = singleFileType.toUpperCase()+(singleImgBitmap?` @${Math.round(singleDPI)}dpi`:'');
+      previewInfo.textContent=
+        `sheet ${sheetTxt()}${barTxt()}  ·  ${cols}×${rows}  ·  ${typeLabel}  ·  tile ${effW.toFixed(1)}×${effH.toFixed(1)}mm`+
+        `  ·  gap ${p.gapX}×${p.gapY}mm  ·  margin ${p.marX}×${p.marY}mm`+
+        (centreIdx>0&&p.centreGapX>0?`  ·  centre +${p.centreGapX}mm`:'')+
+        (deg?`  ·  ${deg}°`:'');
+
+    } else {
+      const activeCols=columns.filter(c=>c.rawBytes);
+      if(activeCols.length===0){btnPrev.disabled=false;return}
+      setStatus('Rendering preview…','busy');
+
+      const rendered=await Promise.all(activeCols.map(async (col,ci)=>{
+        const {canvas,mmW,mmH} = await srcToCanvas(
+          col.fileType, col.pdfJsDoc, col.imgBitmap,
+          col.imgW, col.imgH, col.selPage, col.fileName, col.dpi
+        );
+        const deg=col.rotation;
+        const cellW=(deg===90||deg===270)?canvas.height:canvas.width;
+        const cellH=(deg===90||deg===270)?canvas.width:canvas.height;
+        const {w:effMmW,h:effMmH}=rotatedSize(mmW,mmH,deg);
+        return {canvas, cellW, cellH, deg, effMmW, effMmH, fileType:col.fileType};
+      }));
+
+      const numCols=rendered.length;
+      const rows=p.rows;
+      const maxCellH=Math.max(...rendered.map(r=>r.cellH));
+      const pxGX=p.gapX*PX_PER_MM,pxGY=p.gapY*PX_PER_MM;
+      let pxMX=p.marX*PX_PER_MM;const pxMY=p.marY*PX_PER_MM;
+      const pxCGX=p.centreGapX*PX_PER_MM;
+      const centreIdx=(numCols%2===0)?numCols/2:0;
+
+      const totalRowW=rendered.reduce((s,r)=>s+r.cellW,0)+(numCols-1)*pxGX+(centreIdx>0?pxCGX:0);
+      const bars=barLayout(p,(pxMX*2+totalRowW)/PX_PER_MM);pxMX+=bars.side*PX_PER_MM;
+      const totalW=pxMX*2+totalRowW;
+      const totalH=pxMY*2+rows*maxCellH+(rows-1)*pxGY;
+      const ds=Math.min(1,900/Math.max(totalW,totalH));
+
+      previewCanvas.width=Math.round(totalW*ds);lastContent={w:totalW/PX_PER_MM,h:totalH/PX_PER_MM};
+      previewCanvas.height=Math.round(totalH*ds);
+      const ctx=previewCanvas.getContext('2d');
+      paintBg(ctx,p.bg,previewCanvas.width,previewCanvas.height);
+
+      const mX=pxMX*ds,mY=pxMY*ds,gY=pxGY*ds,gX=pxGX*ds,cGX=pxCGX*ds;
+      for(let r=0;r<rows;r++){
+        let xCursor=mX;
+        const yRow=mY+r*(maxCellH*ds+gY);
+        for(let ci=0;ci<numCols;ci++){
+          const {canvas:src,cellW,cellH,deg}=rendered[ci];
+          const dCW=cellW*ds,dCH=cellH*ds;
+          const yOff=(maxCellH-cellH)*0.5*ds;
+          drawRotated(ctx,src,deg,xCursor,yRow+yOff,dCW,dCH);
+          ctx.strokeStyle=colColor(ci).hex+'55';ctx.lineWidth=1.5;
+          ctx.strokeRect(xCursor,yRow+yOff,dCW,dCH);
+          xCursor+=dCW+gX;
+          if(centreIdx>0&&ci+1===centreIdx) xCursor+=cGX;
+        }
+      }
+      if(p.gapY>0){
+        ctx.save();ctx.strokeStyle=guideCol(0.22);ctx.lineWidth=0.75;ctx.setLineDash([3,3]);
+        for(let r=1;r<rows;r++){
+          const ly=mY+r*(maxCellH*ds+gY)-gY/2;
+          ctx.beginPath();ctx.moveTo(0,ly);ctx.lineTo(previewCanvas.width,ly);ctx.stroke();
+        }
+        ctx.restore();
+      }
+      if(centreIdx>0&&p.centreGapX>0){
+        let cx=mX;
+        for(let ci=0;ci<centreIdx;ci++) cx+=rendered[ci].cellW*ds+(ci<centreIdx-1?gX:0);
+        const gapMid=cx+gX/2+cGX/2;
+        ctx.save();
+        ctx.strokeStyle=guideCol(0.55);ctx.lineWidth=1;ctx.setLineDash([4,2]);
+        ctx.beginPath();ctx.moveTo(gapMid,0);ctx.lineTo(gapMid,previewCanvas.height);ctx.stroke();
+        ctx.restore();
+      }
+
+      colLegend.innerHTML='';
+      activeCols.forEach((col,ci)=>{
+        const item=document.createElement('div');item.className='legend-item';
+        const ft=col.fileType.toUpperCase();
+        item.innerHTML=`<div class="legend-dot" style="background:${colColor(ci).hex}"></div>
+          <span>Col ${ci+1} [${ft}]: ${esc(col.fileName.replace(/\.(pdf|eps|png|jpe?g)$/i,''))}${col.rotation?` (${col.rotation}°)`:''}</span>`;
+        colLegend.appendChild(item);
+      });
+      drawBarsPreview(ctx,bars,previewCanvas.width,previewCanvas.height);
+      previewInfo.textContent=
+        `sheet ${sheetTxt()}${barTxt()}  ·  ${numCols} cols × ${rows} rows  ·  gap ${p.gapX}×${p.gapY}mm  ·  margin ${p.marX}×${p.marY}mm`+
+        (centreIdx>0&&p.centreGapX>0?`  ·  centre +${p.centreGapX}mm`:'');
+    }
+
+    emptyState.style.display='none';
+    previewWrap.style.display='flex';
+    setStatus('Preview ready · sheet '+sheetTxt()+(lastBars.clamped?` · bar gap raised to ${lastBars.gap.toFixed(1)} mm to clear the layout`:''),'ok');
+  }catch(e){
+    setStatus('Preview error: '+e.message,'err');console.error(e);
+  }
+  btnPrev.disabled=false;
+}
+
+function paintBg(ctx,bg,w,h){
+  if(bg==='white'){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);}
+  else{
+    const cs=10;
+    for(let y=0;y<h;y+=cs*2) for(let x=0;x<w;x+=cs*2){
+      ctx.fillStyle='#d9dde2';ctx.fillRect(x,y,cs,cs);ctx.fillRect(x+cs,y+cs,cs,cs);
+      ctx.fillStyle='#f1f3f5';ctx.fillRect(x+cs,y,cs,cs);ctx.fillRect(x,y+cs,cs,cs);
+    }
+  }
+}
+function drawGapGuides(ctx,cols,rows,mX,mY,cW,cH,gX,gY,W,H,centreIdx,cGX){
+  ctx.save();
+  ctx.lineWidth=0.75;ctx.setLineDash([3,3]);
+  // Regular column gap guides
+  if(gX>0||cGX>0){
+    ctx.strokeStyle=guideCol(0.28);
+    for(let c=1;c<cols;c++){
+      if(centreIdx>0&&c===centreIdx) continue; // centre gap drawn separately
+      // x position of gap centre: account for extra offset on right side of centre
+      const extraLeft=centreIdx>0&&c>centreIdx?cGX:0;
+      const lx=mX+c*cW+c*gX-gX/2+extraLeft;
+      ctx.beginPath();ctx.moveTo(lx,0);ctx.lineTo(lx,H);ctx.stroke();
+    }
+  }
+  // Centre gap guide — brighter and slightly thicker
+  if(centreIdx>0&&cGX>0){
+    const lx=mX+centreIdx*cW+centreIdx*gX+cGX/2;
+    ctx.strokeStyle=guideCol(0.65);ctx.lineWidth=1;ctx.setLineDash([5,2]);
+    ctx.beginPath();ctx.moveTo(lx,0);ctx.lineTo(lx,H);ctx.stroke();
+  }
+  // Row gap guides
+  if(gY>0){
+    ctx.strokeStyle=guideCol(0.28);ctx.lineWidth=0.75;ctx.setLineDash([3,3]);
+    for(let r=1;r<rows;r++){const ly=mY+r*cH+(r-0.5)*gY;ctx.beginPath();ctx.moveTo(0,ly);ctx.lineTo(W,ly);ctx.stroke()}
+  }
+  ctx.restore();
+}
+
+// ─────────────────────────────────────────────────────────────
+// EXPORT — vector-safe, tested against pdf-lib 1.17.1 source
+// ─────────────────────────────────────────────────────────────
+// pdf-lib drawPage emits: translate(x,y) → rotateRadians(angle) → scale → Do
+// Rotation is CCW around (x,y). For CW rotation D° use degrees(-D).
+// After translate(x,y) + rotate(-D°), tile bottom-left lands at:
+//   D=0:   (x,       y      )   tile W×H
+//   D=90:  (x,       y-srcW )   tile srcH × srcW  → need y=cellY+srcW
+//   D=180: (x-srcW,  y-srcH )   tile W×H           → need x=cellX+srcW, y=cellY+srcH
+//   D=270: (x-srcH,  y      )   tile srcH × srcW  → need x=cellX+srcH
+//
+// embedPages handles cross-document copies internally — no copyPages needed.
+// ─────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────
+// EXPORT — supports PDF, EPS, PNG, JPEG
+// ─────────────────────────────────────────────────────────────
+// drawImage uses the same translate→rotate→scale→Do pattern as
+// drawPage, so tileParams works identically for both.
+// Raster images are sized at 96 DPI: 1px = 72/96 = 0.75pt.
+// EPS is embedded as a raw PostScript Form XObject — a standard
+// approach in print workflows; any PS/PDF RIP renders it correctly.
+// ─────────────────────────────────────────────────────────────
+const PX_TO_PT = 72/96; // raster px → PDF points at 96 dpi
+
+// Compute (x,y) anchor and tile footprint for drawPage/drawImage given a CW rotation.
+// Both use translate(x,y)→rotate(angle)→scale→Do, so the same maths applies.
+function tileParams(srcW, srcH, deg, cellX, cellY){
+  if(deg===0)   return {x:cellX,       y:cellY,       tileW:srcW, tileH:srcH};
+  if(deg===90)  return {x:cellX,       y:cellY+srcW,  tileW:srcH, tileH:srcW};
+  if(deg===180) return {x:cellX+srcW,  y:cellY+srcH,  tileW:srcW, tileH:srcH};
+  if(deg===270) return {x:cellX+srcH,  y:cellY,       tileW:srcH, tileH:srcW};
+}
+
+// Strip CropBox / TrimBox / BleedBox / ArtBox so embedPages uses full MediaBox.
+function stripToMediaBox(page){
+  const {PDFName} = PDFLib;
+  for(const box of ['CropBox','TrimBox','BleedBox','ArtBox']){
+    page.node.delete(PDFName.of(box));
+  }
+}
+
+btnExport.addEventListener('click',exportPDF);
+
+// Embed one source file into outDoc and return tile geometry.
+// Returns {emb, srcW, srcH, tileW, tileH, deg, isImage}
+async function embedSource(outDoc, ft, rawBytes, selPage, deg, dpi=96){
+  const {PDFDocument, degrees} = PDFLib;
+
+  if(ft==='pdf'||(ft==='eps'&&rawBytes)){
+    // For EPS: try loading as PDF (works if file has embedded PDF preview).
+    // If it loads, great. If not, fall back to wrapping raw bytes in a PDF shell.
+    let srcDoc;
+    try {
+      srcDoc = await PDFDocument.load(rawBytes,{updateMetadata:false});
+    } catch(err) {
+      if(ft!=='eps') throw err;
+      throw new Error('This EPS has no embedded PDF data. Convert it to PDF (e.g. ps2pdf) for vector-safe export.');
+    }
+    const srcPage = srcDoc.getPage(Math.min(selPage, srcDoc.getPageCount()-1));
+    stripToMediaBox(srcPage);
+    const {width:srcW, height:srcH} = srcPage.getSize();
+    const [emb] = await outDoc.embedPages([srcPage]);
+    // /Rotate is ignored by embedded pages but honoured by the preview: apply it here
+    const dEff=(deg+(((srcPage.getRotation().angle%360)+360)%360))%360;
+    const {tileW,tileH} = tileParams(srcW,srcH,dEff,0,0);
+    return {emb, srcW, srcH, tileW, tileH, deg:dEff, isImage:false};
+  }
+
+  // PNG or JPEG — embed as raster image
+  const imgBytes = new Uint8Array(rawBytes);
+  const embImg = ft==='png'
+    ? (await pngPassthrough(outDoc,imgBytes) || await outDoc.embedPng(imgBytes))
+    : await outDoc.embedJpg(imgBytes);
+  // Size in PDF points at 96 DPI
+  const srcW = embImg.width  * 72/dpi;
+  const srcH = embImg.height * 72/dpi;
+  const {tileW,tileH} = tileParams(srcW,srcH,deg,0,0);
+  return {emb:embImg, srcW, srcH, tileW, tileH, deg, isImage:true};
+}
+
+// Draw one tile onto outPage, using drawPage or drawImage as appropriate.
+function drawTile(outPage, emb, isImage, x, y, srcW, srcH, deg){
+  const {degrees} = PDFLib;
+  if(isImage){
+    outPage.drawImage(emb, {x, y, width:srcW, height:srcH, rotate:degrees(-deg)});
+  } else {
+    outPage.drawPage(emb,  {x, y, width:srcW, height:srcH, rotate:degrees(-deg)});
+  }
+}
+
+async function exportPDF(){
+  const p=getParams();
+  setStatus('Building PDF…','busy');_exportWarn='';
+  setProgress(5);
+  btnExport.disabled=true; btnPrev.disabled=true;
+
+  try{
+    await loadPdfLib();
+    const {PDFDocument,rgb,degrees}=PDFLib;
+
+    if(mode==='single'){
+      if(!singleRawBytes) return;
+      setProgress(10);
+
+      const outDoc = await PDFDocument.create();
+      const ed = await embedSource(outDoc, singleFileType, singleRawBytes, singleSelPage-1, singleRotation, singleDPI);
+      setProgress(30);
+
+      const {emb,srcW,srcH,tileW,tileH,deg,isImage} = ed;
+      const tileWmm=tileW/PT_PER_MM, tileHmm=tileH/PT_PER_MM;
+      const centreIdx=(p.cols%2===0)?p.cols/2:0;
+      const cGXpt=p.centreGapX*PT_PER_MM;
+
+      const contentMmW=tileWmm*p.cols+(p.cols-1)*p.gapX+(centreIdx>0?p.centreGapX:0);
+      const bars=barLayout(p,p.marX*2+contentMmW);p.marX+=bars.side;
+      const {sheetPtW,sheetPtH} = calcSheet(p, contentMmW, tileHmm, p.cols);
+
+      const outPage = outDoc.addPage([sheetPtW,sheetPtH]);
+      if(p.bg==='white') outPage.drawRectangle({x:0,y:0,width:sheetPtW,height:sheetPtH,color:rgb(1,1,1)});
+
+      const gXpt=p.gapX*PT_PER_MM, gYpt=p.gapY*PT_PER_MM;
+      const mXpt=p.marX*PT_PER_MM, mYpt=p.marY*PT_PER_MM;
+      const total=p.rows*p.cols; let done=0;
+
+      for(let r=0;r<p.rows;r++) for(let c=0;c<p.cols;c++){
+        const extraX = centreIdx>0&&c>=centreIdx ? cGXpt : 0;
+        const cellX = mXpt + c*(tileW+gXpt) + extraX;
+        const cellY = sheetPtH - mYpt - (r+1)*tileH - r*gYpt;
+        const {x,y} = tileParams(srcW,srcH,deg,cellX,cellY);
+        drawTile(outPage, emb, isImage, x, y, srcW, srcH, deg);
+        done++; setProgress(30+Math.round((done/total)*62));
+      }
+      drawBarsPdf(outPage,bars,sheetPtW,sheetPtH);
+      await saveAndDownload(outDoc, `step-repeat-${p.cols}x${p.rows}.pdf`);
+
+    } else {
+      const activeCols = columns.filter(c=>c.rawBytes);
+      if(activeCols.length===0) return;
+      const numCols=activeCols.length, rows=p.rows;
+      setProgress(10);
+
+      const outDoc = await PDFDocument.create();
+      const embedData = [];
+
+      for(let ci=0;ci<numCols;ci++){
+        const col = activeCols[ci];
+        const ed = await embedSource(outDoc, col.fileType, col.rawBytes, col.selPage-1, col.rotation, col.dpi);
+        embedData.push(ed);
+        setProgress(10+Math.round(((ci+1)/numCols)*30));
+      }
+      setProgress(42);
+
+      const maxTileH   = Math.max(...embedData.map(e=>e.tileH));
+      const centreIdx  = (numCols%2===0)?numCols/2:0;
+      const cGXpt      = p.centreGapX*PT_PER_MM;
+      const totalRowPtW = embedData.reduce((s,e)=>s+e.tileW,0) + (numCols-1)*p.gapX*PT_PER_MM + (centreIdx>0?cGXpt:0);
+      const bars=barLayout(p,p.marX*2+totalRowPtW/PT_PER_MM);p.marX+=bars.side;
+      const {sheetPtW,sheetPtH} = calcSheet(p, totalRowPtW/PT_PER_MM, maxTileH/PT_PER_MM, numCols);
+
+      const outPage = outDoc.addPage([sheetPtW,sheetPtH]);
+      if(p.bg==='white') outPage.drawRectangle({x:0,y:0,width:sheetPtW,height:sheetPtH,color:rgb(1,1,1)});
+
+      const gXpt=p.gapX*PT_PER_MM, gYpt=p.gapY*PT_PER_MM;
+      const mXpt=p.marX*PT_PER_MM, mYpt=p.marY*PT_PER_MM;
+      const total=rows*numCols; let done=0;
+
+      for(let r=0;r<rows;r++){
+        let xCursor=mXpt;
+        for(let ci=0;ci<numCols;ci++){
+          const {emb,srcW,srcH,tileW,tileH,deg,isImage} = embedData[ci];
+          const yOff = (maxTileH-tileH)*0.5;
+          const cellX = xCursor;
+          const cellY = sheetPtH - mYpt - (r+1)*maxTileH - r*gYpt + yOff;
+          const {x,y} = tileParams(srcW,srcH,deg,cellX,cellY);
+          drawTile(outPage, emb, isImage, x, y, srcW, srcH, deg);
+          xCursor+=tileW+gXpt;
+          if(centreIdx>0&&ci+1===centreIdx) xCursor+=cGXpt;
+          done++; setProgress(42+Math.round((done/total)*50));
+        }
+      }
+      drawBarsPdf(outPage,bars,sheetPtW,sheetPtH);
+      await saveAndDownload(outDoc, `step-repeat-${numCols}col-x${rows}row.pdf`);
+    }
+
+    setProgress(100);
+    setTimeout(()=>setProgress(0),800);
+    setStatus('✓ Exported at full source quality'+(lastBars.on?` · bearer bars ${lastBars.bw}mm added in spot colour REGISTRATION`:' · no bearer bars (switch is off in section 06)')+(_exportWarn?' — '+_exportWarn:''),_exportWarn?'busy':'ok');
+
+  }catch(e){
+    setStatus('Export failed: '+e.message,'err');
+    console.error(e); setProgress(0);
+  }
+  btnExport.disabled=false; btnPrev.disabled=false; updateExportBtn();
+}
+
+// Sheet is always auto-fit: margins + tiles + gaps, exactly as previewed
+function calcSheet(p,contentMmW,contentMmH,numCols){
+  const sheetMmW=p.marX*2+contentMmW;
+  const sheetMmH=p.marY*2+p.rows*contentMmH+(p.rows-1)*p.gapY;
+  return {sheetPtW:sheetMmW*PT_PER_MM,sheetPtH:sheetMmH*PT_PER_MM};
+}
+
+async function saveAndDownload(doc,filename){
+  setProgress(94);
+  await new Promise(r=>setTimeout(r,0));
+  const bytes=await doc.save();
+  const blob=new Blob([bytes],{type:'application/pdf'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),4000);
+}
+
+// ─── v2 additions ─────────────────────────────────────────────
+function esc(t){return String(t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+
+// pdf-lib is only needed for export: load it off the critical path
+let _pdfLibP;
+function loadPdfLib(){
+  if(window.PDFLib) return Promise.resolve();
+  return _pdfLibP||(_pdfLibP=new Promise((res,rej)=>{
+    const el=document.createElement('script');
+    el.src='https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js';
+    el.onload=res; el.onerror=()=>{_pdfLibP=null;rej(new Error('Could not load pdf-lib (offline?)'))};
+    document.head.appendChild(el);
+  }));
+}
+(window.requestIdleCallback||setTimeout)(()=>loadPdfLib().catch(()=>{}));
+
+// Embedded resolution of raster files (PNG pHYs, JPEG JFIF); 96 dpi when absent
+function rasterDPI(u8,ft){
+  let d=0;
+  try{
+    const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);
+    if(ft==='png'){
+      for(let o=8;o+12<=u8.length;){
+        const len=dv.getUint32(o),type=String.fromCharCode(u8[o+4],u8[o+5],u8[o+6],u8[o+7]);
+        if(type==='pHYs'){ if(u8[o+16]===1) d=dv.getUint32(o+8)*0.0254; break; }
+        if(type==='IDAT'||type==='IEND') break;
+        o+=12+len;
+      }
+    } else {
+      let jf=0,ex=0;
+      for(let o=2;o+4<=u8.length&&u8[o]===0xFF;){
+        const m=u8[o+1],len=dv.getUint16(o+2);
+        if(m===0xE0&&u8[o+4]===0x4A&&u8[o+5]===0x46){const un=u8[o+11],x=dv.getUint16(o+12);jf=un===1?x:un===2?x*2.54:0}
+        if(m===0xE1&&u8[o+4]===0x45&&u8[o+5]===0x78){ // "Ex"if
+          const t=o+10,le=dv.getUint16(t)===0x4949,g16=p=>dv.getUint16(p,le),g32=p=>dv.getUint32(p,le);
+          const ifd=t+g32(t+4),n=g16(ifd);let x=0,un=2;
+          for(let i=0;i<n;i++){const e=ifd+2+i*12,tag=g16(e);
+            if(tag===0x011A){const q=t+g32(e+8);x=g32(q)/(g32(q+4)||1)} else if(tag===0x0128) un=g16(e+8);}
+          ex=un===3?x*2.54:x;
+        }
+        if(m===0xDA) break;
+        o+=2+len;
+      }
+      d=ex>=36?ex:jf;
+    }
+  }catch(_){}
+  return d>=36&&d<=2400?d:96;
+}
+
+// Rendered source pages are cached per document/page/dpi
+const _srcCache=new WeakMap();
+function srcToCanvas(ft,doc,bmp,w,h,page,name,dpi=96){
+  const k=doc||bmp;
+  if(!k) return srcToCanvasRaw(ft,doc,bmp,w,h,page,name,dpi);
+  let m=_srcCache.get(k); if(!m) _srcCache.set(k,m=new Map());
+  const key=page+'|'+dpi;
+  if(!m.has(key)) m.set(key,srcToCanvasRaw(ft,doc,bmp,w,h,page,name,dpi).catch(e=>{m.delete(key);throw e}));
+  return m.get(key);
+}
+
+// Serialise preview renders so rapid edits can't interleave
+let _rpBusy=false,_rpAgain=false;
+async function renderPreview(){
+  if(_rpBusy){_rpAgain=true;return}
+  _rpBusy=true;
+  try{do{_rpAgain=false;await renderPreviewNow()}while(_rpAgain)}finally{_rpBusy=false}
+}
+
+function sheetTxt(){
+  const t=`${lastContent.w.toFixed(1)} × ${lastContent.h.toFixed(1)} mm`;
+  const el=document.getElementById('sheet-size'); if(el) el.textContent=t;
+  const g=document.getElementById('bar-gap'); if(g) g.placeholder=lastBars.on?`auto (${lastBars.minGap.toFixed(1)})`:'auto';
+  return t;
+}
+
+// Live preview, debounced
+let _liveT;
+function live(){
+  clearTimeout(_liveT);
+  _liveT=setTimeout(()=>{
+    if(mode==='single'?singleRawBytes:columns.some(c=>c.rawBytes)) renderPreview();
+  },160);
+}
+const asideEl=document.querySelector('aside');
+asideEl.addEventListener('input',live);
+asideEl.addEventListener('change',live);
+asideEl.addEventListener('click',e=>{if(e.target.closest('.pill,.rot-pill'))live()});
+
+// ─── Lossless raster embedding ────────────────────────────────
+// JPEG: pdf-lib passes the original DCT data straight through (no re-encode).
+// PNG: pass the original compressed IDAT data through untouched (any bit depth,
+// incl. 16-bit, grey / RGB / indexed). Interlaced PNGs and PNGs with transparency
+// fall back to pdf-lib's lossless re-encode (16-bit + alpha is reduced to 8-bit).
+let _exportWarn='';
+const _TINY_PNG='data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
+async function pngPassthrough(outDoc,u8){
+  const {PDFName,PDFHexString,PDFRawStream,PDFImage}=PDFLib;
+  const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);
+  let o=8,h=null,plte=null,trns=false;const idat=[];
+  while(o+12<=u8.length){
+    const len=dv.getUint32(o),t=String.fromCharCode(u8[o+4],u8[o+5],u8[o+6],u8[o+7]),d=u8.subarray(o+8,o+8+len);
+    if(t==='IHDR') h={w:dv.getUint32(o+8),h:dv.getUint32(o+12),bd:u8[o+16],ct:u8[o+17],il:u8[o+20]};
+    else if(t==='PLTE') plte=d; else if(t==='tRNS') trns=true; else if(t==='IDAT') idat.push(d);
+    else if(t==='IEND') break;
+    o+=12+len;
+  }
+  if(!h||!idat.length) return null;
+  if(h.il||trns||h.ct===4||h.ct===6||(h.ct===3&&!plte)){
+    if(h.bd===16&&(h.ct===4||h.ct===6)) _exportWarn='16-bit PNG with transparency was reduced to 8-bit';
+    return null;
+  }
+  const n=idat.reduce((a,b)=>a+b.length,0),data=new Uint8Array(n);
+  let p=0;for(const b of idat){data.set(b,p);p+=b.length}
+  const ctx=outDoc.context;
+  const cs=h.ct===0?PDFName.of('DeviceGray'):h.ct===2?PDFName.of('DeviceRGB')
+    :ctx.obj([PDFName.of('Indexed'),PDFName.of('DeviceRGB'),plte.length/3-1,
+        PDFHexString.of(Array.from(plte,b=>b.toString(16).padStart(2,'0')).join(''))]);
+  const dict=ctx.obj({Type:'XObject',Subtype:'Image',Width:h.w,Height:h.h,ColorSpace:cs,
+    BitsPerComponent:h.bd,Filter:'FlateDecode',
+    DecodeParms:{Predictor:15,Colors:h.ct===2?3:1,BitsPerComponent:h.bd,Columns:h.w}});
+  const ref=ctx.register(PDFRawStream.of(dict,data));
+  // pdf-lib only accepts its own image wrapper: borrow one from a 1×1 PNG, then point it at our stream
+  const img=await outDoc.embedPng(_TINY_PNG);
+  img.ref=ref;img.width=h.w;img.height=h.h;img.embedder=undefined;
+  return img;
+}
+
+// Tile size readout; width (mm) and resolution (ppi) are two views of the same setting
+function syncTileMm(setWidthField){
+  if(!singleImgW) return;
+  const w=singleImgW/singleDPI*25.4,h=singleImgH/singleDPI*25.4;
+  if(setWidthField) document.getElementById('single-wmm').value=+w.toFixed(2);
+  document.getElementById('single-tilemm').textContent=`${singleImgW}×${singleImgH} px → tile ${w.toFixed(1)} × ${h.toFixed(1)} mm`;
+}
+document.getElementById('single-dpi').addEventListener('input',e=>{
+  singleDPI=Math.min(2400,Math.max(36,parseFloat(e.target.value)||96)); syncTileMm(true);
+});
+document.getElementById('single-wmm').addEventListener('input',e=>{
+  const mm=parseFloat(e.target.value); if(!(mm>0)||!singleImgW) return;
+  singleDPI=Math.min(2400,Math.max(36,singleImgW*25.4/mm));
+  document.getElementById('single-dpi').value=+singleDPI.toFixed(3); syncTileMm(false);
+});
+
+// ─── Colour skins ─────────────────────────────────────────────
+let guideRGB='230,0,126';
+function guideCol(a){return `rgba(${guideRGB},${a})`}
+function applySkin(name,save){
+  const root=document.documentElement,btns=[...document.querySelectorAll('#skins button')];
+  if(!btns.some(b=>b.dataset.skin===name)) name='workbench';
+  root.dataset.skin=name;
+  btns.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.skin===name)));
+  guideRGB=getComputedStyle(root).getPropertyValue('--guide').trim()||'230,0,126';
+  if(save){try{localStorage.setItem('sr-skin',name)}catch(_){}}
+  live(); // redraw the preview with the skin's guide colour
+}
+document.getElementById('skins').addEventListener('click',e=>{const b=e.target.closest('button');if(b)applySkin(b.dataset.skin,true)});
+applySkin(document.documentElement.dataset.skin||'workbench',false);
+
+// ─── Bearer bars ──────────────────────────────────────────────
+// Bars sit on the outer edges of the sheet. The sheet widens to hold them, and the
+// artwork block is centred between them. Gap = distance between the bars' inner edges
+// (never smaller than the artwork block incl. its margins, so bars can't overlap it).
+let lastBars={on:false};
+function readBars(){
+  const on=document.getElementById('bar-on').checked, act=document.querySelector('#bar-w .pill.active');
+  return {on, w:act?+act.dataset.bw:5,
+    gap:parseFloat(document.getElementById('bar-gap').value)||0,
+    adj:parseFloat(document.getElementById('bar-adj').value)||0,
+    hole:parseFloat(document.getElementById('bar-hole').value)||0,
+    inset:(v=>isNaN(v)?5:Math.max(0,v))(parseFloat(document.getElementById('bar-inset').value))};
+}
+function barLayout(p,layoutMmW){
+  const b=p.bars;
+  if(!b.on) return (lastBars={on:false,side:0,bw:0,gap:0,minGap:0,clamped:false});
+  const gap=b.gap>0?Math.max(b.gap,layoutMmW):layoutMmW;
+  return (lastBars={on:true,bw:b.w,gap,minGap:layoutMmW,side:b.w+(gap-layoutMmW)/2,
+    adj:b.adj,hole:b.hole,inset:b.inset,clamped:b.gap>0&&b.gap<layoutMmW-0.001});
+}
+function barTxt(){return lastBars.on?`  ·  bearer bars ${lastBars.bw}mm (REGISTRATION), gap ${lastBars.gap.toFixed(1)}mm`:''}
+// Geometry in mm, y measured from the TOP of the sheet. Bars are full height ± adj, centred vertically.
+// Each bar has three crosshair holes: one at the middle, and one near each end, `inset` mm in from the page edge.
+function barGeom(bars,W,H){
+  const w=bars.bw, len=Math.max(5,H+bars.adj), y=(H-len)/2;
+  let d=bars.hole>0?bars.hole:w*0.6; d=Math.min(d,Math.max(0.2,w-0.2));
+  const top=Math.max(y,0), bot=Math.min(y+len,H), ins=Math.min(bars.inset,(bot-top)/2);
+  const ys=[H/2];
+  if(ins>=d/2+0.2){ys.unshift(top+ins);ys.push(bot-ins)}
+  return [0,W-w].map(x=>({x,y,w,h:len,cx:x+w/2,r:d/2,ys}));
+}
+function drawBarsPreview(ctx,bars,Wpx,Hpx){
+  if(!bars.on) return;
+  const k=Wpx/lastContent.w;           // canvas px per mm
+  ctx.save(); ctx.fillStyle='#000'; ctx.strokeStyle='#000'; ctx.lineWidth=Math.max(0.6,0.09*k);
+  for(const g of barGeom(bars,lastContent.w,lastContent.h)){
+    ctx.beginPath(); ctx.rect(g.x*k,g.y*k,g.w*k,g.h*k);
+    for(const cy of g.ys){ctx.moveTo((g.cx+g.r)*k,cy*k); ctx.arc(g.cx*k,cy*k,g.r*k,0,Math.PI*2,true)}
+    ctx.fill('evenodd');                // circles are true cutouts
+    ctx.beginPath();
+    for(const cy of g.ys){
+      ctx.moveTo((g.cx-g.r)*k,cy*k); ctx.lineTo((g.cx+g.r)*k,cy*k);
+      ctx.moveTo(g.cx*k,(cy-g.r)*k); ctx.lineTo(g.cx*k,(cy+g.r)*k);
+    }
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+function drawBarsPdf(page,bars,sheetPtW,sheetPtH){
+  if(!bars.on) return;
+  const L=PDFLib,K=0.5522847498,M=PT_PER_MM,H=sheetPtH/M;
+  // Named spot colour "REGISTRATION": Separation space, 100% tint, CMYK alternate = C+M+Y+K 100%
+  const ctx=page.doc.context, CS='CS_REGISTRATION', res=page.node.normalizedEntries().Resources;
+  let csd=res.lookup(L.PDFName.of('ColorSpace'));
+  if(!csd){csd=ctx.obj({});res.set(L.PDFName.of('ColorSpace'),csd)}
+  if(!csd.get(L.PDFName.of(CS))){
+    const fn=ctx.obj({FunctionType:2,Domain:[0,1],C0:[0,0,0,0],C1:[1,1,1,1],N:1});
+    csd.set(L.PDFName.of(CS),ctx.obj([L.PDFName.of('Separation'),L.PDFName.of('REGISTRATION'),L.PDFName.of('DeviceCMYK'),fn]));
+  }
+  const nm=L.PDFName.of(CS),one=L.PDFNumber.of(1);
+  const ops=[L.pushGraphicsState(),
+    L.PDFOperator.of('cs',[nm]),L.PDFOperator.of('scn',[one]),   // fill  = REGISTRATION 100%
+    L.PDFOperator.of('CS',[nm]),L.PDFOperator.of('SCN',[one]),   // stroke = REGISTRATION 100%
+    L.setLineWidth(0.25)];
+  for(const g of barGeom(bars,sheetPtW/M,H)){
+    const x=g.x*M,w=g.w*M,yb=(H-g.y-g.h)*M,yt=(H-g.y)*M,cx=g.cx*M,r=g.r*M;
+    // bar clockwise, holes counter-clockwise => non-zero fill leaves the circles empty
+    ops.push(L.moveTo(x,yb),L.lineTo(x,yt),L.lineTo(x+w,yt),L.lineTo(x+w,yb),L.closePath());
+    for(const my of g.ys){
+      const cy=(H-my)*M;
+      ops.push(L.moveTo(cx+r,cy),
+        L.appendBezierCurve(cx+r,cy+K*r,cx+K*r,cy+r,cx,cy+r),
+        L.appendBezierCurve(cx-K*r,cy+r,cx-r,cy+K*r,cx-r,cy),
+        L.appendBezierCurve(cx-r,cy-K*r,cx-K*r,cy-r,cx,cy-r),
+        L.appendBezierCurve(cx+K*r,cy-r,cx+r,cy-K*r,cx+r,cy),L.closePath());
+    }
+    ops.push(L.fill());
+    for(const my of g.ys){
+      const cy=(H-my)*M;
+      ops.push(L.moveTo(cx-r,cy),L.lineTo(cx+r,cy),L.moveTo(cx,cy-r),L.lineTo(cx,cy+r));
+    }
+    ops.push(L.stroke());
+  }
+  ops.push(L.popGraphicsState());
+  page.pushOperators(...ops);
+}
+document.getElementById('bar-on').addEventListener('change',e=>document.getElementById('bar-opts').classList.toggle('off',!e.target.checked));
+document.getElementById('bar-w').addEventListener('click',e=>{
+  const p=e.target.closest('.pill'); if(!p) return;
+  document.querySelectorAll('#bar-w .pill').forEach(x=>x.classList.toggle('active',x===p));
+});
+</script>
+</body>
+</html>
