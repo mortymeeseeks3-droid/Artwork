@@ -237,6 +237,20 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
 .modal .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:9px 0}
 .modal .row>label{min-width:104px;color:var(--mut);font-size:12.5px}
 .modal .row>label:has(input[type=checkbox]){display:flex;align-items:center;gap:8px;color:var(--tx);font-size:13px}
+.pal{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 4px}.pal .psw{width:22px;height:22px;min-height:0;padding:0;border-radius:4px;border:1px solid rgba(var(--grid),.35);cursor:pointer;position:relative}
+.pal .psw.spot::after{content:'';position:absolute;right:1px;bottom:1px;width:6px;height:6px;border-radius:50%;background:#fff;border:1px solid #000}
+.pal .psw.on{outline:2px solid var(--m7);outline-offset:1px}.pal .pgrp{flex:0 0 100%;font-size:11.5px;color:var(--dim);margin-top:4px}
+.pal.big{max-height:190px;overflow:auto;margin-top:0;padding:2px}.pal.big .psw{width:26px;height:26px}
+.rpfrom{display:flex;align-items:center;gap:8px;font-size:13px;min-width:0}.rpfrom .sw{width:22px;height:22px}
+.fsub{font-size:11.5px;color:var(--dim);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.5px}
+.frow{padding:6px 9px;margin-bottom:4px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;cursor:pointer;font-size:13px}
+.frow.sel{border-color:var(--m7)}.frow b{display:block;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.frow small{color:var(--dim);font:11.5px var(--num)}
+.frow .bad{color:var(--bad)}.frow .ok{color:var(--ok)}
+.anch{display:grid;grid-template-columns:repeat(3,18px);gap:3px}.anch button{width:18px;height:18px;min-height:0;padding:0;border-radius:3px}.anch button.on{background:var(--m7);border-color:var(--m7)}
+.modal.side{background:transparent;pointer-events:none;justify-content:flex-end;align-items:flex-start;padding:112px 18px 18px}
+.modal.side .box{pointer-events:auto;width:min(470px,100%);max-height:calc(100vh - 140px)}
+#stage.cropdraw{cursor:crosshair;touch-action:none}
+@media (max-width:700px){.modal.side{padding:0;align-items:flex-end}.modal.side .box{max-height:58vh;width:100%}}
 #mResize .rzq{display:flex;flex-wrap:wrap;gap:4px}
 .modal .foot{display:flex;justify-content:flex-end;gap:6px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
 .flist{border:1px solid var(--line2);border-radius:6px;min-height:90px;max-height:300px;overflow:auto;background:var(--well)}
@@ -335,6 +349,7 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
       <hr><button data-cmd="combine">Combine files…</button>
       <button data-cmd="split" data-need="doc">Split document…</button>
       <button data-cmd="resize" data-need="doc">Resize / scale pages…</button>
+      <button data-cmd="crop" data-need="doc">Crop pages…</button>
       <button data-cmd="img">Create PDF from images…</button>
       <hr><button data-cmd="export" data-need="doc">Export as image…</button>
     </div></div>
@@ -344,6 +359,8 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
       <hr><button data-cmd="inspect" data-need="doc">Select &amp; inspect<kbd>I</kbd></button>
       <button data-cmd="edit" data-need="doc">Edit text<kbd>E</kbd></button>
       <button data-cmd="resize" data-need="doc">Resize / scale pages…</button>
+      <button data-cmd="crop" data-need="doc">Crop pages…</button>
+      <button data-cmd="repl" data-need="doc">Replace colour…</button>
       <hr><button data-cmd="strip" data-need="op">Remove all overprint</button>
     </div></div>
     <div class="menu"><button class="mbtn">View</button><div class="drop">
@@ -368,7 +385,11 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
       <button data-cmd="combine">Combine files…</button>
       <button data-cmd="split" data-need="doc">Split document…</button>
       <button data-cmd="resize" data-need="doc">Resize / scale…</button>
-      <button data-cmd="img">Images to PDF…</button>
+      <button data-cmd="crop" data-need="doc">Crop pages…</button>
+      <button data-cmd="repl" data-need="doc">Replace colour…</button>
+      <hr><button data-cmd="ase">Load .ase colour palette…</button>
+      <button data-cmd="fontdir">Load font folder…</button>
+      <hr><button data-cmd="img">Images to PDF…</button>
       <button data-cmd="export" data-need="doc">Export as image…</button>
       <hr><button data-cmd="t2p" data-need="doc">Text to paths (outline all fonts)</button>
       <button data-cmd="t2pfiles">Text to paths – other files…</button>
@@ -449,6 +470,7 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
         <button id="bImg">Images to PDF…</button>
         <button id="bSplit" disabled>Split document…</button>
         <button id="bResize" disabled>Resize / scale…</button>
+        <button id="bCrop" disabled>Crop pages…</button>
         <button id="bExport" disabled>Export as image…</button>
         <button id="bT2P">Text to paths…</button>
         <button id="bSave2" disabled>Save PDF</button>
@@ -484,6 +506,19 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
       </div></section>
       <section class="acc open"><h4>Colours in document <span id="colStat" class="hint"></span></h4><div class="ab">
         <div class="inks" id="inks"></div><div id="colours"><span class="hint">—</span></div>
+        <div class="sepbtns" style="margin-top:6px"><button id="bRepl" class="sm" disabled title="Click a colour above to select it">Replace selected colour…</button></div>
+      </div></section>
+      <section class="acc open" id="secPal"><h4>Colour palette (.ase) <span id="palStat" class="hint"></span></h4><div class="ab">
+        <div class="sepbtns"><button id="bPalLoad" class="sm">Load .ase…</button><button id="bPalClear" class="sm" disabled>Clear</button><input type="file" id="fAse" accept=".ase,application/octet-stream" hidden></div>
+        <div id="palGrid" class="pal"><span class="hint">No palette loaded. Swatches are kept between sessions.</span></div>
+        <div class="hint" id="palSel"></div>
+      </div></section>
+      <section class="acc open" id="secFonts"><h4>Fonts <span id="fontStat" class="hint"></span></h4><div class="ab">
+        <div class="sepbtns"><button id="bFontDir" class="sm">Load font folder…</button><button id="bFontFiles" class="sm">Add font files…</button><button id="bFontClear" class="sm" disabled>Clear</button>
+          <input type="file" id="fFontDir" webkitdirectory directory multiple hidden><input type="file" id="fFontFiles" accept=".ttf,.otf,font/ttf,font/otf" multiple hidden></div>
+        <div class="hint" id="fontLoaded">No fonts loaded. Loaded fonts are used when editing text and are kept between sessions.</div>
+        <div class="fsub">Used in this document</div>
+        <div id="fontList"><span class="hint">—</span></div>
       </div></section>
       <section class="acc open" id="secProps"><h4>Document</h4><div class="ab"><div class="kv" id="docInfo"><span>No file</span><b>—</b></div></div></section>
     </div>
@@ -529,6 +564,50 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
   <div class="hint" id="rzPreview" style="white-space:pre-line;margin-top:8px"></div>
   <div class="hint">Vector scaling: text, paths, images, spot colours, layers and overprint are kept. Line weights scale with the artwork.</div>
   <div class="foot"><button data-close>Cancel</button><button class="pri" id="rzGo">Apply</button></div>
+</div></div>
+
+<div class="modal side" id="mCrop"><div class="box">
+  <h2>Crop pages</h2>
+  <div class="row"><label>Crop to</label><select id="crMethod"><option value="trim">Trim box</option><option value="bleed">Trim box + bleed</option><option value="margins">Remove margins</option><option value="size">Exact size</option></select></div>
+  <div class="row"><label></label><button id="crDraw" class="sm">Draw crop area on page</button><span class="hint" id="crDrawHint"></span></div>
+  <div class="row" id="crBleedRow"><label>Bleed</label><input type="number" id="crBleed" value="3" min="0" step="0.1" style="width:80px"> <span class="hint">mm each side of the trim</span></div>
+  <div id="crMarg">
+    <div class="row"><label>Top / Bottom</label><input type="number" id="crT" value="10" step="0.1" style="width:76px"><input type="number" id="crB" value="10" step="0.1" style="width:76px"> <span class="hint">mm</span></div>
+    <div class="row"><label>Left / Right</label><input type="number" id="crL" value="10" step="0.1" style="width:76px"><input type="number" id="crR" value="10" step="0.1" style="width:76px"> <span class="hint">mm</span></div>
+    <div class="row"><label></label><label style="min-width:0"><input type="checkbox" id="crSame"> Same on all sides</label></div>
+  </div>
+  <div id="crSize">
+    <div class="row"><label>Size</label><select id="crPreset"><option value="c">Custom</option><option>A6</option><option>A5</option><option>A4</option><option>A3</option><option>Letter</option></select><input type="number" id="crW" value="100" min="1" step="0.1" style="width:76px"> × <input type="number" id="crH" value="100" min="1" step="0.1" style="width:76px"> <span class="hint">mm</span></div>
+    <div class="row"><label>Anchor</label><div class="anch" id="crAnch"><button data-a="0"></button><button data-a="1"></button><button data-a="2"></button><button data-a="3"></button><button data-a="4" class="on"></button><button data-a="5"></button><button data-a="6"></button><button data-a="7"></button><button data-a="8"></button></div><div class="row" style="margin:0;gap:4px"><span class="hint">Offset X</span><input type="number" id="crOX" value="0" step="0.1" style="width:66px"><span class="hint">Y</span><input type="number" id="crOY" value="0" step="0.1" style="width:66px"><span class="hint">mm</span></div></div>
+  </div>
+  <div class="row"><label>Measure from</label><select id="crFrom"><option value="crop">Visible page (crop box)</option><option value="media">Media box</option><option value="trim">Trim box</option></select></div>
+  <div class="row"><label>Apply as</label><select id="crHow"><option value="media">Permanent – new page size</option><option value="crop">Crop box only (keeps hidden content)</option></select></div>
+  <div class="row"><label></label><label style="min-width:0"><input type="checkbox" id="crSetTrim"> Set trim box to the cropped area</label></div>
+  <div class="row"><label>Pages</label><select id="crPages"><option value="all">All pages</option><option value="cur">Current page</option><option value="range">Range…</option></select><input type="text" id="crRange" placeholder="1-3, 5" style="display:none;flex:1"></div>
+  <div class="hint" id="crPreview" style="white-space:pre-line;margin-top:8px"></div>
+  <div class="foot"><button data-close>Cancel</button><button class="pri" id="crGo">Crop</button></div>
+</div></div>
+
+<div class="modal" id="mRepl"><div class="box">
+  <h2>Replace colour</h2>
+  <div class="row"><label>Replace</label><div id="rpFrom" class="rpfrom"></div></div>
+  <div class="row" style="align-items:flex-start"><label>With</label><div style="flex:1;min-width:0">
+    <div id="rpPal" class="pal big"></div>
+    <div class="hint" id="rpPalHint"></div>
+    <div class="row" style="margin:6px 0 0"><label style="min-width:0"><input type="checkbox" id="rpCustom"> Custom colour</label><button id="rpLoadAse" class="sm">Load .ase…</button></div>
+    <div id="rpCustomRow" style="display:none">
+      <div class="row" style="margin:6px 0"><span class="hint" style="width:44px">Name</span><input type="text" id="rpName" placeholder="e.g. PANTONE 185 C" style="flex:1"></div>
+      <div class="row" style="margin:6px 0"><span class="hint" style="width:44px">CMYK</span><input type="number" id="rpC" min="0" max="100" value="0" style="width:58px"><input type="number" id="rpM" min="0" max="100" value="100" style="width:58px"><input type="number" id="rpY" min="0" max="100" value="80" style="width:58px"><input type="number" id="rpK" min="0" max="100" value="0" style="width:58px"><span class="hint">%</span></div>
+    </div>
+  </div></div>
+  <div class="row"><label>New colour</label><div id="rpTo" class="rpfrom"><span class="hint">Choose a swatch</span></div></div>
+  <div class="row"><label>Output as</label><select id="rpAs"><option value="spot">Spot colour (named separation)</option><option value="cmyk">Process CMYK</option></select></div>
+  <div class="row" id="rpRedefRow"><label></label><label style="min-width:0"><input type="checkbox" id="rpRedef" checked> Redefine the spot ink everywhere (also images, gradients, tints – whole document)</label></div>
+  <div class="row" id="rpTintRow"><label></label><label style="min-width:0"><input type="checkbox" id="rpTint" checked> Keep tint percentages</label></div>
+  <div class="row" id="rpRolesRow"><label>Apply to</label><label style="min-width:0"><input type="checkbox" id="rpFill" checked> Fills</label><label style="min-width:0"><input type="checkbox" id="rpStroke" checked> Strokes</label><label style="min-width:0"><input type="checkbox" id="rpText" checked> Text</label></div>
+  <div class="row" id="rpPagesRow"><label>Pages</label><select id="rpPages"><option value="all">All pages</option><option value="cur">Current page</option><option value="range">Range…</option></select><input type="text" id="rpRange" placeholder="1-3, 5" style="display:none;flex:1"></div>
+  <div class="hint" id="rpInfo" style="white-space:pre-line;margin-top:8px"></div>
+  <div class="foot"><button data-close>Cancel</button><button class="pri" id="rpGo" disabled>Replace</button></div>
 </div></div>
 
 <div class="modal" id="mCombine"><div class="box">
@@ -1632,14 +1711,22 @@ function colourSetOps(c, stroke) {
   return `${nm2} ${stroke ? 'CS' : 'cs'} ${v}${c.pat ? ' ' + PDFName.of(c.pat.name).toString() : ''} ${stroke ? 'SCN' : 'scn'}`;
 }
 /* a Separation colour space for a named spot with a CMYK alternate */
+function altCSFn(alt) { // alt: [c,m,y,k] or {sp:'cmyk'|'rgb'|'lab'|'gray', v}
+  const ctx = E.lib.context; const a = Array.isArray(alt) ? { sp: 'cmyk', v: alt } : alt; const r = x => +(+x).toFixed(4);
+  const fn = (c0, c1) => ctx.obj({ FunctionType: 2, Domain: [0, 1], C0: c0, C1: c1.map(r), N: 1 });
+  if (a.sp === 'lab') return [ctx.obj(['Lab', ctx.obj({ WhitePoint: [0.9642, 1, 0.8249], Range: [-128, 127, -128, 127] })]), fn([100, 0, 0], a.v)];
+  if (a.sp === 'rgb') return [PDFName.of('DeviceRGB'), fn([1, 1, 1], a.v)];
+  if (a.sp === 'gray') return [PDFName.of('DeviceGray'), fn([1], a.v)];
+  return [PDFName.of('DeviceCMYK'), fn([0, 0, 0, 0], a.v)];
+}
 function spotCSObj(name, alt) {
-  const ctx = E.lib.context;
-  return ctx.register(ctx.obj(['Separation', PDFName.of(name), 'DeviceCMYK', ctx.obj({ FunctionType: 2, Domain: [0, 1], C0: [0, 0, 0, 0], C1: alt.map(x => +(+x).toFixed(4)), N: 1 })]));
+  const ctx = E.lib.context; const [cs, fn] = altCSFn(alt);
+  return ctx.register(ctx.obj(['Separation', PDFName.of(name), cs, fn]));
 }
 /* register (or reuse) a spot colour space in a resource dict, return its resource name */
 function spotResName(holder, name, alt, cache) {
   const res = resDictFor(holder); const csd = subDict(res, 'ColorSpace');
-  const key = name + '|' + alt.join(',');
+  const key = name + '|' + JSON.stringify(alt);
   cache.refs = cache.refs || new Map();
   let ref = cache.refs.get(key); if (!ref) { ref = spotCSObj(name, alt); cache.refs.set(key, ref); }
   for (const [k, v] of csd.entries()) if (v === ref) return k.decodeText();
@@ -1670,12 +1757,12 @@ function recolourObjects(list, target, keepTint) {
 /* redefine every Separation / DeviceN use of a spot name (covers images, gradients, tints) */
 function redefineSpot(oldName, newName, alt) {
   const ctx = E.lib.context; let n = 0; const seen = new Set();
-  const fnObj = () => ctx.obj({ FunctionType: 2, Domain: [0, 1], C0: [0, 0, 0, 0], C1: alt.map(x => +(+x).toFixed(4)), N: 1 });
+
   const walk = o => {
     if (!o || seen.has(o)) return;
     if (o instanceof PDFArray) {
       seen.add(o); const a = o.asArray(); const fam = a[0] instanceof PDFName ? a[0].decodeText() : null;
-      if (fam === 'Separation' && a[1] instanceof PDFName && a[1].decodeText() === oldName) { o.set(1, PDFName.of(newName)); o.set(2, PDFName.of('DeviceCMYK')); o.set(3, fnObj()); n++; }
+      if (fam === 'Separation' && a[1] instanceof PDFName && a[1].decodeText() === oldName) { const [cs, fn] = altCSFn(alt); o.set(1, PDFName.of(newName)); o.set(2, cs); o.set(3, fn); n++; }
       else if (fam === 'DeviceN') { const names = L(a[1]); if (names instanceof PDFArray) names.asArray().forEach((x, i) => { if (x instanceof PDFName && x.decodeText() === oldName) { names.set(i, PDFName.of(newName)); n++; } }); }
       for (const v of a) if (v instanceof PDFDict || v instanceof PDFArray) walk(v);
     } else if (o instanceof PDFDict) { seen.add(o); for (const [, v] of o.entries()) if (v instanceof PDFDict || v instanceof PDFArray) walk(v); }
@@ -1735,7 +1822,7 @@ async function openFile(file) {
   try {
     busy(true, 'Loading ' + file.name + '…');
     const bytes = new Uint8Array(await file.arrayBuffer());
-    S.undo = []; S.redo = []; S.edited = false; S.name = file.name; S.sepHidden = new Set(); S.ocVis = {}; S.page = 1; S.fit = 'page'; S.hiKey = null; S.pinned = null;
+    S.undo = []; S.redo = []; S.edited = false; S.hiFont = null; S.name = file.name; S.sepHidden = new Set(); S.ocVis = {}; S.page = 1; S.fit = 'page'; S.hiKey = null; S.pinned = null;
     await openBytes(bytes, false);
   } catch (e) { console.error(e); toast('Could not open PDF: ' + e.message, true); }
   finally { busy(false); }
@@ -1765,7 +1852,7 @@ async function openBytes(bytes, keep) {
 }
 function updateUI() {
   const has = !!S.jsDoc;
-  ['#bSave', '#bSave2', '#bExport', '#bSplit', '#bResize', '#bOP', '#cbOP', '#bPrev', '#bNext', '#tEdit'].forEach(s => $(s).disabled = !has);
+  ['#bSave', '#bSave2', '#bExport', '#bSplit', '#bResize', '#bCrop', '#bOP', '#cbOP', '#bPrev', '#bNext', '#tEdit'].forEach(s => $(s).disabled = !has);
   $('#bOPStrip').disabled = !has || !S.opCount;
   $('#bUndo').disabled = !S.undo.length; $('#bRedo').disabled = !S.redo.length;
   $('#drop').classList.toggle('hide', has); $('#pagewrap').classList.toggle('empty', !has);
@@ -1962,7 +2049,7 @@ function zoom(f) { if (!S.jsDoc) return; S.fit = null; S.scale = Math.max(0.05, 
 
 /* ---------- colour scanning (whole document) ---------- */
 async function scanColours() {
-  const g = S.gen; const all = new Map(); S.colours = all;
+  const g = S.gen; const all = new Map(); S.colours = all; S.fonts = new Map();
   for (let p = 1; p <= S.n; p++) {
     if (g !== S.gen) return;
     let d = S.pcache.get(p);
@@ -1971,12 +2058,14 @@ async function scanColours() {
       let a = all.get(k); if (!a) { a = { ...e, count: 0, roles: new Set(), tints: new Set(), pages: new Set() }; all.set(k, a); }
       a.count += e.count; e.roles.forEach(r => a.roles.add(r)); e.tints.forEach(t => a.tints.add(t)); a.pages.add(p);
     }
+    fontsFrom(d, p);
     $('#colStat').textContent = p < S.n ? `scanning ${p}/${S.n}` : '';
-    if (p % 3 === 0 || p === S.n) { renderColours(); await tick(); }
+    if (p % 3 === 0 || p === S.n) { renderColours(); renderFonts(); await tick(); }
   }
   renderColours();
 }
 function renderColours() {
+  $('#bRepl').disabled = !S.jsDoc || !S.hiKey || !S.colours.has(S.hiKey);
   const list = [...S.colours.values()];
   const inks = new Map();
   for (const c of list) for (const i of c.inks || []) { if (i.process && i.t <= 0) continue; if (!i.process && !i.spot) continue; if (!inks.has(i.name)) inks.set(i.name, i); }
@@ -1993,6 +2082,7 @@ function renderColours() {
     const tints = c.kind === 'spot' && c.tints.size ? ` <span class="ct">${[...c.tints].sort((a, b) => b - a).slice(0, 4).join('/')}%</span>` : '';
     return `<div class="col ${S.hiKey === c.key ? 'sel' : ''}" data-k="${esc(c.key)}" title="${esc(c.label)} — ${c.count} uses on page(s) ${[...(c.pages || [])].slice(0, 12).join(', ')}">${sw}<span class="nm">${esc(c.label)}${tints}</span>${tag}<span class="ct">${c.count}</span></div>`;
   }).join('') + (list.length > 300 ? `<div class="hint">…and ${list.length - 300} more</div>` : '') || '<span class="hint">No colours found</span>';
+  $('#colours').querySelectorAll('.col').forEach(el => el.ondblclick = () => { S.hiKey = el.dataset.k; renderColours(); drawOverlay(); openReplace(); });
   $('#colours').querySelectorAll('.col').forEach(el => el.onclick = () => { S.hiKey = S.hiKey === el.dataset.k ? null : el.dataset.k; renderColours(); drawOverlay();
     if (S.hiKey) { const d = pageData(S.page); const n = d.objs.filter(o => o.ckeys && o.ckeys.has(S.hiKey)).length; toast(n ? `${n} object(s) on this page use this colour` : 'Not used on this page'); } });
 }
@@ -2059,7 +2149,9 @@ function drawOverlay() {
   ox.setTransform(1, 0, 0, 1, 0, 0); ox.clearRect(0, 0, ov.width, ov.height);
   if (!S.vp) return;
   const t = S.vp.transform; ox.setTransform(S.dpr, 0, 0, S.dpr, 0, 0); ox.transform(t[0], t[1], t[2], t[3], t[4], t[5]);
+  drawCropPrev();
   const lw = 1.5 / S.scale; const d = S.pcache.get(S.page); if (!d) return;
+  drawFontHi(d);
   const paint = (o, fill, stroke, dash) => {
     if (!o.path) return; ox.save(); ox.lineWidth = lw; ox.setLineDash(dash ? [4 / S.scale, 3 / S.scale] : []);
     if (o.kind === 'path' && o.paint === 'stroke') { ox.strokeStyle = fill; ox.lineWidth = Math.max(o.lwDev, 3 / S.scale); ox.stroke(o.path); ox.lineWidth = lw; }
@@ -2125,7 +2217,7 @@ function showInspector(o, screenRGB) {
     h += `<div class="row" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">`;
     const on = o.op || o.OP;
     h += `<button id="pOP">${on ? 'Set overprint OFF' : 'Set overprint ON'}</button>`;
-    if (o.ckeys && o.ckeys.size) h += `<button id="pHi">Highlight colour</button>`;
+    if (o.ckeys && o.ckeys.size) h += `<button id="pHi">Highlight colour</button><button id="pRepl">Replace colour…</button>`;
     if (o.kind === 'text') h += `<button id="pEd">Edit text</button>`;
     h += '</div>';
   }
@@ -2133,6 +2225,7 @@ function showInspector(o, screenRGB) {
   if (S.pinned === o) {
     const b1 = $('#pOP'); if (b1) b1.onclick = () => setObjOverprint(o, !(o.op || o.OP));
     const b2 = $('#pHi'); if (b2) b2.onclick = () => { S.hiKey = [...o.ckeys][0]; renderColours(); drawOverlay(); };
+    const b4 = $('#pRepl'); if (b4) b4.onclick = () => { const c = o.cols.find(c => c.raw && c.desc && c.desc.key) || o.cols.find(c => c.desc && c.desc.key); S.hiKey = c ? c.desc.key : [...o.ckeys][0]; renderColours(); drawOverlay(); openReplace(); };
     const b3 = $('#pEd'); if (b3) b3.onclick = () => { setMode('edit'); openEditor(o.group); };
   }
 }
@@ -2256,9 +2349,10 @@ $('#fFont').onchange = async e => {
   for (const f of e.target.files) {
     const bytes = new Uint8Array(await f.arrayBuffer());
     let name = f.name.replace(/\.(ttf|otf)$/i, ''); try { const fk = fontkit.create(bytes); name = fk.postscriptName || fk.fullName || name; } catch (er) { toast('Not a valid font file: ' + f.name, true); continue; }
-    S.subFonts.push({ name, bytes });
+    const rec = { name, full: name, bytes, file: f.name }; addSubFont(rec); FDB.put([rec]).catch(() => {});
+    var lastName = name;
   }
-  e.target.value = ''; fillSubSelect('c' + (S.subFonts.length - 1)); toast('Font loaded – choose it and click “Apply with this font”');
+  e.target.value = ''; renderLoadedFonts(); fillSubSelect('c' + Math.max(0, S.subFonts.findIndex(x => typeof lastName !== 'undefined' && x.name === lastName))); toast('Font loaded – choose it and click “Apply with this font”');
 };
 
 /* ---------- split / combine ---------- */
@@ -2470,7 +2564,7 @@ document.querySelectorAll('.menu .mbtn').forEach(b => {
 });
 document.addEventListener('click', e => { if (!e.target.closest('.menu')) closeMenus(); });
 const CMDS = {
-  open: () => $('#fOpen').click(), save: () => $('#bSave').click(), combine: () => $('#bCombine').click(), split: () => $('#bSplit').click(), resize: () => $('#bResize').click(), export: () => $('#bExport').click(),
+  open: () => $('#fOpen').click(), save: () => $('#bSave').click(), combine: () => $('#bCombine').click(), split: () => $('#bSplit').click(), resize: () => $('#bResize').click(), crop: () => $('#bCrop').click(), repl: () => openReplace(), ase: () => $('#fAse').click(), fontdir: () => $('#fFontDir').click(), export: () => $('#bExport').click(),
   undo, redo, inspect: () => setMode('inspect'), edit: () => setMode('edit'), strip: stripOverprint,
   zin: () => zoom(1.25), zout: () => zoom(0.8), z100: () => { S.fit = null; S.scale = 1; closeEditor(); render(); },
   fitp: () => { S.fit = 'page'; closeEditor(); render(); }, fitw: () => { S.fit = 'width'; closeEditor(); render(); }, op: toggleOverprint,
@@ -2882,6 +2976,404 @@ $('#rzGo').onclick = async () => {
   const p0 = plans[0], same = plans.every(p => Math.abs(p.sxd - p0.sxd) < 1e-9 && Math.abs(p.syd - p0.syd) < 1e-9);
   const pc = same ? (Math.abs(p0.sxd - p0.syd) < 1e-9 ? (p0.sxd * 100).toFixed(1) + '%' : `${(p0.sxd * 100).toFixed(1)}% × ${(p0.syd * 100).toFixed(1)}%`) : 'various scales';
   await commit(`Scaled ${idx.length} page${idx.length > 1 ? 's' : ''} – ${pc}`);
+};
+
+S.fonts = new Map();
+/* ================= Crop pages ================= */
+const CR = { anchor: 4, draw: null, drawing: false };
+const CR_MM = { A6: [105, 148], A5: [148, 210], A4: [210, 297], A3: [297, 420], Letter: [215.9, 279.4] };
+const boxArr = b => [b.x, b.y, b.x + b.width, b.y + b.height];
+const pageRot = page => ((page.getRotation().angle % 360) + 360) % 360;
+function crPageIdx() {
+  const m = $('#crPages').value;
+  if (m === 'cur') return [S.page - 1];
+  if (m === 'range') return [...new Set(parseRanges($('#crRange').value, S.n).flat())].sort((a, b) => a - b);
+  return [...Array(S.n).keys()];
+}
+function crFromBox(page) {
+  const f = $('#crFrom').value;
+  return boxArr(f === 'media' ? page.getMediaBox() : f === 'trim' ? page.getTrimBox() : page.getCropBox());
+}
+/* display-side margins (mm) → unrotated [x1,y1,x2,y2] */
+function crMarginsRect(B, rot, t, r, b, l) {
+  const m = { 0: [l, b, r, t], 90: [t, l, b, r], 180: [r, t, l, b], 270: [b, r, t, l] }[rot]; // [x1+, y1+, x2-, y2-]
+  return [B[0] + m[0] * MM, B[1] + m[1] * MM, B[2] - m[2] * MM, B[3] - m[3] * MM];
+}
+/* unrotated rect R inside box B → display margins mm {t,r,b,l} */
+function crRectMargins(B, R, rot) {
+  const x1 = (R[0] - B[0]) / MM, y1 = (R[1] - B[1]) / MM, x2 = (B[2] - R[2]) / MM, y2 = (B[3] - R[3]) / MM;
+  return { 0: { l: x1, b: y1, r: x2, t: y2 }, 90: { t: x1, l: y1, b: x2, r: y2 }, 180: { r: x1, t: y1, l: x2, b: y2 }, 270: { b: x1, r: y1, t: x2, l: y2 } }[rot];
+}
+function crRect(page) { // → {R, note} or {err}
+  const meth = $('#crMethod').value, rot = pageRot(page), mb = boxArr(page.getMediaBox());
+  const hasTrim = !!page.node.get(PDFName.of('TrimBox'));
+  let R;
+  if (meth === 'trim' || meth === 'bleed') {
+    if (!hasTrim) return { err: 'no trim box' };
+    const T = boxArr(page.getTrimBox()), e = meth === 'bleed' ? Math.max(0, +$('#crBleed').value || 0) * MM : 0;
+    R = [T[0] - e, T[1] - e, T[2] + e, T[3] + e];
+  } else if (meth === 'margins') {
+    R = crMarginsRect(crFromBox(page), rot, +$('#crT').value || 0, +$('#crR').value || 0, +$('#crB').value || 0, +$('#crL').value || 0);
+  } else {
+    const B = crFromBox(page), sw = rot === 90 || rot === 270;
+    let w = Math.max(1, +$('#crW').value || 1) * MM, h = Math.max(1, +$('#crH').value || 1) * MM; if (sw) [w, h] = [h, w];
+    const ax = (CR.anchor % 3) / 2, ay = Math.floor(CR.anchor / 3) / 2; // display: 0 = left/top
+    const ux = { 0: ax, 90: ay, 180: 1 - ax, 270: 1 - ay }[rot], uy = { 0: 1 - ay, 90: ax, 180: ay, 270: 1 - ax }[rot];
+    const ox = (+$('#crOX').value || 0) * MM, oy = (+$('#crOY').value || 0) * MM; // display offset: +X right, +Y down
+    const dx = { 0: ox, 90: oy, 180: -ox, 270: -oy }[rot], dy = { 0: -oy, 90: ox, 180: oy, 270: -ox }[rot];
+    const x1 = B[0] + ux * (B[2] - B[0] - w) + dx, y1 = B[1] + uy * (B[3] - B[1] - h) + dy;
+    R = [x1, y1, x1 + w, y1 + h];
+  }
+  const C = [Math.max(R[0], mb[0]), Math.max(R[1], mb[1]), Math.min(R[2], mb[2]), Math.min(R[3], mb[3])];
+  if (C[2] - C[0] < 1 || C[3] - C[1] < 1) return { err: 'crop area is empty' };
+  return { R: C, clipped: C.some((v, i) => Math.abs(v - R[i]) > 0.01) };
+}
+function crSync() {
+  const m = $('#crMethod').value;
+  $('#crBleedRow').style.display = m === 'bleed' ? '' : 'none';
+  $('#crMarg').style.display = m === 'margins' ? '' : 'none';
+  $('#crSize').style.display = m === 'size' ? '' : 'none';
+  $('#crFrom').parentElement.style.display = m === 'margins' || m === 'size' ? '' : 'none';
+  $('#crRange').style.display = $('#crPages').value === 'range' ? '' : 'none';
+  const p = $('#crPreset').value; $('#crW').disabled = $('#crH').disabled = p !== 'c';
+  if (p !== 'c') { $('#crW').value = CR_MM[p][0]; $('#crH').value = CR_MM[p][1]; }
+  if ($('#crSame').checked) ['#crR', '#crB', '#crL'].forEach(s => $(s).value = $('#crT').value);
+  ['#crR', '#crB', '#crL'].forEach(s => $(s).disabled = $('#crSame').checked);
+  crPreview();
+}
+function crPreview() {
+  if (!S.jsDoc) return;
+  let idx; try { idx = crPageIdx(); } catch (e) { $('#crPreview').textContent = e.message; $('#crGo').disabled = true; drawOverlay(); return; }
+  const mm = v => (v / MM).toFixed(1), lines = new Map(); let ok = 0, bad = 0, clipped = 0;
+  for (const i of idx) {
+    const pg = E.lib.getPage(i), r = crRect(pg);
+    if (r.err) { bad++; const k = `skipped – ${r.err}`; lines.set(k, (lines.get(k) || []).concat(i + 1)); continue; }
+    ok++; if (r.clipped) clipped++;
+    const cb = boxArr(pg.getCropBox()), sw = pageRot(pg) % 180 !== 0;
+    const d = (w, h) => sw ? `${mm(h)} × ${mm(w)}` : `${mm(w)} × ${mm(h)}`;
+    const k = `${d(cb[2] - cb[0], cb[3] - cb[1])} → ${d(r.R[2] - r.R[0], r.R[3] - r.R[1])} mm`;
+    lines.set(k, (lines.get(k) || []).concat(i + 1));
+  }
+  const multi = lines.size > 1 || idx.length < S.n;
+  const out = [...lines].slice(0, 6).map(([k, v]) => (multi ? `p${v.length > 3 ? v[0] + '–' + v[v.length - 1] + ` (${v.length})` : v.join(',')}: ` : '') + k);
+  if (clipped) out.push(`${clipped} page(s) limited to the media box`);
+  $('#crPreview').textContent = out.join('\n') || 'No pages selected';
+  $('#crGo').disabled = !ok;
+  drawOverlay();
+}
+function drawCropPrev() {
+  if (!S.jsDoc || !$('#mCrop').classList.contains('show')) return;
+  let R = CR.draw;
+  if (!R) { try { if (crPageIdx().includes(S.page - 1)) { const r = crRect(E.lib.getPage(S.page - 1)); R = r.R; } } catch (e) {} }
+  if (!R) return;
+  const lw = 1.5 / S.scale; ox.save();
+  ox.beginPath(); ox.rect(-1e5, -1e5, 2e5, 2e5); ox.rect(R[0], R[1], R[2] - R[0], R[3] - R[1]);
+  ox.fillStyle = 'rgba(8,10,14,.55)'; ox.fill('evenodd');
+  ox.lineWidth = lw; ox.setLineDash([6 / S.scale, 4 / S.scale]); ox.strokeStyle = OVC.pin; ox.strokeRect(R[0], R[1], R[2] - R[0], R[3] - R[1]);
+  ox.restore();
+}
+function crClose() { CR.drawing = false; CR.draw = null; $('#stage').classList.remove('cropdraw'); $('#crDraw').classList.remove('on'); $('#crDrawHint').textContent = ''; drawOverlay(); }
+new MutationObserver(() => { if (!$('#mCrop').classList.contains('show')) crClose(); }).observe($('#mCrop'), { attributes: true, attributeFilter: ['class'] });
+['#crMethod', '#crPages', '#crPreset', '#crSame'].forEach(s => $(s).addEventListener('change', crSync));
+['#crBleed', '#crFrom', '#crRange', '#crW', '#crH', '#crR', '#crB', '#crL', '#crOX', '#crOY'].forEach(s => $(s).addEventListener('input', crPreview));
+$('#crT').addEventListener('input', crSync);
+$('#crAnch').querySelectorAll('button').forEach(b => b.onclick = () => { CR.anchor = +b.dataset.a; $('#crAnch').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b)); crPreview(); });
+$('#crDraw').onclick = () => {
+  CR.drawing = !CR.drawing; $('#stage').classList.toggle('cropdraw', CR.drawing); $('#crDraw').classList.toggle('on', CR.drawing);
+  $('#crDrawHint').textContent = CR.drawing ? 'Drag a rectangle on the page' : '';
+};
+/* drawing — capture phase so the inspector does not react */
+const crPt = ev => { const r = cv.getBoundingClientRect(); const x = Math.max(0, Math.min(r.width, ev.clientX - r.left)), y = Math.max(0, Math.min(r.height, ev.clientY - r.top)); return S.vp.convertToPdfPoint(x, y); };
+let crStart = null;
+$('#stage').addEventListener('pointerdown', ev => { if (!CR.drawing || !S.vp || ev.button) return; ev.preventDefault(); ev.stopPropagation(); crStart = crPt(ev); CR.draw = null; }, true);
+window.addEventListener('pointermove', ev => {
+  if (!crStart) return; ev.stopPropagation(); const p = crPt(ev);
+  CR.draw = [Math.min(crStart[0], p[0]), Math.min(crStart[1], p[1]), Math.max(crStart[0], p[0]), Math.max(crStart[1], p[1])]; drawOverlay();
+}, true);
+window.addEventListener('pointerup', ev => {
+  if (!crStart) return; ev.stopPropagation(); crStart = null; CR.justDrew = true; setTimeout(() => CR.justDrew = false, 50);
+  const R = CR.draw; CR.drawing = false; $('#stage').classList.remove('cropdraw'); $('#crDraw').classList.remove('on'); $('#crDrawHint').textContent = '';
+  if (!R || R[2] - R[0] < 2 || R[3] - R[1] < 2) { CR.draw = null; crPreview(); return; }
+  const pg = E.lib.getPage(S.page - 1), B = crFromBox(pg), m = crRectMargins(B, R, pageRot(pg));
+  $('#crMethod').value = 'margins'; $('#crSame').checked = false;
+  $('#crT').value = m.t.toFixed(2); $('#crR').value = m.r.toFixed(2); $('#crB').value = m.b.toFixed(2); $('#crL').value = m.l.toFixed(2);
+  CR.draw = null; crSync();
+}, true);
+$('#stage').addEventListener('click', ev => { if (CR.drawing || CR.justDrew) ev.stopPropagation(); }, true);
+$('#stage').addEventListener('mousemove', ev => { if (crStart) ev.stopPropagation(); }, true);
+$('#bCrop').onclick = () => {
+  if (!S.jsDoc) return;
+  const anyTrim = E.lib.getPages().some(p => p.node.get(PDFName.of('TrimBox')));
+  if (!anyTrim && ($('#crMethod').value === 'trim' || $('#crMethod').value === 'bleed')) $('#crMethod').value = 'margins';
+  showModal('#mCrop'); crSync();
+};
+$('#crGo').onclick = async () => {
+  let idx; try { idx = crPageIdx(); } catch (e) { toast(e.message, true); return; }
+  const how = $('#crHow').value, setTrim = $('#crSetTrim').checked, meth = $('#crMethod').value;
+  let n = 0, skipped = 0;
+  try {
+    for (const i of idx) {
+      const page = E.lib.getPage(i), r = crRect(page); if (r.err) { skipped++; continue; }
+      const R = r.R, node = page.node, w = R[2] - R[0], h = R[3] - R[1];
+      const boxes = {}; for (const k of ['Bleed', 'Trim', 'Art']) if (node.get(PDFName.of(k + 'Box'))) boxes[k] = boxArr(page['get' + k + 'Box']());
+      if (how === 'media') page.setMediaBox(R[0], R[1], w, h);
+      page.setCropBox(R[0], R[1], w, h);
+      for (const [k, b] of Object.entries(boxes)) {
+        const I = [Math.max(b[0], R[0]), Math.max(b[1], R[1]), Math.min(b[2], R[2]), Math.min(b[3], R[3])];
+        if (I[2] - I[0] < 0.5 || I[3] - I[1] < 0.5) node.delete(PDFName.of(k + 'Box')); else page['set' + k + 'Box'](I[0], I[1], I[2] - I[0], I[3] - I[1]);
+      }
+      if (meth === 'bleed') page.setBleedBox(R[0], R[1], w, h);
+      if (setTrim) page.setTrimBox(R[0], R[1], w, h);
+      n++;
+    }
+  } catch (e) { console.error(e); toast('Crop failed: ' + e.message, true); await openBytes(S.bytes, true); return; }
+  showModal('#mCrop', false); S.fit = 'page';
+  await commit(`Cropped ${n} page${n !== 1 ? 's' : ''}` + (skipped ? ` – ${skipped} skipped (no trim box)` : ''));
+};
+
+/* ================= .ase colour palette ================= */
+function parseASE(buf) {
+  const dv = new DataView(buf.buffer, buf.byteOffset, buf.byteLength);
+  if (dv.getUint32(0) !== 0x41534546) throw new Error('Not an Adobe Swatch Exchange (.ase) file');
+  const nb = dv.getUint32(8); let o = 12; const cols = []; let grp = null;
+  const str = () => { const len = dv.getUint16(o); o += 2; let s = ''; for (let i = 0; i < len; i++) { const c = dv.getUint16(o + i * 2); if (c) s += String.fromCharCode(c); } o += len * 2; return s; };
+  for (let b = 0; b < nb && o + 6 <= dv.byteLength; b++) {
+    const type = dv.getUint16(o), len = dv.getUint32(o + 2); const start = o + 6; o = start;
+    if (type === 0xC001) grp = len ? str() : null;
+    else if (type === 0xC002) grp = null;
+    else if (type === 0x0001) {
+      const name = str(); const model = String.fromCharCode(dv.getUint8(o), dv.getUint8(o + 1), dv.getUint8(o + 2), dv.getUint8(o + 3)).trim(); o += 4;
+      const n = { CMYK: 4, RGB: 3, LAB: 3, Gray: 1 }[model] || 0; const v = []; for (let i = 0; i < n; i++) { v.push(dv.getFloat32(o)); o += 4; }
+      const kind = dv.getUint16(o); // 0 global, 1 spot, 2 normal
+      let alt = null;
+      if (model === 'CMYK') alt = { sp: 'cmyk', v: v.map(clamp01) };
+      else if (model === 'RGB') alt = { sp: 'rgb', v: v.map(clamp01) };
+      else if (model === 'LAB') alt = { sp: 'lab', v: [v[0] * 100, v[1], v[2]] };
+      else if (model === 'Gray') alt = { sp: 'gray', v: [clamp01(1 - v[0])] };
+      if (alt) cols.push({ name: name || `${model} ${v.map(x => +x.toFixed(3)).join(' ')}`, group: grp, model, spot: kind === 1, alt, rgb: altToRGB(alt) });
+    }
+    o = start + len;
+  }
+  if (!cols.length) throw new Error('No colours found in this .ase file');
+  return cols;
+}
+const altLabel = a => a.sp === 'cmyk' ? `C${pc(a.v[0])} M${pc(a.v[1])} Y${pc(a.v[2])} K${pc(a.v[3])}` : a.sp === 'rgb' ? 'RGB ' + a.v.map(x => Math.round(x * 255)).join(' ') : a.sp === 'lab' ? 'Lab ' + a.v.map(x => x.toFixed(1)).join(' ') : 'Grey K' + pc(1 - a.v[0]);
+S.pal = []; S.palName = '';
+function savePal() { lsSet('ase', JSON.stringify({ name: S.palName, cols: S.pal })); }
+(() => { try { const j = JSON.parse(lsGet('ase', 'null')); if (j && j.cols) { S.pal = j.cols; S.palName = j.name || ''; } } catch (e) {} })();
+function palHTML(sel) {
+  if (!S.pal.length) return '';
+  let h = '', g;
+  S.pal.forEach((c, i) => { if (c.group !== g) { g = c.group; if (g) h += `<div class="pgrp">${esc(g)}</div>`; } h += `<button class="psw${c.spot ? ' spot' : ''}${sel === i ? ' on' : ''}" data-i="${i}" title="${esc(c.name)} — ${c.spot ? 'spot' : 'process'} · ${esc(altLabel(c.alt))}" style="background:rgb(${c.rgb.join(',')})"></button>`; });
+  return h;
+}
+function renderPal() {
+  $('#palStat').textContent = S.pal.length ? `${S.pal.length} swatches` : '';
+  $('#bPalClear').disabled = !S.pal.length;
+  $('#palGrid').innerHTML = palHTML() || '<span class="hint">No palette loaded. Swatches are kept between sessions.</span>';
+  $('#palSel').textContent = S.pal.length ? (S.palName ? S.palName + ' · ' : '') + 'Select a document colour, then click a swatch to replace it' : '';
+  $('#palGrid').querySelectorAll('.psw').forEach(b => b.onclick = () => {
+    const c = S.pal[+b.dataset.i];
+    $('#palSel').textContent = `${c.name} – ${c.spot ? 'spot' : 'process'} · ${altLabel(c.alt)}`;
+    if (S.jsDoc && S.hiKey) openReplace(+b.dataset.i);
+  });
+}
+async function loadAse(file) {
+  try { const cols = parseASE(new Uint8Array(await file.arrayBuffer())); S.pal = cols; S.palName = file.name.replace(/\.ase$/i, ''); savePal(); renderPal(); toast(`Loaded ${cols.length} swatches from ${file.name}`); if ($('#mRepl').classList.contains('show')) rpRender(); }
+  catch (e) { console.error(e); toast(e.message, true); }
+}
+$('#bPalLoad').onclick = () => $('#fAse').click();
+$('#fAse').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) loadAse(f); };
+$('#bPalClear').onclick = () => { S.pal = []; S.palName = ''; savePal(); renderPal(); };
+renderPal();
+
+/* ================= font folder ================= */
+const FDB = {
+  db: null,
+  open() { return this.db || (this.db = new Promise((res, rej) => { const r = indexedDB.open('pdfstudio-fonts', 1); r.onupgradeneeded = () => r.result.createObjectStore('fonts', { keyPath: 'name' }); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); })); },
+  async tx(mode, fn) { const db = await this.open(); return new Promise((res, rej) => { const t = db.transaction('fonts', mode); const st = t.objectStore('fonts'); const out = fn(st); t.oncomplete = () => res(out && out.result); t.onerror = () => rej(t.error); }); },
+  put(recs) { return this.tx('readwrite', st => { recs.forEach(r => st.put(r)); }); },
+  all() { return this.tx('readonly', st => st.getAll()); },
+  clear() { return this.tx('readwrite', st => st.clear()); }
+};
+const fnorm = s => String(s || '').replace(/^[A-Z]{6}\+/, '').replace(/[\s_-]/g, '').toLowerCase();
+function fontMeta(bytes, fname) {
+  const fk = fontkit.create(bytes);
+  if (fk.fonts) throw new Error('font collections (.ttc) are not supported');
+  return { name: fk.postscriptName || fk.fullName || fname, full: fk.fullName || fk.postscriptName || fname, family: fk.familyName || '', style: fk.subfamilyName || '' };
+}
+function addSubFont(rec) { if (S.subFonts.some(x => fnorm(x.name) === fnorm(rec.name))) return false; S.subFonts.push(rec); return true; }
+function renderLoadedFonts() {
+  const n = S.subFonts.length;
+  $('#bFontClear').disabled = !n;
+  $('#fontLoaded').innerHTML = n ? `<b style="color:var(--tx)">${n}</b> font${n > 1 ? 's' : ''} loaded${S.fontDir ? ' from ' + esc(S.fontDir) : ''} – used for text edits and matched to the fonts below.` : 'No fonts loaded. Loaded fonts are used when editing text and are kept between sessions.';
+  renderFonts();
+  if (S.editing) { const v = $('#edSub').value; fillSubSelect(v); }
+}
+async function loadFontFiles(files, dirName) {
+  const list = [...files].filter(f => /\.(ttf|otf)$/i.test(f.name));
+  if (!list.length) { toast('No .ttf or .otf fonts found', true); return; }
+  busy(true, 'Loading fonts…'); const recs = []; let bad = 0, dup = 0;
+  for (let i = 0; i < list.length; i++) {
+    const f = list[i];
+    try { const bytes = new Uint8Array(await f.arrayBuffer()); const m = fontMeta(bytes, f.name.replace(/\.(ttf|otf)$/i, '')); const rec = { ...m, bytes, file: f.name }; if (addSubFont(rec)) recs.push(rec); else dup++; }
+    catch (e) { bad++; }
+    if (i % 20 === 0) { $('#busyMsg').textContent = `Loading fonts… ${i + 1}/${list.length}`; await tick(); }
+  }
+  if (dirName) { S.fontDir = dirName; lsSet('fontDir', dirName); }
+  try { await FDB.put(recs); } catch (e) { console.warn('font store', e); }
+  busy(false); renderLoadedFonts();
+  toast(`Loaded ${recs.length} font${recs.length !== 1 ? 's' : ''}` + (dup ? `, ${dup} already loaded` : '') + (bad ? `, ${bad} unreadable` : ''), !recs.length && bad);
+}
+$('#bFontDir').onclick = () => $('#fFontDir').click();
+$('#bFontFiles').onclick = () => $('#fFontFiles').click();
+$('#fFontDir').onchange = e => { const fs = [...e.target.files]; const dir = fs[0] && fs[0].webkitRelativePath ? fs[0].webkitRelativePath.split('/')[0] : ''; e.target.value = ''; loadFontFiles(fs, dir); };
+$('#fFontFiles').onchange = e => { const fs = [...e.target.files]; e.target.value = ''; loadFontFiles(fs); };
+$('#bFontClear').onclick = async () => { S.subFonts = []; S.fontDir = ''; lsSet('fontDir', ''); try { await FDB.clear(); } catch (e) {} renderLoadedFonts(); toast('Loaded fonts cleared'); };
+(async () => { try { const recs = await FDB.all(); (recs || []).sort((a, b) => a.full.localeCompare(b.full)).forEach(addSubFont); S.fontDir = lsGet('fontDir', ''); renderLoadedFonts(); } catch (e) { console.warn('font store unavailable', e); } })();
+
+/* ================= fonts used in the document ================= */
+function fontFileKind(f) {
+  let d = asDict(f.raw); if (!d) return '';
+  if (f.sub === 'Type3') return 'Type 3';
+  let pre = '';
+  if (f.sub === 'Type0') { const df = (arr(get(d, 'DescendantFonts')) || [])[0]; d = asDict(df); pre = 'CID '; if (!d) return 'Type 0'; }
+  const desc = get(d, 'FontDescriptor');
+  if (get(desc, 'FontFile')) return pre + 'Type 1';
+  if (get(desc, 'FontFile2')) return pre + 'TrueType';
+  const f3 = get(desc, 'FontFile3'); if (f3) { const st = nm(get(f3, 'Subtype')); return st === 'OpenType' ? 'OpenType' : pre + 'Type 1 (CFF)'; }
+  return pre + ({ Type1: 'Type 1', TrueType: 'TrueType', MMType1: 'Multiple Master', Type0: 'Type 0' }[f.sub] || f.sub);
+}
+function fontsFrom(d, p) {
+  const texts = d.objs.filter(o => o.kind === 'text');
+  for (const t of texts) {
+    const f = t.font; if (!f) continue;
+    let e = S.fonts.get(f.key);
+    if (!e) {
+      e = S.fonts.get('n:' + f.base); // same font object name from another resource
+      if (!e) { e = { key: f.key, keys: new Set(), f, sizes: new Set(), pages: new Set(), count: 0, invisible: 0, kind: fontFileKind(f) }; S.fonts.set('n:' + f.base, e); }
+      S.fonts.set(f.key, e);
+    }
+    e.keys.add(f.key); e.count++; e.pages.add(p); if (t.invisible) e.invisible++;
+    if (t.em > 0) e.sizes.add(Math.round(t.em * 10) / 10);
+  }
+}
+function renderFonts() {
+  const el = $('#fontList'); if (!el) return;
+  if (!S.jsDoc) { el.innerHTML = '<span class="hint">—</span>'; $('#fontStat').textContent = ''; return; }
+  const list = [...new Set(S.fonts.values())].sort((a, b) => a.f.name.localeCompare(b.f.name));
+  $('#fontStat').textContent = list.length ? `${list.length} in document` : '';
+  if (!list.length) { el.innerHTML = '<span class="hint">No live text – no fonts used (text may be outlined).</span>'; return; }
+  el.innerHTML = list.map(e => {
+    const f = e.f, sz = [...e.sizes].sort((a, b) => a - b);
+    const sizes = !sz.length ? '' : sz.length <= 4 ? sz.join(', ') + ' pt' : `${sz[0]}–${sz[sz.length - 1]} pt (${sz.length} sizes)`;
+    const emb = f.sub === 'Type3' ? '<span>Type 3 (glyphs drawn in PDF)</span>' : f.embedded ? `<span class="ok">${f.subset ? 'Embedded subset' : 'Embedded'}</span>` : '<span class="bad">NOT EMBEDDED</span>';
+    const loaded = S.subFonts.some(x => fnorm(x.name) === fnorm(f.name) || fnorm(x.full) === fnorm(f.name));
+    const pg = [...e.pages].sort((a, b) => a - b), pages = pg.length > 6 ? `${pg.length} pages` : 'p' + pg.join(',');
+    return `<div class="frow${S.hiFont === e.key ? ' sel' : ''}" data-k="${esc(e.key)}" title="Click to highlight on the page"><b>${esc(f.name)}</b><small>${esc(e.kind)} · ${emb}${loaded ? ' · <span class="ok">font loaded</span>' : ''}<br>${sizes}${sizes ? ' · ' : ''}${pages} · ${e.count} run${e.count > 1 ? 's' : ''}${e.invisible ? ` · ${e.invisible} invisible` : ''}${f.encName ? ' · ' + esc(f.encName) : ''}</small></div>`;
+  }).join('');
+  el.querySelectorAll('.frow').forEach(r => r.onclick = () => {
+    S.hiFont = S.hiFont === r.dataset.k ? null : r.dataset.k; renderFonts(); drawOverlay();
+    if (S.hiFont) { const e = S.fonts.get(S.hiFont); const n = pageData(S.page).objs.filter(o => o.kind === 'text' && e.keys.has(o.font.key)).length; toast(n ? `${n} text run(s) on this page use ${e.f.name}` : `${e.f.name} is not used on this page`); }
+  });
+}
+function drawFontHi(d) {
+  if (!S.hiFont) return; const e = S.fonts.get(S.hiFont); if (!e) return;
+  ox.save(); ox.lineWidth = 1.5 / S.scale; ox.fillStyle = hexA(OVC.hi, .3); ox.strokeStyle = OVC.hi;
+  for (const o of d.objs) if (o.kind === 'text' && o.path && e.keys.has(o.font.key)) { ox.fill(o.path); ox.stroke(o.path); }
+  ox.restore();
+}
+
+/* ================= replace colour ================= */
+const RP = { sel: -1 };
+function rpPageIdx() {
+  const m = $('#rpPages').value;
+  if (m === 'cur') return [S.page - 1];
+  if (m === 'range') return [...new Set(parseRanges($('#rpRange').value, S.n).flat())].sort((a, b) => a - b);
+  return [...Array(S.n).keys()];
+}
+function rpTarget() {
+  if ($('#rpCustom').checked) {
+    const v = ['#rpC', '#rpM', '#rpY', '#rpK'].map(s => clamp01((+$(s).value || 0) / 100));
+    const name = $('#rpName').value.trim();
+    return { name: name || `C${pc(v[0])} M${pc(v[1])} Y${pc(v[2])} K${pc(v[3])}`, named: !!name, alt: { sp: 'cmyk', v }, spot: !!name };
+  }
+  const c = S.pal[RP.sel]; return c ? { name: c.name, named: true, alt: c.alt, spot: c.spot } : null;
+}
+function rpRender() {
+  const src = S.colours.get(S.hiKey);
+  if (!src) { $('#rpFrom').innerHTML = '<span class="hint">Select a colour in “Colours in document” first</span>'; }
+  else $('#rpFrom').innerHTML = `${src.kind === 'reg' ? '<span class="sw reg"></span>' : `<span class="sw" style="background:rgb(${src.swatch.join(',')})"></span>`}<span><b>${esc(src.label)}</b> <span class="hint">${src.kind === 'spot' ? 'spot' : src.kind} · ${src.count} uses · ${src.pages ? src.pages.size : '?'} page(s)</span></span>`;
+  $('#rpPal').innerHTML = palHTML(RP.sel);
+  $('#rpPalHint').textContent = S.pal.length ? (S.palName ? 'Palette: ' + S.palName + ' · ' : '') + 'white dot = spot colour' : 'No palette loaded – load an .ase file or use a custom colour.';
+  $('#rpPal').querySelectorAll('.psw').forEach(b => b.onclick = () => { RP.sel = +b.dataset.i; $('#rpCustom').checked = false; const c = S.pal[RP.sel]; $('#rpAs').value = c.spot ? 'spot' : 'cmyk'; rpRender(); });
+  $('#rpCustomRow').style.display = $('#rpCustom').checked ? '' : 'none';
+  const t = rpTarget();
+  $('#rpTo').innerHTML = t ? `<span class="sw" style="background:rgb(${altToRGB(t.alt).join(',')})"></span><span><b>${esc(t.name)}</b> <span class="hint">${esc(altLabel(t.alt))}</span></span>` : '<span class="hint">Choose a swatch</span>';
+  rpSync();
+}
+function rpSync() {
+  const src = S.colours.get(S.hiKey), t = rpTarget(), asSpot = $('#rpAs').value === 'spot';
+  const spotSrc = src && src.kind === 'spot';
+  $('#rpRedefRow').style.display = spotSrc && asSpot ? '' : 'none';
+  const redef = spotSrc && asSpot && $('#rpRedef').checked;
+  $('#rpTintRow').style.display = spotSrc && !redef ? '' : 'none';
+  $('#rpRolesRow').style.display = $('#rpPagesRow').style.display = redef ? 'none' : '';
+  $('#rpRange').style.display = $('#rpPages').value === 'range' ? '' : 'none';
+  let info = '';
+  if (src && src.kind === 'image') info = 'Image colour spaces can’t be replaced object by object.';
+  else if (src && redef) info = `Every use of the ink “${src.label}” is renamed to “${t ? t.name : '…'}” with the new colour values – including tints, gradients and images.`;
+  else if (src && spotSrc && !asSpot) info = 'Vector fills, strokes and text become process CMYK. Spot images and gradients keep the spot ink.';
+  if (t && asSpot && !t.named) info += (info ? '\n' : '') + 'Tip: give the custom colour a name to output it as a spot.';
+  $('#rpInfo').textContent = info;
+  $('#rpGo').disabled = !src || !t || (asSpot && !t.named) || (!redef && !$('#rpFill').checked && !$('#rpStroke').checked && !$('#rpText').checked);
+}
+function openReplace(palIdx) {
+  if (!S.jsDoc) return;
+  if (!S.hiKey) { toast('Select a colour in “Colours in document” first (or pin an object and use Replace colour)', true); return; }
+  if (palIdx != null) { RP.sel = palIdx; $('#rpCustom').checked = false; const c = S.pal[palIdx]; $('#rpAs').value = c.spot ? 'spot' : 'cmyk'; }
+  showModal('#mRepl'); rpRender();
+}
+['#rpAs', '#rpRedef', '#rpTint', '#rpFill', '#rpStroke', '#rpText', '#rpPages'].forEach(s => $(s).addEventListener('change', rpSync));
+['#rpRange'].forEach(s => $(s).addEventListener('input', rpSync));
+$('#rpCustom').onchange = () => { if ($('#rpCustom').checked) $('#rpAs').value = $('#rpName').value.trim() ? 'spot' : 'cmyk'; rpRender(); };
+['#rpName', '#rpC', '#rpM', '#rpY', '#rpK'].forEach(s => $(s).addEventListener('input', rpRender));
+$('#rpLoadAse').onclick = () => $('#fAse').click();
+$('#bRepl').onclick = () => openReplace();
+$('#rpGo').onclick = async () => {
+  const src = S.colours.get(S.hiKey), t = rpTarget(); if (!src || !t) return;
+  const asSpot = $('#rpAs').value === 'spot', redef = src.kind === 'spot' && asSpot && $('#rpRedef').checked;
+  const target = { as: asSpot ? 'spot' : 'cmyk', name: t.name, alt: t.alt, cmyk: altToCMYK(t.alt), tint: 1 };
+  busy(true, 'Replacing colour…'); let mutated = false;
+  try {
+    if (redef) {
+      mutated = true; const n = redefineSpot(src.label, t.name, t.alt);
+      if (!n) throw new Error('Spot ink not found in colour spaces');
+      showModal('#mRepl', false); S.hiKey = null; await commit(`Spot “${src.label}” → “${t.name}” (${n} definition${n > 1 ? 's' : ''})`); return;
+    }
+    let idx; try { idx = rpPageIdx(); } catch (e) { throw e; }
+    const okRole = r => /text/.test(r) ? $('#rpText').checked && (/stroke/.test(r) ? $('#rpStroke').checked : $('#rpFill').checked) : /stroke/.test(r) ? $('#rpStroke').checked : /fill|mask/.test(r) ? $('#rpFill').checked : false;
+    const list = []; let skipped = 0;
+    for (const i of idx) {
+      let d; try { d = parsePage(i, { paths: false }); } catch (e) { continue; }
+      for (const o of d.objs) {
+        if (!o.ckeys || !o.ckeys.has(S.hiKey)) continue; let hit = false;
+        for (const c of o.cols || []) {
+          if (!c.desc || c.desc.key !== S.hiKey) continue; hit = true;
+          if (!okRole(c.role)) continue;
+          if (!c.raw) { skipped++; continue; }
+          if (c.role === 'mask') o.fill = c.raw;
+          list.push({ o, role: /stroke/.test(c.role) ? 'stroke' : 'fill' });
+        }
+        if (!hit) skipped++; // spot used inside a multi-ink colour
+      }
+      if (i % 5 === 4) { $('#busyMsg').textContent = `Replacing colour… page ${i + 1}/${S.n}`; await tick(); }
+    }
+    if (!list.length) throw new Error('No matching objects' + (skipped ? ` (${skipped} image/gradient/multi-ink uses can’t be replaced)` : ''));
+    mutated = true; const n = recolourObjects(list, target, $('#rpTint').checked);
+    showModal('#mRepl', false); S.hiKey = null;
+    await commit(`Replaced ${n} use${n !== 1 ? 's' : ''} with ${t.name}` + (skipped ? ` – ${skipped} image/gradient use(s) unchanged` : ''));
+  } catch (e) { console.error(e); busy(false); toast('Replace failed: ' + e.message, true); if (mutated) await openBytes(S.bytes, true); }
 };
 </script>
 <script type="text/plain" id="gs-js">YXN5bmMgZnVuY3Rpb24gTW9kdWxlKG1vZHVsZUFyZz17fSl7dmFyIG1vZHVsZVJ0bjt2YXIgZj1tb2R1bGVBcmcsYWE9Im9iamVjdCI9PXR5cGVvZiB3aW5kb3csYmE9InVuZGVmaW5lZCIhPXR5cGVvZiBXb3JrZXJHbG9iYWxTY29wZSxsPSJvYmplY3QiPT10eXBlb2YgcHJvY2VzcyYmcHJvY2Vzcy52ZXJzaW9ucz8ubm9kZSYmInJlbmRlcmVyIiE9cHJvY2Vzcy50eXBlO2lmKGwpe2NvbnN0IHtjcmVhdGVSZXF1aXJlOmF9PWF3YWl0IGltcG9ydCgibW9kdWxlIik7dmFyIHJlcXVpcmU9YShpbXBvcnQubWV0YS51cmwpfXZhciBjYT0iLi90aGlzLnByb2dyYW0iLGRhPShhLGIpPT57dGhyb3cgYjt9LGVhPWltcG9ydC5tZXRhLnVybCxmYT0iIixpYSxwOwppZihsKXt2YXIgZnM9cmVxdWlyZSgiZnMiKTtlYS5zdGFydHNXaXRoKCJmaWxlOiIpJiYoZmE9cmVxdWlyZSgicGF0aCIpLmRpcm5hbWUocmVxdWlyZSgidXJsIikuZmlsZVVSTFRvUGF0aChlYSkpKyIvIik7cD1hPT57YT1qYShhKT9uZXcgVVJMKGEpOmE7cmV0dXJuIGZzLnJlYWRGaWxlU3luYyhhKX07aWE9YXN5bmMgYT0+e2E9amEoYSk/bmV3IFVSTChhKTphO3JldHVybiBmcy5yZWFkRmlsZVN5bmMoYSx2b2lkIDApfTsxPHByb2Nlc3MuYXJndi5sZW5ndGgmJihjYT1wcm9jZXNzLmFyZ3ZbMV0ucmVwbGFjZSgvXFwvZywiLyIpKTtwcm9jZXNzLmFyZ3Yuc2xpY2UoMik7ZGE9KGEsYik9Pntwcm9jZXNzLmV4aXRDb2RlPWE7dGhyb3cgYjt9fWVsc2UgaWYoYWF8fGJhKXt0cnl7ZmE9KG5ldyBVUkwoIi4iLGVhKSkuaHJlZn1jYXRjaHt9YmEmJihwPWE9Pnt2YXIgYj1uZXcgWE1MSHR0cFJlcXVlc3Q7Yi5vcGVuKCJHRVQiLGEsITEpO2IucmVzcG9uc2VUeXBlPSJhcnJheWJ1ZmZlciI7CmIuc2VuZChudWxsKTtyZXR1cm4gbmV3IFVpbnQ4QXJyYXkoYi5yZXNwb25zZSl9KTtpYT1hc3luYyBhPT57aWYoamEoYSkpcmV0dXJuIG5ldyBQcm9taXNlKChjLGQpPT57dmFyIGU9bmV3IFhNTEh0dHBSZXF1ZXN0O2Uub3BlbigiR0VUIixhLCEwKTtlLnJlc3BvbnNlVHlwZT0iYXJyYXlidWZmZXIiO2Uub25sb2FkPSgpPT57MjAwPT1lLnN0YXR1c3x8MD09ZS5zdGF0dXMmJmUucmVzcG9uc2U/YyhlLnJlc3BvbnNlKTpkKGUuc3RhdHVzKX07ZS5vbmVycm9yPWQ7ZS5zZW5kKG51bGwpfSk7dmFyIGI9YXdhaXQgZmV0Y2goYSx7Y3JlZGVudGlhbHM6InNhbWUtb3JpZ2luIn0pO2lmKGIub2spcmV0dXJuIGIuYXJyYXlCdWZmZXIoKTt0aHJvdyBFcnJvcihiLnN0YXR1cysiIDogIitiLnVybCk7fX0KdmFyIGthPWNvbnNvbGUubG9nLmJpbmQoY29uc29sZSkscT1jb25zb2xlLmVycm9yLmJpbmQoY29uc29sZSksdSxsYT0hMSxtYSxqYT1hPT5hLnN0YXJ0c1dpdGgoImZpbGU6Ly8iKSxuYSxvYSxwYSx2LHcscWEseCx5LHoscmE9ITE7ZnVuY3Rpb24gc2EoKXt2YXIgYT1wYS5idWZmZXI7dj1uZXcgSW50OEFycmF5KGEpO3FhPW5ldyBJbnQxNkFycmF5KGEpO3c9bmV3IFVpbnQ4QXJyYXkoYSk7bmV3IFVpbnQxNkFycmF5KGEpO3g9bmV3IEludDMyQXJyYXkoYSk7eT1uZXcgVWludDMyQXJyYXkoYSk7bmV3IEZsb2F0MzJBcnJheShhKTtuZXcgRmxvYXQ2NEFycmF5KGEpO3o9bmV3IEJpZ0ludDY0QXJyYXkoYSk7bmV3IEJpZ1VpbnQ2NEFycmF5KGEpfXZhciBFPTAsdGE9bnVsbDtmdW5jdGlvbiB1YSgpe0UrKztmLm1vbml0b3JSdW5EZXBlbmRlbmNpZXM/LihFKX0KZnVuY3Rpb24gdmEoKXtFLS07Zi5tb25pdG9yUnVuRGVwZW5kZW5jaWVzPy4oRSk7aWYoMD09RSYmdGEpe3ZhciBhPXRhO3RhPW51bGw7YSgpfX1mdW5jdGlvbiB3YShhKXtmLm9uQWJvcnQ/LihhKTthPSJBYm9ydGVkKCIrYSsiKSI7cShhKTtsYT0hMDthPW5ldyBXZWJBc3NlbWJseS5SdW50aW1lRXJyb3IoYSsiLiBCdWlsZCB3aXRoIC1zQVNTRVJUSU9OUyBmb3IgbW9yZSBpbmZvLiIpO29hPy4oYSk7dGhyb3cgYTt9dmFyIHhhO2FzeW5jIGZ1bmN0aW9uIHlhKGEpe2lmKCF1KXRyeXt2YXIgYj1hd2FpdCBpYShhKTtyZXR1cm4gbmV3IFVpbnQ4QXJyYXkoYil9Y2F0Y2h7fWlmKGE9PXhhJiZ1KWE9bmV3IFVpbnQ4QXJyYXkodSk7ZWxzZSBpZihwKWE9cChhKTtlbHNlIHRocm93ImJvdGggYXN5bmMgYW5kIHN5bmMgZmV0Y2hpbmcgb2YgdGhlIHdhc20gZmFpbGVkIjtyZXR1cm4gYX0KYXN5bmMgZnVuY3Rpb24gemEoYSxiKXt0cnl7dmFyIGM9YXdhaXQgeWEoYSk7cmV0dXJuIGF3YWl0IFdlYkFzc2VtYmx5Lmluc3RhbnRpYXRlKGMsYil9Y2F0Y2goZCl7cShgZmFpbGVkIHRvIGFzeW5jaHJvbm91c2x5IHByZXBhcmUgd2FzbTogJHtkfWApLHdhKGQpfX1hc3luYyBmdW5jdGlvbiBBYShhKXt2YXIgYj14YTtpZighdSYmIWphKGIpJiYhbCl0cnl7dmFyIGM9ZmV0Y2goYix7Y3JlZGVudGlhbHM6InNhbWUtb3JpZ2luIn0pO3JldHVybiBhd2FpdCBXZWJBc3NlbWJseS5pbnN0YW50aWF0ZVN0cmVhbWluZyhjLGEpfWNhdGNoKGQpe3EoYHdhc20gc3RyZWFtaW5nIGNvbXBpbGUgZmFpbGVkOiAke2R9YCkscSgiZmFsbGluZyBiYWNrIHRvIEFycmF5QnVmZmVyIGluc3RhbnRpYXRpb24iKX1yZXR1cm4gemEoYixhKX0KY2xhc3MgQmF7bmFtZT0iRXhpdFN0YXR1cyI7Y29uc3RydWN0b3IoYSl7dGhpcy5tZXNzYWdlPWBQcm9ncmFtIHRlcm1pbmF0ZWQgd2l0aCBleGl0KCR7YX0pYDt0aGlzLnN0YXR1cz1hfX0KdmFyIENhPWE9Pntmb3IoOzA8YS5sZW5ndGg7KWEuc2hpZnQoKShmKX0sRGE9W10sRWE9W10sRmE9KCk9Pnt2YXIgYT1mLnByZVJ1bi5zaGlmdCgpO0VhLnB1c2goYSl9LEdhPSEwLEhhPSJ1bmRlZmluZWQiIT10eXBlb2YgVGV4dERlY29kZXI/bmV3IFRleHREZWNvZGVyOnZvaWQgMCxGPShhLGI9MCk9Pnt2YXIgYz1iO2Zvcih2YXIgZD1jK3ZvaWQgMDthW2NdJiYhKGM+PWQpOykrK2M7aWYoMTY8Yy1iJiZhLmJ1ZmZlciYmSGEpcmV0dXJuIEhhLmRlY29kZShhLnN1YmFycmF5KGIsYykpO2ZvcihkPSIiO2I8Yzspe3ZhciBlPWFbYisrXTtpZihlJjEyOCl7dmFyIGc9YVtiKytdJjYzO2lmKDE5Mj09KGUmMjI0KSlkKz1TdHJpbmcuZnJvbUNoYXJDb2RlKChlJjMxKTw8NnxnKTtlbHNle3ZhciBoPWFbYisrXSY2MztlPTIyND09KGUmMjQwKT8oZSYxNSk8PDEyfGc8PDZ8aDooZSY3KTw8MTh8Zzw8MTJ8aDw8NnxhW2IrK10mNjM7NjU1MzY+ZT9kKz1TdHJpbmcuZnJvbUNoYXJDb2RlKGUpOgooZS09NjU1MzYsZCs9U3RyaW5nLmZyb21DaGFyQ29kZSg1NTI5NnxlPj4xMCw1NjMyMHxlJjEwMjMpKX19ZWxzZSBkKz1TdHJpbmcuZnJvbUNoYXJDb2RlKGUpfXJldHVybiBkfSxJYT0oYSxiKT0+e2Zvcih2YXIgYz0wLGQ9YS5sZW5ndGgtMTswPD1kO2QtLSl7dmFyIGU9YVtkXTsiLiI9PT1lP2Euc3BsaWNlKGQsMSk6Ii4uIj09PWU/KGEuc3BsaWNlKGQsMSksYysrKTpjJiYoYS5zcGxpY2UoZCwxKSxjLS0pfWlmKGIpZm9yKDtjO2MtLSlhLnVuc2hpZnQoIi4uIik7cmV0dXJuIGF9LEc9YT0+e3ZhciBiPSIvIj09PWEuY2hhckF0KDApLGM9Ii8iPT09YS5zbGljZSgtMSk7KGE9SWEoYS5zcGxpdCgiLyIpLmZpbHRlcihkPT4hIWQpLCFiKS5qb2luKCIvIikpfHxifHwoYT0iLiIpO2EmJmMmJihhKz0iLyIpO3JldHVybihiPyIvIjoiIikrYX0sSmE9YT0+e3ZhciBiPS9eKFwvP3wpKFtcc1xTXSo/KSgoPzpcLnsxLDJ9fFteXC9dKz98KShcLlteLlwvXSp8KSkoPzpbXC9dKikkLy5leGVjKGEpLnNsaWNlKDEpOwphPWJbMF07Yj1iWzFdO2lmKCFhJiYhYilyZXR1cm4iLiI7YiYmPWIuc2xpY2UoMCwtMSk7cmV0dXJuIGErYn0sSD1hPT5hJiZhLm1hdGNoKC8oW15cL10rfFwvKVwvKiQvKVsxXSxLYT0oYSxiKT0+RyhhKyIvIitiKSxMYT0oKT0+e2lmKGwpe3ZhciBhPXJlcXVpcmUoImNyeXB0byIpO3JldHVybiBiPT5hLnJhbmRvbUZpbGxTeW5jKGIpfXJldHVybiBiPT5jcnlwdG8uZ2V0UmFuZG9tVmFsdWVzKGIpfSxNYT1hPT57KE1hPUxhKCkpKGEpfSxOYT0oLi4uYSk9Pntmb3IodmFyIGI9IiIsYz0hMSxkPWEubGVuZ3RoLTE7LTE8PWQmJiFjO2QtLSl7Yz0wPD1kP2FbZF06SS5jd2QoKTtpZigic3RyaW5nIiE9dHlwZW9mIGMpdGhyb3cgbmV3IFR5cGVFcnJvcigiQXJndW1lbnRzIHRvIHBhdGgucmVzb2x2ZSBtdXN0IGJlIHN0cmluZ3MiKTtpZighYylyZXR1cm4iIjtiPWMrIi8iK2I7Yz0iLyI9PT1jLmNoYXJBdCgwKX1iPUlhKGIuc3BsaXQoIi8iKS5maWx0ZXIoZT0+ISFlKSwhYykuam9pbigiLyIpOwpyZXR1cm4oYz8iLyI6IiIpK2J8fCIuIn0sT2E9KGEsYik9PntmdW5jdGlvbiBjKGgpe2Zvcih2YXIgaz0wO2s8aC5sZW5ndGgmJiIiPT09aFtrXTtrKyspO2Zvcih2YXIgbj1oLmxlbmd0aC0xOzA8PW4mJiIiPT09aFtuXTtuLS0pO3JldHVybiBrPm4/W106aC5zbGljZShrLG4taysxKX1hPU5hKGEpLnNsaWNlKDEpO2I9TmEoYikuc2xpY2UoMSk7YT1jKGEuc3BsaXQoIi8iKSk7Yj1jKGIuc3BsaXQoIi8iKSk7Zm9yKHZhciBkPU1hdGgubWluKGEubGVuZ3RoLGIubGVuZ3RoKSxlPWQsZz0wO2c8ZDtnKyspaWYoYVtnXSE9PWJbZ10pe2U9ZzticmVha31kPVtdO2ZvcihnPWU7ZzxhLmxlbmd0aDtnKyspZC5wdXNoKCIuLiIpO2Q9ZC5jb25jYXQoYi5zbGljZShlKSk7cmV0dXJuIGQuam9pbigiLyIpfSxQYT1bXSxRYT1hPT57Zm9yKHZhciBiPTAsYz0wO2M8YS5sZW5ndGg7KytjKXt2YXIgZD1hLmNoYXJDb2RlQXQoYyk7MTI3Pj1kP2IrKzoyMDQ3Pj1kP2IrPTI6NTUyOTY8PWQmJjU3MzQzPj0KZD8oYis9NCwrK2MpOmIrPTN9cmV0dXJuIGJ9LEo9KGEsYixjLGQpPT57aWYoISgwPGQpKXJldHVybiAwO3ZhciBlPWM7ZD1jK2QtMTtmb3IodmFyIGc9MDtnPGEubGVuZ3RoOysrZyl7dmFyIGg9YS5jb2RlUG9pbnRBdChnKTtpZigxMjc+PWgpe2lmKGM+PWQpYnJlYWs7YltjKytdPWh9ZWxzZSBpZigyMDQ3Pj1oKXtpZihjKzE+PWQpYnJlYWs7YltjKytdPTE5MnxoPj42O2JbYysrXT0xMjh8aCY2M31lbHNlIGlmKDY1NTM1Pj1oKXtpZihjKzI+PWQpYnJlYWs7YltjKytdPTIyNHxoPj4xMjtiW2MrK109MTI4fGg+PjYmNjM7YltjKytdPTEyOHxoJjYzfWVsc2V7aWYoYyszPj1kKWJyZWFrO2JbYysrXT0yNDB8aD4+MTg7YltjKytdPTEyOHxoPj4xMiY2MztiW2MrK109MTI4fGg+PjYmNjM7YltjKytdPTEyOHxoJjYzO2crK319YltjXT0wO3JldHVybiBjLWV9LFJhPWE9Pnt2YXIgYj1BcnJheShRYShhKSsxKTthPUooYSxiLDAsYi5sZW5ndGgpO2IubGVuZ3RoPWE7cmV0dXJuIGJ9LFNhPQpbXTtmdW5jdGlvbiBUYShhLGIpe1NhW2FdPXtpbnB1dDpbXSxvdXRwdXQ6W10sdGE6Yn07VWEoYSxWYSl9CnZhciBWYT17b3BlbihhKXt2YXIgYj1TYVthLm5vZGUucmRldl07aWYoIWIpdGhyb3cgbmV3IEkuZGEoNDMpO2EudHR5PWI7YS5zZWVrYWJsZT0hMX0sY2xvc2UoYSl7YS50dHkudGEuZnN5bmMoYS50dHkpfSxmc3luYyhhKXthLnR0eS50YS5mc3luYyhhLnR0eSl9LHJlYWQoYSxiLGMsZCl7aWYoIWEudHR5fHwhYS50dHkudGEuVGEpdGhyb3cgbmV3IEkuZGEoNjApO2Zvcih2YXIgZT0wLGc9MDtnPGQ7ZysrKXt0cnl7dmFyIGg9YS50dHkudGEuVGEoYS50dHkpfWNhdGNoKGspe3Rocm93IG5ldyBJLmRhKDI5KTt9aWYodm9pZCAwPT09aCYmMD09PWUpdGhyb3cgbmV3IEkuZGEoNik7aWYobnVsbD09PWh8fHZvaWQgMD09PWgpYnJlYWs7ZSsrO2JbYytnXT1ofWUmJihhLm5vZGUuYXRpbWU9RGF0ZS5ub3coKSk7cmV0dXJuIGV9LHdyaXRlKGEsYixjLGQpe2lmKCFhLnR0eXx8IWEudHR5LnRhLkxhKXRocm93IG5ldyBJLmRhKDYwKTt0cnl7Zm9yKHZhciBlPTA7ZTxkO2UrKylhLnR0eS50YS5MYShhLnR0eSwKYltjK2VdKX1jYXRjaChnKXt0aHJvdyBuZXcgSS5kYSgyOSk7fWQmJihhLm5vZGUubXRpbWU9YS5ub2RlLmN0aW1lPURhdGUubm93KCkpO3JldHVybiBlfX0sV2E9e1RhKCl7YTp7aWYoIVBhLmxlbmd0aCl7dmFyIGE9bnVsbDtpZihsKXt2YXIgYj1CdWZmZXIuYWxsb2MoMjU2KSxjPTAsZD1wcm9jZXNzLnN0ZGluLmZkO3RyeXtjPWZzLnJlYWRTeW5jKGQsYiwwLDI1Nil9Y2F0Y2goZSl7aWYoZS50b1N0cmluZygpLmluY2x1ZGVzKCJFT0YiKSljPTA7ZWxzZSB0aHJvdyBlO30wPGMmJihhPWIuc2xpY2UoMCxjKS50b1N0cmluZygidXRmLTgiKSl9ZWxzZSJ1bmRlZmluZWQiIT10eXBlb2Ygd2luZG93JiYiZnVuY3Rpb24iPT10eXBlb2Ygd2luZG93LnByb21wdCYmKGE9d2luZG93LnByb21wdCgiSW5wdXQ6ICIpLG51bGwhPT1hJiYoYSs9IlxuIikpO2lmKCFhKXthPW51bGw7YnJlYWsgYX1QYT1SYShhKX1hPVBhLnNoaWZ0KCl9cmV0dXJuIGF9LExhKGEsYil7bnVsbD09PWJ8fDEwPT09CmI/KGthKEYoYS5vdXRwdXQpKSxhLm91dHB1dD1bXSk6MCE9YiYmYS5vdXRwdXQucHVzaChiKX0sZnN5bmMoYSl7MDxhLm91dHB1dD8ubGVuZ3RoJiYoa2EoRihhLm91dHB1dCkpLGEub3V0cHV0PVtdKX0saGIoKXtyZXR1cm57d2I6MjU4NTYseWI6NSx2YjoxOTEseGI6MzUzODcsdWI6WzMsMjgsMTI3LDIxLDQsMCwxLDAsMTcsMTksMjYsMCwxOCwxNSwyMywyMiwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwXX19LGliKCl7cmV0dXJuIDB9LGpiKCl7cmV0dXJuWzI0LDgwXX19LFhhPXtMYShhLGIpe251bGw9PT1ifHwxMD09PWI/KHEoRihhLm91dHB1dCkpLGEub3V0cHV0PVtdKTowIT1iJiZhLm91dHB1dC5wdXNoKGIpfSxmc3luYyhhKXswPGEub3V0cHV0Py5sZW5ndGgmJihxKEYoYS5vdXRwdXQpKSxhLm91dHB1dD1bXSl9fSxLPXtxYTpudWxsLGlhKCl7cmV0dXJuIEsuY3JlYXRlTm9kZShudWxsLCIvIiwxNjg5NSwwKX0sY3JlYXRlTm9kZShhLGIsYyxkKXtpZigyNDU3Nj09PQooYyY2MTQ0MCl8fEkuaXNGSUZPKGMpKXRocm93IG5ldyBJLmRhKDYzKTtLLnFhfHwoSy5xYT17ZGlyOntub2RlOnttYTpLLmVhLm1hLG9hOksuZWEub2EsbG9va3VwOksuZWEubG9va3VwLHNhOksuZWEuc2EscmVuYW1lOksuZWEucmVuYW1lLHVubGluazpLLmVhLnVubGluayxybWRpcjpLLmVhLnJtZGlyLHJlYWRkaXI6Sy5lYS5yZWFkZGlyLHN5bWxpbms6Sy5lYS5zeW1saW5rfSxzdHJlYW06e2thOksuZmEua2F9fSxmaWxlOntub2RlOnttYTpLLmVhLm1hLG9hOksuZWEub2F9LHN0cmVhbTp7a2E6Sy5mYS5rYSxyZWFkOksuZmEucmVhZCx3cml0ZTpLLmZhLndyaXRlLHlhOksuZmEueWEsQWE6Sy5mYS5BYX19LGxpbms6e25vZGU6e21hOksuZWEubWEsb2E6Sy5lYS5vYSxyZWFkbGluazpLLmVhLnJlYWRsaW5rfSxzdHJlYW06e319LE5hOntub2RlOnttYTpLLmVhLm1hLG9hOksuZWEub2F9LHN0cmVhbTpJLmNifX0pO2M9SS5jcmVhdGVOb2RlKGEsYixjLGQpO00oYy5tb2RlKT8oYy5lYT0KSy5xYS5kaXIubm9kZSxjLmZhPUsucWEuZGlyLnN0cmVhbSxjLmdhPXt9KTpJLmlzRmlsZShjLm1vZGUpPyhjLmVhPUsucWEuZmlsZS5ub2RlLGMuZmE9Sy5xYS5maWxlLnN0cmVhbSxjLmphPTAsYy5nYT1udWxsKTo0MDk2MD09PShjLm1vZGUmNjE0NDApPyhjLmVhPUsucWEubGluay5ub2RlLGMuZmE9Sy5xYS5saW5rLnN0cmVhbSk6ODE5Mj09PShjLm1vZGUmNjE0NDApJiYoYy5lYT1LLnFhLk5hLm5vZGUsYy5mYT1LLnFhLk5hLnN0cmVhbSk7Yy5hdGltZT1jLm10aW1lPWMuY3RpbWU9RGF0ZS5ub3coKTthJiYoYS5nYVtiXT1jLGEuYXRpbWU9YS5tdGltZT1hLmN0aW1lPWMuYXRpbWUpO3JldHVybiBjfSxKYihhKXtyZXR1cm4gYS5nYT9hLmdhLnN1YmFycmF5P2EuZ2Euc3ViYXJyYXkoMCxhLmphKTpuZXcgVWludDhBcnJheShhLmdhKTpuZXcgVWludDhBcnJheSgwKX0sZWE6e21hKGEpe3ZhciBiPXt9O2IuZGV2PTgxOTI9PT0oYS5tb2RlJjYxNDQwKT9hLmlkOjE7Yi5pbm89YS5pZDsKYi5tb2RlPWEubW9kZTtiLm5saW5rPTE7Yi51aWQ9MDtiLmdpZD0wO2IucmRldj1hLnJkZXY7TShhLm1vZGUpP2Iuc2l6ZT00MDk2OkkuaXNGaWxlKGEubW9kZSk/Yi5zaXplPWEuamE6NDA5NjA9PT0oYS5tb2RlJjYxNDQwKT9iLnNpemU9YS5saW5rLmxlbmd0aDpiLnNpemU9MDtiLmF0aW1lPW5ldyBEYXRlKGEuYXRpbWUpO2IubXRpbWU9bmV3IERhdGUoYS5tdGltZSk7Yi5jdGltZT1uZXcgRGF0ZShhLmN0aW1lKTtiLmJsa3NpemU9NDA5NjtiLmJsb2Nrcz1NYXRoLmNlaWwoYi5zaXplL2IuYmxrc2l6ZSk7cmV0dXJuIGJ9LG9hKGEsYil7Zm9yKHZhciBjIG9mWyJtb2RlIiwiYXRpbWUiLCJtdGltZSIsImN0aW1lIl0pbnVsbCE9YltjXSYmKGFbY109YltjXSk7dm9pZCAwIT09Yi5zaXplJiYoYj1iLnNpemUsYS5qYSE9YiYmKDA9PWI/KGEuZ2E9bnVsbCxhLmphPTApOihjPWEuZ2EsYS5nYT1uZXcgVWludDhBcnJheShiKSxjJiZhLmdhLnNldChjLnN1YmFycmF5KDAsTWF0aC5taW4oYiwKYS5qYSkpKSxhLmphPWIpKSl9LGxvb2t1cCgpe0suRGF8fChLLkRhPW5ldyBJLmRhKDQ0KSxLLkRhLnN0YWNrPSI8Z2VuZXJpYyBlcnJvciwgbm8gc3RhY2s+Iik7dGhyb3cgSy5EYTt9LHNhKGEsYixjLGQpe3JldHVybiBLLmNyZWF0ZU5vZGUoYSxiLGMsZCl9LHJlbmFtZShhLGIsYyl7dHJ5e3ZhciBkPU4oYixjKX1jYXRjaChnKXt9aWYoZCl7aWYoTShhLm1vZGUpKWZvcih2YXIgZSBpbiBkLmdhKXRocm93IG5ldyBJLmRhKDU1KTtZYShkKX1kZWxldGUgYS5wYXJlbnQuZ2FbYS5uYW1lXTtiLmdhW2NdPWE7YS5uYW1lPWM7Yi5jdGltZT1iLm10aW1lPWEucGFyZW50LmN0aW1lPWEucGFyZW50Lm10aW1lPURhdGUubm93KCl9LHVubGluayhhLGIpe2RlbGV0ZSBhLmdhW2JdO2EuY3RpbWU9YS5tdGltZT1EYXRlLm5vdygpfSxybWRpcihhLGIpe3ZhciBjPU4oYSxiKSxkO2ZvcihkIGluIGMuZ2EpdGhyb3cgbmV3IEkuZGEoNTUpO2RlbGV0ZSBhLmdhW2JdO2EuY3RpbWU9YS5tdGltZT1EYXRlLm5vdygpfSwKcmVhZGRpcihhKXtyZXR1cm5bIi4iLCIuLiIsLi4uT2JqZWN0LmtleXMoYS5nYSldfSxzeW1saW5rKGEsYixjKXthPUsuY3JlYXRlTm9kZShhLGIsNDE0NzEsMCk7YS5saW5rPWM7cmV0dXJuIGF9LHJlYWRsaW5rKGEpe2lmKDQwOTYwIT09KGEubW9kZSY2MTQ0MCkpdGhyb3cgbmV3IEkuZGEoMjgpO3JldHVybiBhLmxpbmt9fSxmYTp7cmVhZChhLGIsYyxkLGUpe3ZhciBnPWEubm9kZS5nYTtpZihlPj1hLm5vZGUuamEpcmV0dXJuIDA7YT1NYXRoLm1pbihhLm5vZGUuamEtZSxkKTtpZig4PGEmJmcuc3ViYXJyYXkpYi5zZXQoZy5zdWJhcnJheShlLGUrYSksYyk7ZWxzZSBmb3IoZD0wO2Q8YTtkKyspYltjK2RdPWdbZStkXTtyZXR1cm4gYX0sd3JpdGUoYSxiLGMsZCxlLGcpe2IuYnVmZmVyPT09di5idWZmZXImJihnPSExKTtpZighZClyZXR1cm4gMDthPWEubm9kZTthLm10aW1lPWEuY3RpbWU9RGF0ZS5ub3coKTtpZihiLnN1YmFycmF5JiYoIWEuZ2F8fGEuZ2Euc3ViYXJyYXkpKXtpZihnKXJldHVybiBhLmdhPQpiLnN1YmFycmF5KGMsYytkKSxhLmphPWQ7aWYoMD09PWEuamEmJjA9PT1lKXJldHVybiBhLmdhPWIuc2xpY2UoYyxjK2QpLGEuamE9ZDtpZihlK2Q8PWEuamEpcmV0dXJuIGEuZ2Euc2V0KGIuc3ViYXJyYXkoYyxjK2QpLGUpLGR9Zz1lK2Q7dmFyIGg9YS5nYT9hLmdhLmxlbmd0aDowO2g+PWd8fChnPU1hdGgubWF4KGcsaCooMTA0ODU3Nj5oPzI6MS4xMjUpPj4+MCksMCE9aCYmKGc9TWF0aC5tYXgoZywyNTYpKSxoPWEuZ2EsYS5nYT1uZXcgVWludDhBcnJheShnKSwwPGEuamEmJmEuZ2Euc2V0KGguc3ViYXJyYXkoMCxhLmphKSwwKSk7aWYoYS5nYS5zdWJhcnJheSYmYi5zdWJhcnJheSlhLmdhLnNldChiLnN1YmFycmF5KGMsYytkKSxlKTtlbHNlIGZvcihnPTA7ZzxkO2crKylhLmdhW2UrZ109YltjK2ddO2EuamE9TWF0aC5tYXgoYS5qYSxlK2QpO3JldHVybiBkfSxrYShhLGIsYyl7MT09PWM/Yis9YS5wb3NpdGlvbjoyPT09YyYmSS5pc0ZpbGUoYS5ub2RlLm1vZGUpJiYoYis9YS5ub2RlLmphKTsKaWYoMD5iKXRocm93IG5ldyBJLmRhKDI4KTtyZXR1cm4gYn0seWEoYSxiLGMsZCxlKXtpZighSS5pc0ZpbGUoYS5ub2RlLm1vZGUpKXRocm93IG5ldyBJLmRhKDQzKTthPWEubm9kZS5nYTtpZihlJjJ8fCFhfHxhLmJ1ZmZlciE9PXYuYnVmZmVyKXtkPSEwO3dhKCk7ZT12b2lkIDA7aWYoIWUpdGhyb3cgbmV3IEkuZGEoNDgpO2lmKGEpe2lmKDA8Y3x8YytiPGEubGVuZ3RoKWEuc3ViYXJyYXk/YT1hLnN1YmFycmF5KGMsYytiKTphPUFycmF5LnByb3RvdHlwZS5zbGljZS5jYWxsKGEsYyxjK2IpO3Yuc2V0KGEsZSl9fWVsc2UgZD0hMSxlPWEuYnl0ZU9mZnNldDtyZXR1cm57T2I6ZSxxYjpkfX0sQWEoYSxiLGMsZCl7Sy5mYS53cml0ZShhLGIsMCxkLGMsITEpO3JldHVybiAwfX19LFphPShhLGIpPT57dmFyIGM9MDthJiYoY3w9MzY1KTtiJiYoY3w9MTQ2KTtyZXR1cm4gY30sJGE9YXN5bmMgYT0+e2E9YXdhaXQgaWEoYSk7cmV0dXJuIG5ldyBVaW50OEFycmF5KGEpfSxhYj1bXSxjYj1hc3luYyhhLApiKT0+eyJ1bmRlZmluZWQiIT10eXBlb2YgQnJvd3NlciYmYmIoKTtmb3IodmFyIGMgb2YgYWIpaWYoYy5jYW5IYW5kbGUoYikpcmV0dXJuIGMuaGFuZGxlKGEsYik7cmV0dXJuIGF9LGRiPWFzeW5jKGEsYixjLGQsZSxnLGgsayk9Pnt2YXIgbj1iP05hKEcoYSsiLyIrYikpOmE7dWEoKTt0cnl7dmFyIHI9Yzsic3RyaW5nIj09dHlwZW9mIGMmJihyPWF3YWl0ICRhKGMpKTtyPWF3YWl0IGNiKHIsbik7az8uKCk7aWYoIWcpe2M9YjthJiYoYT0ic3RyaW5nIj09dHlwZW9mIGE/YTpPKGEpLGM9Yj9HKGErIi8iK2IpOmEpO3ZhciBtPVphKGQsZSksdD1JLmNyZWF0ZShjLG0pO2lmKHIpe2lmKCJzdHJpbmciPT10eXBlb2Ygcil7dmFyIEM9QXJyYXkoci5sZW5ndGgpO2I9MDtmb3IodmFyIEw9ci5sZW5ndGg7YjxMOysrYilDW2JdPXIuY2hhckNvZGVBdChiKTtyPUN9SS5jaG1vZCh0LG18MTQ2KTt2YXIgQT1JLm9wZW4odCw1NzcpO0kud3JpdGUoQSxyLDAsci5sZW5ndGgsMCxoKTtJLmNsb3NlKEEpOwpJLmNobW9kKHQsbSl9fX1maW5hbGx5e3ZhKCl9fTtmdW5jdGlvbiBiYigpe3ZhciBhLGIsYztJLkdhPSEwO2E/Pz1mLnN0ZGluO2I/Pz1mLnN0ZG91dDtjPz89Zi5zdGRlcnI7YT9JLnVhKCIvZGV2Iiwic3RkaW4iLGEpOkkuc3ltbGluaygiL2Rldi90dHkiLCIvZGV2L3N0ZGluIik7Yj9JLnVhKCIvZGV2Iiwic3Rkb3V0IixudWxsLGIpOkkuc3ltbGluaygiL2Rldi90dHkiLCIvZGV2L3N0ZG91dCIpO2M/SS51YSgiL2RldiIsInN0ZGVyciIsbnVsbCxjKTpJLnN5bWxpbmsoIi9kZXYvdHR5MSIsIi9kZXYvc3RkZXJyIik7SS5vcGVuKCIvZGV2L3N0ZGluIiwwKTtJLm9wZW4oIi9kZXYvc3Rkb3V0IiwxKTtJLm9wZW4oIi9kZXYvc3RkZXJyIiwxKX1mdW5jdGlvbiBVYShhLGIpe0kuUGFbYV09e2ZhOmJ9fWZ1bmN0aW9uIE0oYSl7cmV0dXJuIDE2Mzg0PT09KGEmNjE0NDApfQpmdW5jdGlvbiBOKGEsYil7dmFyIGM9TShhLm1vZGUpPyhjPVAoYSwieCIpKT9jOmEuZWEubG9va3VwPzA6Mjo1NDtpZihjKXRocm93IG5ldyBJLmRhKGMpO2ZvcihjPUkucGFbZWIoYS5pZCxiKV07YztjPWMueGEpe3ZhciBkPWMubmFtZTtpZihjLnBhcmVudC5pZD09PWEuaWQmJmQ9PT1iKXJldHVybiBjfXJldHVybiBJLmxvb2t1cChhLGIpfWZ1bmN0aW9uIFlhKGEpe3ZhciBiPWViKGEucGFyZW50LmlkLGEubmFtZSk7aWYoSS5wYVtiXT09PWEpSS5wYVtiXT1hLnhhO2Vsc2UgZm9yKGI9SS5wYVtiXTtiOyl7aWYoYi54YT09PWEpe2IueGE9YS54YTticmVha31iPWIueGF9fQpmdW5jdGlvbiBRKGEsYj17fSl7aWYoIWEpdGhyb3cgbmV3IEkuZGEoNDQpO2IuQmE/PyhiLkJhPSEwKTsiLyI9PT1hLmNoYXJBdCgwKXx8KGE9SS5jd2QoKSsiLyIrYSk7dmFyIGM9MDthOmZvcig7NDA+YztjKyspe2E9YS5zcGxpdCgiLyIpLmZpbHRlcihrPT4hIWspO2Zvcih2YXIgZD1JLnJvb3QsZT0iLyIsZz0wO2c8YS5sZW5ndGg7ZysrKXt2YXIgaD1nPT09YS5sZW5ndGgtMTtpZihoJiZiLnBhcmVudClicmVhaztpZigiLiIhPT1hW2ddKWlmKCIuLiI9PT1hW2ddKWlmKGU9SmEoZSksSS5JYShkKSl7YT1lKyIvIithLnNsaWNlKGcrMSkuam9pbigiLyIpO2MtLTtjb250aW51ZSBhfWVsc2UgZD1kLnBhcmVudDtlbHNle2U9RyhlKyIvIithW2ddKTt0cnl7ZD1OKGQsYVtnXSl9Y2F0Y2goayl7aWYoNDQ9PT1rPy5oYSYmaCYmYi5uYilyZXR1cm57cGF0aDplfTt0aHJvdyBrO30hZC5uYXx8aCYmIWIuQmF8fChkPWQubmEucm9vdCk7aWYoNDA5NjA9PT0oZC5tb2RlJjYxNDQwKSYmKCFofHwKYi5sYSkpe2lmKCFkLmVhLnJlYWRsaW5rKXRocm93IG5ldyBJLmRhKDUyKTtkPWQuZWEucmVhZGxpbmsoZCk7Ii8iPT09ZC5jaGFyQXQoMCl8fChkPUphKGUpKyIvIitkKTthPWQrIi8iK2Euc2xpY2UoZysxKS5qb2luKCIvIik7Y29udGludWUgYX19fXJldHVybntwYXRoOmUsbm9kZTpkfX10aHJvdyBuZXcgSS5kYSgzMik7fWZ1bmN0aW9uIE8oYSl7Zm9yKHZhciBiOzspe2lmKEkuSWEoYSkpcmV0dXJuIGE9YS5pYS5YYSxiPyIvIiE9PWFbYS5sZW5ndGgtMV0/YCR7YX0vJHtifWA6YStiOmE7Yj1iP2Ake2EubmFtZX0vJHtifWA6YS5uYW1lO2E9YS5wYXJlbnR9fWZ1bmN0aW9uIGViKGEsYil7Zm9yKHZhciBjPTAsZD0wO2Q8Yi5sZW5ndGg7ZCsrKWM9KGM8PDUpLWMrYi5jaGFyQ29kZUF0KGQpfDA7cmV0dXJuKGErYz4+PjApJUkucGEubGVuZ3RofWZ1bmN0aW9uIGZiKGEpe3ZhciBiPWViKGEucGFyZW50LmlkLGEubmFtZSk7YS54YT1JLnBhW2JdO0kucGFbYl09YX0KZnVuY3Rpb24gZ2IoYSl7dmFyIGI9WyJyIiwidyIsInJ3Il1bYSYzXTthJjUxMiYmKGIrPSJ3Iik7cmV0dXJuIGJ9ZnVuY3Rpb24gUChhLGIpe2lmKEkuV2EpcmV0dXJuIDA7aWYoIWIuaW5jbHVkZXMoInIiKXx8YS5tb2RlJjI5Mil7aWYoYi5pbmNsdWRlcygidyIpJiYhKGEubW9kZSYxNDYpfHxiLmluY2x1ZGVzKCJ4IikmJiEoYS5tb2RlJjczKSlyZXR1cm4gMn1lbHNlIHJldHVybiAyO3JldHVybiAwfWZ1bmN0aW9uIGhiKGEsYil7aWYoIU0oYS5tb2RlKSlyZXR1cm4gNTQ7dHJ5e3JldHVybiBOKGEsYiksMjB9Y2F0Y2goYyl7fXJldHVybiBQKGEsInd4Iil9CmZ1bmN0aW9uIGliKGEsYixjKXt0cnl7dmFyIGQ9TihhLGIpfWNhdGNoKGUpe3JldHVybiBlLmhhfWlmKGE9UChhLCJ3eCIpKXJldHVybiBhO2lmKGMpe2lmKCFNKGQubW9kZSkpcmV0dXJuIDU0O2lmKEkuSWEoZCl8fE8oZCk9PT1JLmN3ZCgpKXJldHVybiAxMH1lbHNlIGlmKE0oZC5tb2RlKSlyZXR1cm4gMzE7cmV0dXJuIDB9ZnVuY3Rpb24gamIoYSxiKXtpZighYSl0aHJvdyBuZXcgSS5kYShiKTtyZXR1cm4gYX1mdW5jdGlvbiBSKGEpe2E9SS5TYShhKTtpZighYSl0aHJvdyBuZXcgSS5kYSg4KTtyZXR1cm4gYX1mdW5jdGlvbiBrYihhLGI9LTEpe2E9T2JqZWN0LmFzc2lnbihuZXcgSS5iYixhKTtpZigtMT09YilhOntmb3IoYj0wO2I8PUkuTWE7YisrKWlmKCFJLnN0cmVhbXNbYl0pYnJlYWsgYTt0aHJvdyBuZXcgSS5kYSgzMyk7fWEuZmQ9YjtyZXR1cm4gSS5zdHJlYW1zW2JdPWF9ZnVuY3Rpb24gbGIoYSxiPS0xKXthPWtiKGEsYik7YS5mYT8uRGI/LihhKTtyZXR1cm4gYX0KZnVuY3Rpb24gbWIoYSxiLGMpe3ZhciBkPWE/LmZhLm9hO2E9ZD9hOmI7ZD8/PWIuZWEub2E7amIoZCw2Myk7ZChhLGMpfWZ1bmN0aW9uIG5iKGEpe3ZhciBiPVtdO2ZvcihhPVthXTthLmxlbmd0aDspe3ZhciBjPWEucG9wKCk7Yi5wdXNoKGMpO2EucHVzaCguLi5jLnphKX1yZXR1cm4gYn1mdW5jdGlvbiBvYihhKXt2YXIgYj17dGI6NDA5NixHYjo0MDk2LGJsb2NrczoxRTYsc2I6NUU1LHJiOjVFNSxmaWxlczpJLkthLEViOkkuS2EtMSxIYjo0MixmbGFnczoyLE1iOjI1NX07YS5lYS5aYSYmT2JqZWN0LmFzc2lnbihiLGEuZWEuWmEoYS5pYS5vYi5yb290KSk7cmV0dXJuIGJ9ZnVuY3Rpb24gcGIoYSxiLGMpeyJ1bmRlZmluZWQiPT10eXBlb2YgYyYmKGM9YixiPTQzOCk7cmV0dXJuIEkuc2EoYSxifDgxOTIsYyl9ZnVuY3Rpb24gcWIoYSxiLGMsZCl7bWIoYSxiLHttb2RlOmMmNDA5NXxiLm1vZGUmLTQwOTYsY3RpbWU6RGF0ZS5ub3coKSxRYTpkfSl9CmZ1bmN0aW9uIHJiKGEsYixjKXtpZihNKGIubW9kZSkpdGhyb3cgbmV3IEkuZGEoMzEpO2lmKCFJLmlzRmlsZShiLm1vZGUpKXRocm93IG5ldyBJLmRhKDI4KTt2YXIgZD1QKGIsInciKTtpZihkKXRocm93IG5ldyBJLmRhKGQpO21iKGEsYix7c2l6ZTpjLHRpbWVzdGFtcDpEYXRlLm5vdygpfSl9ZnVuY3Rpb24gc2IoYSxiLGMsZCl7YT0ic3RyaW5nIj09dHlwZW9mIGE/YTpPKGEpO2I9RyhhKyIvIitiKTtyZXR1cm4gSS5jcmVhdGUoYixaYShjLGQpKX0KZnVuY3Rpb24gdGIoYSl7aWYoIShhLmtifHxhLmxifHxhLmxpbmt8fGEuZ2EpKXtpZigidW5kZWZpbmVkIiE9dHlwZW9mIFhNTEh0dHBSZXF1ZXN0KXRocm93IEVycm9yKCJMYXp5IGxvYWRpbmcgc2hvdWxkIGhhdmUgYmVlbiBwZXJmb3JtZWQgKGNvbnRlbnRzIHNldCkgaW4gY3JlYXRlTGF6eUZpbGUsIGJ1dCBpdCB3YXMgbm90LiBMYXp5IGxvYWRpbmcgb25seSB3b3JrcyBpbiB3ZWIgd29ya2Vycy4gVXNlIC0tZW1iZWQtZmlsZSBvciAtLXByZWxvYWQtZmlsZSBpbiBlbWNjIG9uIHRoZSBtYWluIHRocmVhZC4iKTt0cnl7YS5nYT1wKGEudXJsKSxhLmphPWEuZ2EubGVuZ3RofWNhdGNoKGIpe3Rocm93IG5ldyBJLmRhKDI5KTt9fX0KdmFyIEk9e3Jvb3Q6bnVsbCx6YTpbXSxQYTp7fSxzdHJlYW1zOltdLEthOjEscGE6bnVsbCxPYToiLyIsR2E6ITEsV2E6ITAsZmI6bnVsbCxDYTowLFlhOnt9LGRhOmNsYXNze25hbWU9IkVycm5vRXJyb3IiO2NvbnN0cnVjdG9yKGEpe3RoaXMuaGE9YX19LGJiOmNsYXNze3JhPXt9O25vZGU9bnVsbDtnZXQgb2JqZWN0KCl7cmV0dXJuIHRoaXMubm9kZX1zZXQgb2JqZWN0KGEpe3RoaXMubm9kZT1hfWdldCBmbGFncygpe3JldHVybiB0aGlzLnJhLmZsYWdzfXNldCBmbGFncyhhKXt0aGlzLnJhLmZsYWdzPWF9Z2V0IHBvc2l0aW9uKCl7cmV0dXJuIHRoaXMucmEucG9zaXRpb259c2V0IHBvc2l0aW9uKGEpe3RoaXMucmEucG9zaXRpb249YX19LGFiOmNsYXNze2VhPXt9O2ZhPXt9O25hPW51bGw7Y29uc3RydWN0b3IoYSxiLGMsZCl7YXx8PXRoaXM7dGhpcy5wYXJlbnQ9YTt0aGlzLmlhPWEuaWE7dGhpcy5pZD1JLkthKys7dGhpcy5uYW1lPWI7dGhpcy5tb2RlPWM7dGhpcy5yZGV2PWQ7CnRoaXMuYXRpbWU9dGhpcy5tdGltZT10aGlzLmN0aW1lPURhdGUubm93KCl9Z2V0IHJlYWQoKXtyZXR1cm4gMzY1PT09KHRoaXMubW9kZSYzNjUpfXNldCByZWFkKGEpe2E/dGhpcy5tb2RlfD0zNjU6dGhpcy5tb2RlJj0tMzY2fWdldCB3cml0ZSgpe3JldHVybiAxNDY9PT0odGhpcy5tb2RlJjE0Nil9c2V0IHdyaXRlKGEpe2E/dGhpcy5tb2RlfD0xNDY6dGhpcy5tb2RlJj0tMTQ3fWdldCBsYigpe3JldHVybiBNKHRoaXMubW9kZSl9Z2V0IGtiKCl7cmV0dXJuIDgxOTI9PT0odGhpcy5tb2RlJjYxNDQwKX19LGNyZWF0ZU5vZGUoYSxiLGMsZCl7YT1uZXcgSS5hYihhLGIsYyxkKTtmYihhKTtyZXR1cm4gYX0sSWEoYSl7cmV0dXJuIGE9PT1hLnBhcmVudH0saXNGaWxlKGEpe3JldHVybiAzMjc2OD09PShhJjYxNDQwKX0saXNGSUZPKGEpe3JldHVybiA0MDk2PT09KGEmNjE0NDApfSxpc1NvY2tldChhKXtyZXR1cm4gNDkxNTI9PT0oYSY0OTE1Mil9LE1hOjQwOTYsU2E6YT0+SS5zdHJlYW1zW2FdLApjYjp7b3BlbihhKXthLmZhPUkuZ2IoYS5ub2RlLnJkZXYpLmZhO2EuZmEub3Blbj8uKGEpfSxrYSgpe3Rocm93IG5ldyBJLmRhKDcwKTt9fSxKYTphPT5hPj44LEtiOmE9PmEmMjU1LHdhOihhLGIpPT5hPDw4fGIsZ2I6YT0+SS5QYVthXSwkYShhLGIpe2Z1bmN0aW9uIGMoaCl7SS5DYS0tO3JldHVybiBiKGgpfWZ1bmN0aW9uIGQoaCl7aWYoaCl7aWYoIWQuZWIpcmV0dXJuIGQuZWI9ITAsYyhoKX1lbHNlKytnPj1lLmxlbmd0aCYmYyhudWxsKX0iZnVuY3Rpb24iPT10eXBlb2YgYSYmKGI9YSxhPSExKTtJLkNhKys7MTxJLkNhJiZxKGB3YXJuaW5nOiAke0kuQ2F9IEZTLnN5bmNmcyBvcGVyYXRpb25zIGluIGZsaWdodCBhdCBvbmNlLCBwcm9iYWJseSBqdXN0IGRvaW5nIGV4dHJhIHdvcmtgKTt2YXIgZT1uYihJLnJvb3QuaWEpLGc9MDtlLmZvckVhY2goaD0+e2lmKCFoLnR5cGUuJGEpcmV0dXJuIGQobnVsbCk7aC50eXBlLiRhKGgsYSxkKX0pfSxpYShhLGIsYyl7dmFyIGQ9Ii8iPT09CmM7aWYoZCYmSS5yb290KXRocm93IG5ldyBJLmRhKDEwKTtpZighZCYmYyl7dmFyIGU9UShjLHtCYTohMX0pO2M9ZS5wYXRoO2U9ZS5ub2RlO2lmKGUubmEpdGhyb3cgbmV3IEkuZGEoMTApO2lmKCFNKGUubW9kZSkpdGhyb3cgbmV3IEkuZGEoNTQpO31iPXt0eXBlOmEsb2I6YixYYTpjLHphOltdfTthPWEuaWEoYik7YS5pYT1iO2Iucm9vdD1hO2Q/SS5yb290PWE6ZSYmKGUubmE9YixlLmlhJiZlLmlhLnphLnB1c2goYikpO3JldHVybiBhfSxTYihhKXthPVEoYSx7QmE6ITF9KTtpZighYS5ub2RlLm5hKXRocm93IG5ldyBJLmRhKDI4KTthPWEubm9kZTt2YXIgYj1hLm5hLGM9bmIoYik7T2JqZWN0LmtleXMoSS5wYSkuZm9yRWFjaChkPT57Zm9yKGQ9SS5wYVtkXTtkOyl7dmFyIGU9ZC54YTtjLmluY2x1ZGVzKGQuaWEpJiZZYShkKTtkPWV9fSk7YS5uYT1udWxsO2EuaWEuemEuc3BsaWNlKGEuaWEuemEuaW5kZXhPZihiKSwxKX0sbG9va3VwKGEsYil7cmV0dXJuIGEuZWEubG9va3VwKGEsCmIpfSxzYShhLGIsYyl7dmFyIGQ9UShhLHtwYXJlbnQ6ITB9KS5ub2RlO2E9SChhKTtpZighYSl0aHJvdyBuZXcgSS5kYSgyOCk7aWYoIi4iPT09YXx8Ii4uIj09PWEpdGhyb3cgbmV3IEkuZGEoMjApO3ZhciBlPWhiKGQsYSk7aWYoZSl0aHJvdyBuZXcgSS5kYShlKTtpZighZC5lYS5zYSl0aHJvdyBuZXcgSS5kYSg2Myk7cmV0dXJuIGQuZWEuc2EoZCxhLGIsYyl9LFphKGEpe3JldHVybiBvYihRKGEse2xhOiEwfSkubm9kZSl9LFFiKGEpe3JldHVybiBvYihhLm5vZGUpfSxjcmVhdGUoYSxiPTQzOCl7cmV0dXJuIEkuc2EoYSxiJjQwOTV8MzI3NjgsMCl9LG1rZGlyKGEsYj01MTEpe3JldHVybiBJLnNhKGEsYiYxMDIzfDE2Mzg0LDApfSxMYihhLGIpe3ZhciBjPWEuc3BsaXQoIi8iKSxkPSIiLGU7Zm9yKGUgb2YgYylpZihlKXtpZihkfHwiLyI9PT1hLmNoYXJBdCgwKSlkKz0iLyI7ZCs9ZTt0cnl7SS5ta2RpcihkLGIpfWNhdGNoKGcpe2lmKDIwIT1nLmhhKXRocm93IGc7fX19LHN5bWxpbmsoYSwKYil7aWYoIU5hKGEpKXRocm93IG5ldyBJLmRhKDQ0KTt2YXIgYz1RKGIse3BhcmVudDohMH0pLm5vZGU7aWYoIWMpdGhyb3cgbmV3IEkuZGEoNDQpO2I9SChiKTt2YXIgZD1oYihjLGIpO2lmKGQpdGhyb3cgbmV3IEkuZGEoZCk7aWYoIWMuZWEuc3ltbGluayl0aHJvdyBuZXcgSS5kYSg2Myk7cmV0dXJuIGMuZWEuc3ltbGluayhjLGIsYSl9LHJlbmFtZShhLGIpe3ZhciBjPUphKGEpLGQ9SmEoYiksZT1IKGEpLGc9SChiKTt2YXIgaD1RKGEse3BhcmVudDohMH0pO3ZhciBrPWgubm9kZTtoPVEoYix7cGFyZW50OiEwfSk7aD1oLm5vZGU7aWYoIWt8fCFoKXRocm93IG5ldyBJLmRhKDQ0KTtpZihrLmlhIT09aC5pYSl0aHJvdyBuZXcgSS5kYSg3NSk7dmFyIG49TihrLGUpO2E9T2EoYSxkKTtpZigiLiIhPT1hLmNoYXJBdCgwKSl0aHJvdyBuZXcgSS5kYSgyOCk7YT1PYShiLGMpO2lmKCIuIiE9PWEuY2hhckF0KDApKXRocm93IG5ldyBJLmRhKDU1KTt0cnl7dmFyIHI9TihoLGcpfWNhdGNoKG0pe31pZihuIT09CnIpe2I9TShuLm1vZGUpO2lmKGU9aWIoayxlLGIpKXRocm93IG5ldyBJLmRhKGUpO2lmKGU9cj9pYihoLGcsYik6aGIoaCxnKSl0aHJvdyBuZXcgSS5kYShlKTtpZighay5lYS5yZW5hbWUpdGhyb3cgbmV3IEkuZGEoNjMpO2lmKG4ubmF8fHImJnIubmEpdGhyb3cgbmV3IEkuZGEoMTApO2lmKGghPT1rJiYoZT1QKGssInciKSkpdGhyb3cgbmV3IEkuZGEoZSk7WWEobik7dHJ5e2suZWEucmVuYW1lKG4saCxnKSxuLnBhcmVudD1ofWNhdGNoKG0pe3Rocm93IG07fWZpbmFsbHl7ZmIobil9fX0scm1kaXIoYSl7dmFyIGI9UShhLHtwYXJlbnQ6ITB9KS5ub2RlO2E9SChhKTt2YXIgYz1OKGIsYSksZD1pYihiLGEsITApO2lmKGQpdGhyb3cgbmV3IEkuZGEoZCk7aWYoIWIuZWEucm1kaXIpdGhyb3cgbmV3IEkuZGEoNjMpO2lmKGMubmEpdGhyb3cgbmV3IEkuZGEoMTApO2IuZWEucm1kaXIoYixhKTtZYShjKX0scmVhZGRpcihhKXthPVEoYSx7bGE6ITB9KS5ub2RlO3JldHVybiBqYihhLmVhLnJlYWRkaXIsCjU0KShhKX0sdW5saW5rKGEpe3ZhciBiPVEoYSx7cGFyZW50OiEwfSkubm9kZTtpZighYil0aHJvdyBuZXcgSS5kYSg0NCk7YT1IKGEpO3ZhciBjPU4oYixhKSxkPWliKGIsYSwhMSk7aWYoZCl0aHJvdyBuZXcgSS5kYShkKTtpZighYi5lYS51bmxpbmspdGhyb3cgbmV3IEkuZGEoNjMpO2lmKGMubmEpdGhyb3cgbmV3IEkuZGEoMTApO2IuZWEudW5saW5rKGIsYSk7WWEoYyl9LHJlYWRsaW5rKGEpe2E9UShhKS5ub2RlO2lmKCFhKXRocm93IG5ldyBJLmRhKDQ0KTtpZighYS5lYS5yZWFkbGluayl0aHJvdyBuZXcgSS5kYSgyOCk7cmV0dXJuIGEuZWEucmVhZGxpbmsoYSl9LHN0YXQoYSxiKXthPVEoYSx7bGE6IWJ9KS5ub2RlO3JldHVybiBqYihhLmVhLm1hLDYzKShhKX0sZnN0YXQoYSl7dmFyIGI9UihhKTthPWIubm9kZTt2YXIgYz1iLmZhLm1hO2I9Yz9iOmE7Yz8/PWEuZWEubWE7amIoYyw2Myk7cmV0dXJuIGMoYil9LGxzdGF0KGEpe3JldHVybiBJLnN0YXQoYSwhMCl9LGNobW9kKGEsCmIsYyl7YT0ic3RyaW5nIj09dHlwZW9mIGE/UShhLHtsYTohY30pLm5vZGU6YTtxYihudWxsLGEsYixjKX0sbGNobW9kKGEsYil7SS5jaG1vZChhLGIsITApfSxmY2htb2QoYSxiKXthPVIoYSk7cWIoYSxhLm5vZGUsYiwhMSl9LGNob3duKGEsYixjLGQpe2E9InN0cmluZyI9PXR5cGVvZiBhP1EoYSx7bGE6IWR9KS5ub2RlOmE7bWIobnVsbCxhLHt0aW1lc3RhbXA6RGF0ZS5ub3coKSxRYTpkfSl9LGxjaG93bihhLGIsYyl7SS5jaG93bihhLGIsYywhMCl9LGZjaG93bihhKXthPVIoYSk7bWIoYSxhLm5vZGUse3RpbWVzdGFtcDpEYXRlLm5vdygpLFFhOiExfSl9LHRydW5jYXRlKGEsYil7aWYoMD5iKXRocm93IG5ldyBJLmRhKDI4KTthPSJzdHJpbmciPT10eXBlb2YgYT9RKGEse2xhOiEwfSkubm9kZTphO3JiKG51bGwsYSxiKX0sSWIoYSxiKXthPVIoYSk7aWYoMD5ifHwwPT09KGEuZmxhZ3MmMjA5NzE1NSkpdGhyb3cgbmV3IEkuZGEoMjgpO3JiKGEsYS5ub2RlLGIpfSxUYihhLGIsYyl7YT0KUShhLHtsYTohMH0pLm5vZGU7amIoYS5lYS5vYSw2MykoYSx7YXRpbWU6YixtdGltZTpjfSl9LG9wZW4oYSxiLGM9NDM4KXtpZigiIj09PWEpdGhyb3cgbmV3IEkuZGEoNDQpO2lmKCJzdHJpbmciPT10eXBlb2YgYil7dmFyIGQ9e3I6MCwicisiOjIsdzo1NzcsIncrIjo1NzgsYToxMDg5LCJhKyI6MTA5MH1bYl07aWYoInVuZGVmaW5lZCI9PXR5cGVvZiBkKXRocm93IEVycm9yKGBVbmtub3duIGZpbGUgb3BlbiBtb2RlOiAke2J9YCk7Yj1kfWM9YiY2ND9jJjQwOTV8MzI3Njg6MDtpZigib2JqZWN0Ij09dHlwZW9mIGEpZD1hO2Vsc2V7dmFyIGU9YS5lbmRzV2l0aCgiLyIpO2E9UShhLHtsYTohKGImMTMxMDcyKSxuYjohMH0pO2Q9YS5ub2RlO2E9YS5wYXRofXZhciBnPSExO2lmKGImNjQpaWYoZCl7aWYoYiYxMjgpdGhyb3cgbmV3IEkuZGEoMjApO31lbHNle2lmKGUpdGhyb3cgbmV3IEkuZGEoMzEpO2Q9SS5zYShhLGN8NTExLDApO2c9ITB9aWYoIWQpdGhyb3cgbmV3IEkuZGEoNDQpOwo4MTkyPT09KGQubW9kZSY2MTQ0MCkmJihiJj0tNTEzKTtpZihiJjY1NTM2JiYhTShkLm1vZGUpKXRocm93IG5ldyBJLmRhKDU0KTtpZighZyYmKGU9ZD80MDk2MD09PShkLm1vZGUmNjE0NDApPzMyOk0oZC5tb2RlKSYmKCJyIiE9PWdiKGIpfHxiJjU3Nik/MzE6UChkLGdiKGIpKTo0NCkpdGhyb3cgbmV3IEkuZGEoZSk7YiY1MTImJiFnJiZJLnRydW5jYXRlKGQsMCk7YiY9LTEzMTcxMztlPWtiKHtub2RlOmQscGF0aDpPKGQpLGZsYWdzOmIsc2Vla2FibGU6ITAscG9zaXRpb246MCxmYTpkLmZhLHBiOltdLGVycm9yOiExfSk7ZS5mYS5vcGVuJiZlLmZhLm9wZW4oZSk7ZyYmSS5jaG1vZChkLGMmNTExKTshZi5sb2dSZWFkRmlsZXN8fGImMXx8YSBpbiBJLllhfHwoSS5ZYVthXT0xKTtyZXR1cm4gZX0sY2xvc2UoYSl7aWYobnVsbD09PWEuZmQpdGhyb3cgbmV3IEkuZGEoOCk7YS52YSYmKGEudmE9bnVsbCk7dHJ5e2EuZmEuY2xvc2UmJmEuZmEuY2xvc2UoYSl9Y2F0Y2goYil7dGhyb3cgYjsKfWZpbmFsbHl7SS5zdHJlYW1zW2EuZmRdPW51bGx9YS5mZD1udWxsfSxrYShhLGIsYyl7aWYobnVsbD09PWEuZmQpdGhyb3cgbmV3IEkuZGEoOCk7aWYoIWEuc2Vla2FibGV8fCFhLmZhLmthKXRocm93IG5ldyBJLmRhKDcwKTtpZigwIT1jJiYxIT1jJiYyIT1jKXRocm93IG5ldyBJLmRhKDI4KTthLnBvc2l0aW9uPWEuZmEua2EoYSxiLGMpO2EucGI9W107cmV0dXJuIGEucG9zaXRpb259LHJlYWQoYSxiLGMsZCxlKXtpZigwPmR8fDA+ZSl0aHJvdyBuZXcgSS5kYSgyOCk7aWYobnVsbD09PWEuZmQpdGhyb3cgbmV3IEkuZGEoOCk7aWYoMT09PShhLmZsYWdzJjIwOTcxNTUpKXRocm93IG5ldyBJLmRhKDgpO2lmKE0oYS5ub2RlLm1vZGUpKXRocm93IG5ldyBJLmRhKDMxKTtpZighYS5mYS5yZWFkKXRocm93IG5ldyBJLmRhKDI4KTt2YXIgZz0idW5kZWZpbmVkIiE9dHlwZW9mIGU7aWYoIWcpZT1hLnBvc2l0aW9uO2Vsc2UgaWYoIWEuc2Vla2FibGUpdGhyb3cgbmV3IEkuZGEoNzApO2I9CmEuZmEucmVhZChhLGIsYyxkLGUpO2d8fChhLnBvc2l0aW9uKz1iKTtyZXR1cm4gYn0sd3JpdGUoYSxiLGMsZCxlLGcpe2lmKDA+ZHx8MD5lKXRocm93IG5ldyBJLmRhKDI4KTtpZihudWxsPT09YS5mZCl0aHJvdyBuZXcgSS5kYSg4KTtpZigwPT09KGEuZmxhZ3MmMjA5NzE1NSkpdGhyb3cgbmV3IEkuZGEoOCk7aWYoTShhLm5vZGUubW9kZSkpdGhyb3cgbmV3IEkuZGEoMzEpO2lmKCFhLmZhLndyaXRlKXRocm93IG5ldyBJLmRhKDI4KTthLnNlZWthYmxlJiZhLmZsYWdzJjEwMjQmJkkua2EoYSwwLDIpO3ZhciBoPSJ1bmRlZmluZWQiIT10eXBlb2YgZTtpZighaCllPWEucG9zaXRpb247ZWxzZSBpZighYS5zZWVrYWJsZSl0aHJvdyBuZXcgSS5kYSg3MCk7Yj1hLmZhLndyaXRlKGEsYixjLGQsZSxnKTtofHwoYS5wb3NpdGlvbis9Yik7cmV0dXJuIGJ9LHlhKGEsYixjLGQsZSl7aWYoMCE9PShkJjIpJiYwPT09KGUmMikmJjIhPT0oYS5mbGFncyYyMDk3MTU1KSl0aHJvdyBuZXcgSS5kYSgyKTsKaWYoMT09PShhLmZsYWdzJjIwOTcxNTUpKXRocm93IG5ldyBJLmRhKDIpO2lmKCFhLmZhLnlhKXRocm93IG5ldyBJLmRhKDQzKTtpZighYil0aHJvdyBuZXcgSS5kYSgyOCk7cmV0dXJuIGEuZmEueWEoYSxiLGMsZCxlKX0sQWEoYSxiLGMsZCxlKXtyZXR1cm4gYS5mYS5BYT9hLmZhLkFhKGEsYixjLGQsZSk6MH0sSGEoYSxiLGMpe2lmKCFhLmZhLkhhKXRocm93IG5ldyBJLmRhKDU5KTtyZXR1cm4gYS5mYS5IYShhLGIsYyl9LHJlYWRGaWxlKGEsYj17fSl7Yi5mbGFncz1iLmZsYWdzfHwwO2IuZW5jb2Rpbmc9Yi5lbmNvZGluZ3x8ImJpbmFyeSI7aWYoInV0ZjgiIT09Yi5lbmNvZGluZyYmImJpbmFyeSIhPT1iLmVuY29kaW5nKXRocm93IEVycm9yKGBJbnZhbGlkIGVuY29kaW5nIHR5cGUgIiR7Yi5lbmNvZGluZ30iYCk7dmFyIGM9SS5vcGVuKGEsYi5mbGFncyk7YT1JLnN0YXQoYSkuc2l6ZTt2YXIgZD1uZXcgVWludDhBcnJheShhKTtJLnJlYWQoYyxkLDAsYSwwKTsidXRmOCI9PT1iLmVuY29kaW5nJiYKKGQ9RihkKSk7SS5jbG9zZShjKTtyZXR1cm4gZH0sd3JpdGVGaWxlKGEsYixjPXt9KXtjLmZsYWdzPWMuZmxhZ3N8fDU3NzthPUkub3BlbihhLGMuZmxhZ3MsYy5tb2RlKTsic3RyaW5nIj09dHlwZW9mIGImJihiPW5ldyBVaW50OEFycmF5KFJhKGIpKSk7aWYoQXJyYXlCdWZmZXIuaXNWaWV3KGIpKUkud3JpdGUoYSxiLDAsYi5ieXRlTGVuZ3RoLHZvaWQgMCxjLnpiKTtlbHNlIHRocm93IEVycm9yKCJVbnN1cHBvcnRlZCBkYXRhIHR5cGUiKTtJLmNsb3NlKGEpfSxjd2Q6KCk9PkkuT2EsY2hkaXIoYSl7YT1RKGEse2xhOiEwfSk7aWYobnVsbD09PWEubm9kZSl0aHJvdyBuZXcgSS5kYSg0NCk7aWYoIU0oYS5ub2RlLm1vZGUpKXRocm93IG5ldyBJLmRhKDU0KTt2YXIgYj1QKGEubm9kZSwieCIpO2lmKGIpdGhyb3cgbmV3IEkuZGEoYik7SS5PYT1hLnBhdGh9LFBiKCl7SS5HYT0hMTtmb3IodmFyIGEgb2YgSS5zdHJlYW1zKWEmJkkuY2xvc2UoYSl9LEZiKGEsYil7dHJ5e3ZhciBjPVEoYSwKe2xhOiFifSk7YT1jLnBhdGh9Y2F0Y2goZyl7fXZhciBkPSExLGU9bnVsbDt0cnl7Yz1RKGEse3BhcmVudDohMH0pLEgoYSksYz1RKGEse2xhOiFifSksZD0hMCxlPWMubm9kZX1jYXRjaChnKXt9cmV0dXJuIGQ/ZTpudWxsfSxCYihhLGIpe2E9InN0cmluZyI9PXR5cGVvZiBhP2E6TyhhKTtmb3IoYj1iLnNwbGl0KCIvIikucmV2ZXJzZSgpO2IubGVuZ3RoOyl7dmFyIGM9Yi5wb3AoKTtpZihjKXt2YXIgZD1HKGErIi8iK2MpO3RyeXtJLm1rZGlyKGQpfWNhdGNoKGUpe2lmKDIwIT1lLmhhKXRocm93IGU7fWE9ZH19cmV0dXJuIGR9LHVhKGEsYixjLGQpe2E9S2EoInN0cmluZyI9PXR5cGVvZiBhP2E6TyhhKSxiKTtiPVphKCEhYywhIWQpO3ZhciBlOyhlPUkudWEpLkphPz8oZS5KYT02NCk7ZT1JLndhKEkudWEuSmErKywwKTtVYShlLHtvcGVuKGcpe2cuc2Vla2FibGU9ITF9LGNsb3NlKCl7ZD8uYnVmZmVyPy5sZW5ndGgmJmQoMTApfSxyZWFkKGcsaCxrLG4pe2Zvcih2YXIgcj0wLG09CjA7bTxuO20rKyl7dHJ5e3ZhciB0PWMoKX1jYXRjaChDKXt0aHJvdyBuZXcgSS5kYSgyOSk7fWlmKHZvaWQgMD09PXQmJjA9PT1yKXRocm93IG5ldyBJLmRhKDYpO2lmKG51bGw9PT10fHx2b2lkIDA9PT10KWJyZWFrO3IrKztoW2srbV09dH1yJiYoZy5ub2RlLmF0aW1lPURhdGUubm93KCkpO3JldHVybiByfSx3cml0ZShnLGgsayxuKXtmb3IodmFyIHI9MDtyPG47cisrKXRyeXtkKGhbaytyXSl9Y2F0Y2gobSl7dGhyb3cgbmV3IEkuZGEoMjkpO31uJiYoZy5ub2RlLm10aW1lPWcubm9kZS5jdGltZT1EYXRlLm5vdygpKTtyZXR1cm4gcn19KTtyZXR1cm4gcGIoYSxiLGUpfSxBYihhLGIsYyxkLGUpe2NsYXNzIGd7RmE9ITE7cmE9W107RWE9dm9pZCAwO1VhPTA7UmE9MDtnZXQobSl7aWYoIShtPnRoaXMubGVuZ3RoLTF8fDA+bSkpe3ZhciB0PW0ldGhpcy5jaHVua1NpemU7cmV0dXJuIHRoaXMuRWEobS90aGlzLmNodW5rU2l6ZXwwKVt0XX19bWIobSl7dGhpcy5FYT1tfVZhKCl7dmFyIG09Cm5ldyBYTUxIdHRwUmVxdWVzdDttLm9wZW4oIkhFQUQiLGMsITEpO20uc2VuZChudWxsKTtpZighKDIwMDw9bS5zdGF0dXMmJjMwMD5tLnN0YXR1c3x8MzA0PT09bS5zdGF0dXMpKXRocm93IEVycm9yKCJDb3VsZG4ndCBsb2FkICIrYysiLiBTdGF0dXM6ICIrbS5zdGF0dXMpO3ZhciB0PU51bWJlcihtLmdldFJlc3BvbnNlSGVhZGVyKCJDb250ZW50LWxlbmd0aCIpKSxDLEw9KEM9bS5nZXRSZXNwb25zZUhlYWRlcigiQWNjZXB0LVJhbmdlcyIpKSYmImJ5dGVzIj09PUM7bT0oQz1tLmdldFJlc3BvbnNlSGVhZGVyKCJDb250ZW50LUVuY29kaW5nIikpJiYiZ3ppcCI9PT1DO3ZhciBBPTEwNDg1NzY7THx8KEE9dCk7dmFyIEI9dGhpcztCLm1iKFU9Pnt2YXIgaGE9VSpBLFY9KFUrMSkqQS0xO1Y9TWF0aC5taW4oVix0LTEpO2lmKCJ1bmRlZmluZWQiPT10eXBlb2YgQi5yYVtVXSl7dmFyIE9iPUIucmE7aWYoaGE+Vil0aHJvdyBFcnJvcigiaW52YWxpZCByYW5nZSAoIitoYSsiLCAiK1YrIikgb3Igbm8gYnl0ZXMgcmVxdWVzdGVkISIpOwppZihWPnQtMSl0aHJvdyBFcnJvcigib25seSAiK3QrIiBieXRlcyBhdmFpbGFibGUhIHByb2dyYW1tZXIgZXJyb3IhIik7dmFyIEQ9bmV3IFhNTEh0dHBSZXF1ZXN0O0Qub3BlbigiR0VUIixjLCExKTt0IT09QSYmRC5zZXRSZXF1ZXN0SGVhZGVyKCJSYW5nZSIsImJ5dGVzPSIraGErIi0iK1YpO0QucmVzcG9uc2VUeXBlPSJhcnJheWJ1ZmZlciI7RC5vdmVycmlkZU1pbWVUeXBlJiZELm92ZXJyaWRlTWltZVR5cGUoInRleHQvcGxhaW47IGNoYXJzZXQ9eC11c2VyLWRlZmluZWQiKTtELnNlbmQobnVsbCk7aWYoISgyMDA8PUQuc3RhdHVzJiYzMDA+RC5zdGF0dXN8fDMwND09PUQuc3RhdHVzKSl0aHJvdyBFcnJvcigiQ291bGRuJ3QgbG9hZCAiK2MrIi4gU3RhdHVzOiAiK0Quc3RhdHVzKTtoYT12b2lkIDAhPT1ELnJlc3BvbnNlP25ldyBVaW50OEFycmF5KEQucmVzcG9uc2V8fFtdKTpSYShELnJlc3BvbnNlVGV4dHx8IiIpO09iW1VdPWhhfWlmKCJ1bmRlZmluZWQiPT10eXBlb2YgQi5yYVtVXSl0aHJvdyBFcnJvcigiZG9YSFIgZmFpbGVkISIpOwpyZXR1cm4gQi5yYVtVXX0pO2lmKG18fCF0KUE9dD0xLEE9dD10aGlzLkVhKDApLmxlbmd0aCxrYSgiTGF6eUZpbGVzIG9uIGd6aXAgZm9yY2VzIGRvd25sb2FkIG9mIHRoZSB3aG9sZSBmaWxlIHdoZW4gbGVuZ3RoIGlzIGFjY2Vzc2VkIik7dGhpcy5VYT10O3RoaXMuUmE9QTt0aGlzLkZhPSEwfWdldCBsZW5ndGgoKXt0aGlzLkZhfHx0aGlzLlZhKCk7cmV0dXJuIHRoaXMuVWF9Z2V0IGNodW5rU2l6ZSgpe3RoaXMuRmF8fHRoaXMuVmEoKTtyZXR1cm4gdGhpcy5SYX19aWYoInVuZGVmaW5lZCIhPXR5cGVvZiBYTUxIdHRwUmVxdWVzdCl7aWYoIWJhKXRocm93IkNhbm5vdCBkbyBzeW5jaHJvbm91cyBiaW5hcnkgWEhScyBvdXRzaWRlIHdlYndvcmtlcnMgaW4gbW9kZXJuIGJyb3dzZXJzLiBVc2UgLS1lbWJlZC1maWxlIG9yIC0tcHJlbG9hZC1maWxlIGluIGVtY2MiO3ZhciBoPW5ldyBnO3ZhciBrPXZvaWQgMH1lbHNlIGs9YyxoPXZvaWQgMDt2YXIgbj1zYihhLGIsZCxlKTtoP24uZ2E9Cmg6ayYmKG4uZ2E9bnVsbCxuLnVybD1rKTtPYmplY3QuZGVmaW5lUHJvcGVydGllcyhuLHtqYTp7Z2V0OmZ1bmN0aW9uKCl7cmV0dXJuIHRoaXMuZ2EubGVuZ3RofX19KTt2YXIgcj17fTtPYmplY3Qua2V5cyhuLmZhKS5mb3JFYWNoKG09Pnt2YXIgdD1uLmZhW21dO3JbbV09KC4uLkMpPT57dGIobik7cmV0dXJuIHQoLi4uQyl9fSk7ci5yZWFkPShtLHQsQyxMLEEpPT57dGIobik7bT1tLm5vZGUuZ2E7aWYoQT49bS5sZW5ndGgpdD0wO2Vsc2V7TD1NYXRoLm1pbihtLmxlbmd0aC1BLEwpO2lmKG0uc2xpY2UpZm9yKHZhciBCPTA7QjxMO0IrKyl0W0MrQl09bVtBK0JdO2Vsc2UgZm9yKEI9MDtCPEw7QisrKXRbQytCXT1tLmdldChBK0IpO3Q9TH1yZXR1cm4gdH07ci55YT0oKT0+e3RiKG4pO3dhKCk7dGhyb3cgbmV3IEkuZGEoNDgpO307bi5mYT1yO3JldHVybiBufX07CmZ1bmN0aW9uIHViKGEsYixjKXtpZigiLyI9PT1iLmNoYXJBdCgwKSlyZXR1cm4gYjthPS0xMDA9PT1hP0kuY3dkKCk6UihhKS5wYXRoO2lmKDA9PWIubGVuZ3RoKXtpZighYyl0aHJvdyBuZXcgSS5kYSg0NCk7cmV0dXJuIGF9cmV0dXJuIGErIi8iK2J9CmZ1bmN0aW9uIHZiKGEsYil7eVthPj4yXT1iLmRldjt5W2ErND4+Ml09Yi5tb2RlO3lbYSs4Pj4yXT1iLm5saW5rO3lbYSsxMj4+Ml09Yi51aWQ7eVthKzE2Pj4yXT1iLmdpZDt5W2ErMjA+PjJdPWIucmRldjt6W2ErMjQ+PjNdPUJpZ0ludChiLnNpemUpO3hbYSszMj4+Ml09NDA5Njt4W2ErMzY+PjJdPWIuYmxvY2tzO3ZhciBjPWIuYXRpbWUuZ2V0VGltZSgpLGQ9Yi5tdGltZS5nZXRUaW1lKCksZT1iLmN0aW1lLmdldFRpbWUoKTt6W2ErNDA+PjNdPUJpZ0ludChNYXRoLmZsb29yKGMvMUUzKSk7eVthKzQ4Pj4yXT1jJTFFMyoxRTY7elthKzU2Pj4zXT1CaWdJbnQoTWF0aC5mbG9vcihkLzFFMykpO3lbYSs2ND4+Ml09ZCUxRTMqMUU2O3pbYSs3Mj4+M109QmlnSW50KE1hdGguZmxvb3IoZS8xRTMpKTt5W2ErODA+PjJdPWUlMUUzKjFFNjt6W2ErODg+PjNdPUJpZ0ludChiLmlubyk7cmV0dXJuIDB9CnZhciB3Yj12b2lkIDAsUz0oKT0+e3ZhciBhPXhbK3diPj4yXTt3Yis9NDtyZXR1cm4gYX0seGI9MCx5Yj1hPT4wPT09YSU0JiYoMCE9PWElMTAwfHwwPT09YSU0MDApLHpiPVswLDMxLDYwLDkxLDEyMSwxNTIsMTgyLDIxMywyNDQsMjc0LDMwNSwzMzVdLEFiPVswLDMxLDU5LDkwLDEyMCwxNTEsMTgxLDIxMiwyNDMsMjczLDMwNCwzMzRdLEJiPXt9LENiPWE9PntpZihhIGluc3RhbmNlb2YgQmF8fCJ1bndpbmQiPT1hKXJldHVybiBtYTtkYSgxLGEpfSxEYj1hPT57bWE9YTtHYXx8MDx4Ynx8KGYub25FeGl0Py4oYSksbGE9ITApO2RhKGEsbmV3IEJhKGEpKX0sRWI9YT0+e21hPWE7RGIoYSl9LEZiPWE9PntpZighbGEpdHJ5e2lmKGEoKSwhKEdhfHwwPHhiKSl0cnl7bWE9YT1tYSxEYihhKX1jYXRjaChiKXtDYihiKX19Y2F0Y2goYil7Q2IoYil9fSxHYj17fSxJYj0oKT0+e2lmKCFIYil7dmFyIGE9e1VTRVI6IndlYl91c2VyIixMT0dOQU1FOiJ3ZWJfdXNlciIsUEFUSDoiLyIsUFdEOiIvIiwKSE9NRToiL2hvbWUvd2ViX3VzZXIiLExBTkc6KCJvYmplY3QiPT10eXBlb2YgbmF2aWdhdG9yJiZuYXZpZ2F0b3IubGFuZ3VhZ2V8fCJDIikucmVwbGFjZSgiLSIsIl8iKSsiLlVURi04IixfOmNhfHwiLi90aGlzLnByb2dyYW0ifSxiO2ZvcihiIGluIEdiKXZvaWQgMD09PUdiW2JdP2RlbGV0ZSBhW2JdOmFbYl09R2JbYl07dmFyIGM9W107Zm9yKGIgaW4gYSljLnB1c2goYCR7Yn09JHthW2JdfWApO0hiPWN9cmV0dXJuIEhifSxIYixKYj0oYSxiLGMsZCk9Pntmb3IodmFyIGU9MCxnPTA7ZzxjO2crKyl7dmFyIGg9eVtiPj4yXSxrPXlbYis0Pj4yXTtiKz04O2g9SS5yZWFkKGEsdixoLGssZCk7aWYoMD5oKXJldHVybi0xO2UrPWg7aWYoaDxrKWJyZWFrOyJ1bmRlZmluZWQiIT10eXBlb2YgZCYmKGQrPWgpfXJldHVybiBlfSxLYj0oYSxiLGMsZCk9Pntmb3IodmFyIGU9MCxnPTA7ZzxjO2crKyl7dmFyIGg9eVtiPj4yXSxrPXlbYis0Pj4yXTtiKz04O2g9SS53cml0ZShhLHYsaCxrLGQpOwppZigwPmgpcmV0dXJuLTE7ZSs9aDtpZihoPGspYnJlYWs7InVuZGVmaW5lZCIhPXR5cGVvZiBkJiYoZCs9aCl9cmV0dXJuIGV9LFQ7SS5DYj0oYSxiLGMsZCxlLGcsaCxrLG4scik9PntkYihhLGIsYyxkLGUsayxuLHIpLnRoZW4oZykuY2F0Y2goaCl9O0kuTmI9ZGI7SS5wYT1BcnJheSg0MDk2KTtJLmlhKEsse30sIi8iKTtJLm1rZGlyKCIvdG1wIik7SS5ta2RpcigiL2hvbWUiKTtJLm1rZGlyKCIvaG9tZS93ZWJfdXNlciIpOwooZnVuY3Rpb24oKXtJLm1rZGlyKCIvZGV2Iik7VWEoSS53YSgxLDMpLHtyZWFkOigpPT4wLHdyaXRlOihkLGUsZyxoKT0+aCxrYTooKT0+MH0pO3BiKCIvZGV2L251bGwiLEkud2EoMSwzKSk7VGEoSS53YSg1LDApLFdhKTtUYShJLndhKDYsMCksWGEpO3BiKCIvZGV2L3R0eSIsSS53YSg1LDApKTtwYigiL2Rldi90dHkxIixJLndhKDYsMCkpO3ZhciBhPW5ldyBVaW50OEFycmF5KDEwMjQpLGI9MCxjPSgpPT57MD09PWImJihNYShhKSxiPWEuYnl0ZUxlbmd0aCk7cmV0dXJuIGFbLS1iXX07SS51YSgiL2RldiIsInJhbmRvbSIsYyk7SS51YSgiL2RldiIsInVyYW5kb20iLGMpO0kubWtkaXIoIi9kZXYvc2htIik7SS5ta2RpcigiL2Rldi9zaG0vdG1wIil9KSgpOwooZnVuY3Rpb24oKXtJLm1rZGlyKCIvcHJvYyIpO3ZhciBhPUkubWtkaXIoIi9wcm9jL3NlbGYiKTtJLm1rZGlyKCIvcHJvYy9zZWxmL2ZkIik7SS5pYSh7aWEoKXt2YXIgYj1JLmNyZWF0ZU5vZGUoYSwiZmQiLDE2ODk1LDczKTtiLmZhPXtrYTpLLmZhLmthfTtiLmVhPXtsb29rdXAoYyxkKXtjPStkO3ZhciBlPVIoYyk7Yz17cGFyZW50Om51bGwsaWE6e1hhOiJmYWtlIn0sZWE6e3JlYWRsaW5rOigpPT5lLnBhdGh9LGlkOmMrMX07cmV0dXJuIGMucGFyZW50PWN9LHJlYWRkaXIoKXtyZXR1cm4gQXJyYXkuZnJvbShJLnN0cmVhbXMuZW50cmllcygpKS5maWx0ZXIoKFssY10pPT5jKS5tYXAoKFtjXSk9PmMudG9TdHJpbmcoKSl9fTtyZXR1cm4gYn19LHt9LCIvcHJvYy9zZWxmL2ZkIil9KSgpO0kuZmI9e01FTUZTOkt9O2Yubm9FeGl0UnVudGltZSYmKEdhPWYubm9FeGl0UnVudGltZSk7Zi5wcmVsb2FkUGx1Z2lucyYmKGFiPWYucHJlbG9hZFBsdWdpbnMpO2YucHJpbnQmJihrYT1mLnByaW50KTsKZi5wcmludEVyciYmKHE9Zi5wcmludEVycik7Zi53YXNtQmluYXJ5JiYodT1mLndhc21CaW5hcnkpO2YudGhpc1Byb2dyYW0mJihjYT1mLnRoaXNQcm9ncmFtKTtmLmNhbGxNYWluPUxiO2YuRlM9STsKdmFyIE1iLE5iLFcsWCxQYixZLGJjPXtpOihhLGIsYyxkKT0+d2EoYEFzc2VydGlvbiBmYWlsZWQ6ICR7YT9GKHcsYSk6IiJ9LCBhdDogYCtbYj9iP0YodyxiKToiIjoidW5rbm93biBmaWxlbmFtZSIsYyxkP2Q/Rih3LGQpOiIiOiJ1bmtub3duIGZ1bmN0aW9uIl0pLHA6ZnVuY3Rpb24oYSl7dHJ5e3ZhciBiPVIoYSk7cmV0dXJuIGxiKGIpLmZkfWNhdGNoKGMpe2lmKCJ1bmRlZmluZWQiPT10eXBlb2YgSXx8IkVycm5vRXJyb3IiIT09Yy5uYW1lKXRocm93IGM7cmV0dXJuLWMuaGF9fSxVOmZ1bmN0aW9uKGEsYil7dHJ5e3ZhciBjPVIoYSk7aWYoYy5mZD09PWIpcmV0dXJuLTI4O2lmKDA+Ynx8Yj49SS5NYSlyZXR1cm4tODt2YXIgZD1JLlNhKGIpO2QmJkkuY2xvc2UoZCk7cmV0dXJuIGxiKGMsYikuZmR9Y2F0Y2goZSl7aWYoInVuZGVmaW5lZCI9PXR5cGVvZiBJfHwiRXJybm9FcnJvciIhPT1lLm5hbWUpdGhyb3cgZTtyZXR1cm4tZS5oYX19LGo6ZnVuY3Rpb24oYSxiLGMpe3diPWM7CnRyeXt2YXIgZD1SKGEpO3N3aXRjaChiKXtjYXNlIDA6dmFyIGU9UygpO2lmKDA+ZSlicmVhaztmb3IoO0kuc3RyZWFtc1tlXTspZSsrO3JldHVybiBsYihkLGUpLmZkO2Nhc2UgMTpjYXNlIDI6cmV0dXJuIDA7Y2FzZSAzOnJldHVybiBkLmZsYWdzO2Nhc2UgNDpyZXR1cm4gZT1TKCksZC5mbGFnc3w9ZSwwO2Nhc2UgMTI6cmV0dXJuIGU9UygpLHFhW2UrMD4+MV09MiwwO2Nhc2UgMTM6Y2FzZSAxNDpyZXR1cm4gMH1yZXR1cm4tMjh9Y2F0Y2goZyl7aWYoInVuZGVmaW5lZCI9PXR5cGVvZiBJfHwiRXJybm9FcnJvciIhPT1nLm5hbWUpdGhyb3cgZztyZXR1cm4tZy5oYX19LFQ6ZnVuY3Rpb24oYSxiKXt0cnl7cmV0dXJuIHZiKGIsSS5mc3RhdChhKSl9Y2F0Y2goYyl7aWYoInVuZGVmaW5lZCI9PXR5cGVvZiBJfHwiRXJybm9FcnJvciIhPT1jLm5hbWUpdGhyb3cgYztyZXR1cm4tYy5oYX19LEY6ZnVuY3Rpb24oYSxiLGMpe3RyeXt2YXIgZD1SKGEpO2QudmF8fChkLnZhPUkucmVhZGRpcihkLnBhdGgpKTsKYT0wO3ZhciBlPUkua2EoZCwwLDEpLGc9TWF0aC5mbG9vcihlLzI4MCksaD1NYXRoLm1pbihkLnZhLmxlbmd0aCxnK01hdGguZmxvb3IoYy8yODApKTtmb3IoYz1nO2M8aDtjKyspe3ZhciBrPWQudmFbY107aWYoIi4iPT09ayl7dmFyIG49ZC5ub2RlLmlkO3ZhciByPTR9ZWxzZSBpZigiLi4iPT09ayluPVEoZC5wYXRoLHtwYXJlbnQ6ITB9KS5ub2RlLmlkLHI9NDtlbHNle3RyeXt2YXIgbT1OKGQubm9kZSxrKX1jYXRjaCh0KXtpZigyOD09PXQ/LmhhKWNvbnRpbnVlO3Rocm93IHQ7fW49bS5pZDtyPTgxOTI9PT0obS5tb2RlJjYxNDQwKT8yOk0obS5tb2RlKT80OjQwOTYwPT09KG0ubW9kZSY2MTQ0MCk/MTA6OH16W2IrYT4+M109QmlnSW50KG4pO3pbYithKzg+PjNdPUJpZ0ludCgyODAqKGMrMSkpO3FhW2IrYSsxNj4+MV09MjgwO3ZbYithKzE4XT1yO0ooayx3LGIrYSsxOSwyNTYpO2ErPTI4MH1JLmthKGQsMjgwKmMsMCk7cmV0dXJuIGF9Y2F0Y2godCl7aWYoInVuZGVmaW5lZCI9PQp0eXBlb2YgSXx8IkVycm5vRXJyb3IiIT09dC5uYW1lKXRocm93IHQ7cmV0dXJuLXQuaGF9fSxDOmZ1bmN0aW9uKGEsYixjKXt3Yj1jO3RyeXt2YXIgZD1SKGEpO3N3aXRjaChiKXtjYXNlIDIxNTA5OnJldHVybiBkLnR0eT8wOi01OTtjYXNlIDIxNTA1OmlmKCFkLnR0eSlyZXR1cm4tNTk7aWYoZC50dHkudGEuaGIpe2E9WzMsMjgsMTI3LDIxLDQsMCwxLDAsMTcsMTksMjYsMCwxOCwxNSwyMywyMiwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwLDAsMCwwXTt2YXIgZT1TKCk7eFtlPj4yXT0yNTg1Njt4W2UrND4+Ml09NTt4W2UrOD4+Ml09MTkxO3hbZSsxMj4+Ml09MzUzODc7Zm9yKHZhciBnPTA7MzI+ZztnKyspdltlK2crMTddPWFbZ118fDB9cmV0dXJuIDA7Y2FzZSAyMTUxMDpjYXNlIDIxNTExOmNhc2UgMjE1MTI6cmV0dXJuIGQudHR5PzA6LTU5O2Nhc2UgMjE1MDY6Y2FzZSAyMTUwNzpjYXNlIDIxNTA4OmlmKCFkLnR0eSlyZXR1cm4tNTk7aWYoZC50dHkudGEuaWIpZm9yKGU9UygpLAphPVtdLGc9MDszMj5nO2crKylhLnB1c2godltlK2crMTddKTtyZXR1cm4gMDtjYXNlIDIxNTE5OmlmKCFkLnR0eSlyZXR1cm4tNTk7ZT1TKCk7cmV0dXJuIHhbZT4+Ml09MDtjYXNlIDIxNTIwOnJldHVybiBkLnR0eT8tMjg6LTU5O2Nhc2UgMjE1Mzc6Y2FzZSAyMTUzMTpyZXR1cm4gZT1TKCksSS5IYShkLGIsZSk7Y2FzZSAyMTUyMzppZighZC50dHkpcmV0dXJuLTU5O2QudHR5LnRhLmpiJiYoZz1bMjQsODBdLGU9UygpLHFhW2U+PjFdPWdbMF0scWFbZSsyPj4xXT1nWzFdKTtyZXR1cm4gMDtjYXNlIDIxNTI0OnJldHVybiBkLnR0eT8wOi01OTtjYXNlIDIxNTE1OnJldHVybiBkLnR0eT8wOi01OTtkZWZhdWx0OnJldHVybi0yOH19Y2F0Y2goaCl7aWYoInVuZGVmaW5lZCI9PXR5cGVvZiBJfHwiRXJybm9FcnJvciIhPT1oLm5hbWUpdGhyb3cgaDtyZXR1cm4taC5oYX19LFI6ZnVuY3Rpb24oYSxiKXt0cnl7cmV0dXJuIGE9YT9GKHcsYSk6IiIsdmIoYixJLmxzdGF0KGEpKX1jYXRjaChjKXtpZigidW5kZWZpbmVkIj09CnR5cGVvZiBJfHwiRXJybm9FcnJvciIhPT1jLm5hbWUpdGhyb3cgYztyZXR1cm4tYy5oYX19LFE6ZnVuY3Rpb24oYSxiLGMsZCl7dHJ5e2I9Yj9GKHcsYik6IiI7dmFyIGU9ZCYyNTY7Yj11YihhLGIsZCY0MDk2KTtyZXR1cm4gdmIoYyxlP0kubHN0YXQoYik6SS5zdGF0KGIpKX1jYXRjaChnKXtpZigidW5kZWZpbmVkIj09dHlwZW9mIEl8fCJFcnJub0Vycm9yIiE9PWcubmFtZSl0aHJvdyBnO3JldHVybi1nLmhhfX0sbzpmdW5jdGlvbihhLGIsYyxkKXt3Yj1kO3RyeXtiPWI/Rih3LGIpOiIiO2I9dWIoYSxiKTt2YXIgZT1kP1MoKTowO3JldHVybiBJLm9wZW4oYixjLGUpLmZkfWNhdGNoKGcpe2lmKCJ1bmRlZmluZWQiPT10eXBlb2YgSXx8IkVycm5vRXJyb3IiIT09Zy5uYW1lKXRocm93IGc7cmV0dXJuLWcuaGF9fSxEOmZ1bmN0aW9uKGEsYixjLGQpe3RyeXtyZXR1cm4gYj1iP0YodyxiKToiIixkPWQ/Rih3LGQpOiIiLGI9dWIoYSxiKSxkPXViKGMsZCksSS5yZW5hbWUoYixkKSwwfWNhdGNoKGUpe2lmKCJ1bmRlZmluZWQiPT0KdHlwZW9mIEl8fCJFcnJub0Vycm9yIiE9PWUubmFtZSl0aHJvdyBlO3JldHVybi1lLmhhfX0sRTpmdW5jdGlvbihhKXt0cnl7cmV0dXJuIGE9YT9GKHcsYSk6IiIsSS5ybWRpcihhKSwwfWNhdGNoKGIpe2lmKCJ1bmRlZmluZWQiPT10eXBlb2YgSXx8IkVycm5vRXJyb3IiIT09Yi5uYW1lKXRocm93IGI7cmV0dXJuLWIuaGF9fSxTOmZ1bmN0aW9uKGEsYil7dHJ5e3JldHVybiBhPWE/Rih3LGEpOiIiLHZiKGIsSS5zdGF0KGEpKX1jYXRjaChjKXtpZigidW5kZWZpbmVkIj09dHlwZW9mIEl8fCJFcnJub0Vycm9yIiE9PWMubmFtZSl0aHJvdyBjO3JldHVybi1jLmhhfX0sbjpmdW5jdGlvbihhLGIsYyl7dHJ5e2I9Yj9GKHcsYik6IiI7Yj11YihhLGIpO2lmKGMpaWYoNTEyPT09YylJLnJtZGlyKGIpO2Vsc2UgcmV0dXJuLTI4O2Vsc2UgSS51bmxpbmsoYik7cmV0dXJuIDB9Y2F0Y2goZCl7aWYoInVuZGVmaW5lZCI9PXR5cGVvZiBJfHwiRXJybm9FcnJvciIhPT1kLm5hbWUpdGhyb3cgZDtyZXR1cm4tZC5oYX19LApxOigpPT53YSgiIiksejooKT0+e0dhPSExO3hiPTB9LHg6KCk9Pnt0aHJvdyBJbmZpbml0eTt9LEk6ZnVuY3Rpb24oYSxiKXthPS05MDA3MTk5MjU0NzQwOTkyPmF8fDkwMDcxOTkyNTQ3NDA5OTI8YT9OYU46TnVtYmVyKGEpO2E9bmV3IERhdGUoMUUzKmEpO3hbYj4+Ml09YS5nZXRVVENTZWNvbmRzKCk7eFtiKzQ+PjJdPWEuZ2V0VVRDTWludXRlcygpO3hbYis4Pj4yXT1hLmdldFVUQ0hvdXJzKCk7eFtiKzEyPj4yXT1hLmdldFVUQ0RhdGUoKTt4W2IrMTY+PjJdPWEuZ2V0VVRDTW9udGgoKTt4W2IrMjA+PjJdPWEuZ2V0VVRDRnVsbFllYXIoKS0xOTAwO3hbYisyND4+Ml09YS5nZXRVVENEYXkoKTt4W2IrMjg+PjJdPShhLmdldFRpbWUoKS1EYXRlLlVUQyhhLmdldFVUQ0Z1bGxZZWFyKCksMCwxLDAsMCwwLDApKS84NjRFNXwwfSxKOmZ1bmN0aW9uKGEsYil7YT0tOTAwNzE5OTI1NDc0MDk5Mj5hfHw5MDA3MTk5MjU0NzQwOTkyPGE/TmFOOk51bWJlcihhKTthPW5ldyBEYXRlKDFFMyoKYSk7eFtiPj4yXT1hLmdldFNlY29uZHMoKTt4W2IrND4+Ml09YS5nZXRNaW51dGVzKCk7eFtiKzg+PjJdPWEuZ2V0SG91cnMoKTt4W2IrMTI+PjJdPWEuZ2V0RGF0ZSgpO3hbYisxNj4+Ml09YS5nZXRNb250aCgpO3hbYisyMD4+Ml09YS5nZXRGdWxsWWVhcigpLTE5MDA7eFtiKzI0Pj4yXT1hLmdldERheSgpO3hbYisyOD4+Ml09KHliKGEuZ2V0RnVsbFllYXIoKSk/emI6QWIpW2EuZ2V0TW9udGgoKV0rYS5nZXREYXRlKCktMXwwO3hbYiszNj4+Ml09LSg2MCphLmdldFRpbWV6b25lT2Zmc2V0KCkpO3ZhciBjPShuZXcgRGF0ZShhLmdldEZ1bGxZZWFyKCksNiwxKSkuZ2V0VGltZXpvbmVPZmZzZXQoKSxkPShuZXcgRGF0ZShhLmdldEZ1bGxZZWFyKCksMCwxKSkuZ2V0VGltZXpvbmVPZmZzZXQoKTt4W2IrMzI+PjJdPShjIT1kJiZhLmdldFRpbWV6b25lT2Zmc2V0KCk9PU1hdGgubWluKGQsYykpfDB9LEs6ZnVuY3Rpb24oYSl7dmFyIGI9bmV3IERhdGUoeFthKzIwPj4yXSsxOTAwLHhbYSsKMTY+PjJdLHhbYSsxMj4+Ml0seFthKzg+PjJdLHhbYSs0Pj4yXSx4W2E+PjJdLDApLGM9eFthKzMyPj4yXSxkPWIuZ2V0VGltZXpvbmVPZmZzZXQoKSxlPShuZXcgRGF0ZShiLmdldEZ1bGxZZWFyKCksNiwxKSkuZ2V0VGltZXpvbmVPZmZzZXQoKSxnPShuZXcgRGF0ZShiLmdldEZ1bGxZZWFyKCksMCwxKSkuZ2V0VGltZXpvbmVPZmZzZXQoKSxoPU1hdGgubWluKGcsZSk7MD5jP3hbYSszMj4+Ml09TnVtYmVyKGUhPWcmJmg9PWQpOjA8YyE9KGg9PWQpJiYoZT1NYXRoLm1heChnLGUpLGIuc2V0VGltZShiLmdldFRpbWUoKSs2RTQqKCgwPGM/aDplKS1kKSkpO3hbYSsyND4+Ml09Yi5nZXREYXkoKTt4W2ErMjg+PjJdPSh5YihiLmdldEZ1bGxZZWFyKCkpP3piOkFiKVtiLmdldE1vbnRoKCldK2IuZ2V0RGF0ZSgpLTF8MDt4W2E+PjJdPWIuZ2V0U2Vjb25kcygpO3hbYSs0Pj4yXT1iLmdldE1pbnV0ZXMoKTt4W2ErOD4+Ml09Yi5nZXRIb3VycygpO3hbYSsxMj4+Ml09Yi5nZXREYXRlKCk7CnhbYSsxNj4+Ml09Yi5nZXRNb250aCgpO3hbYSsyMD4+Ml09Yi5nZXRZZWFyKCk7YT1iLmdldFRpbWUoKTtyZXR1cm4gQmlnSW50KGlzTmFOKGEpPy0xOmEvMUUzKX0sQTooYSxiKT0+e0JiW2FdJiYoY2xlYXJUaW1lb3V0KEJiW2FdLmlkKSxkZWxldGUgQmJbYV0pO2lmKCFiKXJldHVybiAwO3ZhciBjPXNldFRpbWVvdXQoKCk9PntkZWxldGUgQmJbYV07RmIoKCk9Pk5iKGEscGVyZm9ybWFuY2Uubm93KCkpKX0sYik7QmJbYV09e2lkOmMsUmI6Yn07cmV0dXJuIDB9LEw6KGEsYixjLGQpPT57dmFyIGU9KG5ldyBEYXRlKS5nZXRGdWxsWWVhcigpLGc9KG5ldyBEYXRlKGUsMCwxKSkuZ2V0VGltZXpvbmVPZmZzZXQoKTtlPShuZXcgRGF0ZShlLDYsMSkpLmdldFRpbWV6b25lT2Zmc2V0KCk7eVthPj4yXT02MCpNYXRoLm1heChnLGUpO3hbYj4+Ml09TnVtYmVyKGchPWUpO2I9aD0+e3ZhciBrPU1hdGguYWJzKGgpO3JldHVybmBVVEMkezA8PWg/Ii0iOiIrIn0ke1N0cmluZyhNYXRoLmZsb29yKGsvCjYwKSkucGFkU3RhcnQoMiwiMCIpfSR7U3RyaW5nKGslNjApLnBhZFN0YXJ0KDIsIjAiKX1gfTthPWIoZyk7Yj1iKGUpO2U8Zz8oSihhLHcsYywxNyksSihiLHcsZCwxNykpOihKKGEsdyxkLDE3KSxKKGIsdyxjLDE3KSl9LE06ZnVuY3Rpb24oYSxiLGMpe2lmKCEoMDw9YSYmMz49YSkpcmV0dXJuIDI4O3pbYz4+M109QmlnSW50KE1hdGgucm91bmQoMUU2KigwPT09YT9EYXRlLm5vdygpOnBlcmZvcm1hbmNlLm5vdygpKSkpO3JldHVybiAwfSxrOigpPT5EYXRlLm5vdygpLEI6YT0+e3ZhciBiPXcubGVuZ3RoO2E+Pj49MDtpZigyMTQ3NDgzNjQ4PGEpcmV0dXJuITE7Zm9yKHZhciBjPTE7ND49YztjKj0yKXt2YXIgZD1iKigxKy4yL2MpO2Q9TWF0aC5taW4oZCxhKzEwMDY2MzI5Nik7YTp7ZD0oTWF0aC5taW4oMjE0NzQ4MzY0OCw2NTUzNipNYXRoLmNlaWwoTWF0aC5tYXgoYSxkKS82NTUzNikpLXBhLmJ1ZmZlci5ieXRlTGVuZ3RoKzY1NTM1KS82NTUzNnwwO3RyeXtwYS5ncm93KGQpOwpzYSgpO3ZhciBlPTE7YnJlYWsgYX1jYXRjaChnKXt9ZT12b2lkIDB9aWYoZSlyZXR1cm4hMH1yZXR1cm4hMX0sTzooYSxiKT0+e3ZhciBjPTAsZD0wLGU7Zm9yKGUgb2YgSWIoKSl7dmFyIGc9YitjO3lbYStkPj4yXT1nO2MrPUooZSx3LGcsSW5maW5pdHkpKzE7ZCs9NH1yZXR1cm4gMH0sUDooYSxiKT0+e3ZhciBjPUliKCk7eVthPj4yXT1jLmxlbmd0aDthPTA7Zm9yKHZhciBkIG9mIGMpYSs9UWEoZCkrMTt5W2I+PjJdPWE7cmV0dXJuIDB9LGI6RWIsaDpmdW5jdGlvbihhKXt0cnl7dmFyIGI9UihhKTtJLmNsb3NlKGIpO3JldHVybiAwfWNhdGNoKGMpe2lmKCJ1bmRlZmluZWQiPT10eXBlb2YgSXx8IkVycm5vRXJyb3IiIT09Yy5uYW1lKXRocm93IGM7cmV0dXJuIGMuaGF9fSxIOmZ1bmN0aW9uKGEsYixjLGQsZSl7ZD0tOTAwNzE5OTI1NDc0MDk5Mj5kfHw5MDA3MTk5MjU0NzQwOTkyPGQ/TmFOOk51bWJlcihkKTt0cnl7aWYoaXNOYU4oZCkpcmV0dXJuIDYxO3ZhciBnPVIoYSksaD0KSmIoZyxiLGMsZCk7eVtlPj4yXT1oO3JldHVybiAwfWNhdGNoKGspe2lmKCJ1bmRlZmluZWQiPT10eXBlb2YgSXx8IkVycm5vRXJyb3IiIT09ay5uYW1lKXRocm93IGs7cmV0dXJuIGsuaGF9fSxHOmZ1bmN0aW9uKGEsYixjLGQsZSl7ZD0tOTAwNzE5OTI1NDc0MDk5Mj5kfHw5MDA3MTk5MjU0NzQwOTkyPGQ/TmFOOk51bWJlcihkKTt0cnl7aWYoaXNOYU4oZCkpcmV0dXJuIDYxO3ZhciBnPVIoYSksaD1LYihnLGIsYyxkKTt5W2U+PjJdPWg7cmV0dXJuIDB9Y2F0Y2goayl7aWYoInVuZGVmaW5lZCI9PXR5cGVvZiBJfHwiRXJybm9FcnJvciIhPT1rLm5hbWUpdGhyb3cgaztyZXR1cm4gay5oYX19LGw6ZnVuY3Rpb24oYSxiLGMsZCl7dHJ5e3ZhciBlPVIoYSksZz1KYihlLGIsYyk7eVtkPj4yXT1nO3JldHVybiAwfWNhdGNoKGgpe2lmKCJ1bmRlZmluZWQiPT10eXBlb2YgSXx8IkVycm5vRXJyb3IiIT09aC5uYW1lKXRocm93IGg7cmV0dXJuIGguaGF9fSxOOmZ1bmN0aW9uKGEsYixjLGQpe2I9Ci05MDA3MTk5MjU0NzQwOTkyPmJ8fDkwMDcxOTkyNTQ3NDA5OTI8Yj9OYU46TnVtYmVyKGIpO3RyeXtpZihpc05hTihiKSlyZXR1cm4gNjE7dmFyIGU9UihhKTtJLmthKGUsYixjKTt6W2Q+PjNdPUJpZ0ludChlLnBvc2l0aW9uKTtlLnZhJiYwPT09YiYmMD09PWMmJihlLnZhPW51bGwpO3JldHVybiAwfWNhdGNoKGcpe2lmKCJ1bmRlZmluZWQiPT10eXBlb2YgSXx8IkVycm5vRXJyb3IiIT09Zy5uYW1lKXRocm93IGc7cmV0dXJuIGcuaGF9fSxyOmZ1bmN0aW9uKGEsYixjLGQpe3RyeXt2YXIgZT1SKGEpLGc9S2IoZSxiLGMpO3lbZD4+Ml09ZztyZXR1cm4gMH1jYXRjaChoKXtpZigidW5kZWZpbmVkIj09dHlwZW9mIEl8fCJFcnJub0Vycm9yIiE9PWgubmFtZSl0aHJvdyBoO3JldHVybiBoLmhhfX0sZDpRYixlOlJiLGY6U2IsdjpUYixzOlViLHc6VmIsYTpXYixjOlhiLGc6WWIsbTpaYix1OiRiLHQ6YWMseTpEYn0sWj1hd2FpdCAoYXN5bmMgZnVuY3Rpb24oKXtmdW5jdGlvbiBhKGMpe1o9CmMuZXhwb3J0cztwYT1aLlY7c2EoKTtUPVouWTtjPVo7Zi5fbWFpbj1NYj1jLlg7TmI9Yy5aO1c9Yy5fO1g9Yy4kO1BiPWMuYWE7WT1jLmJhO3ZhKCk7cmV0dXJuIFp9dWEoKTt2YXIgYj17YTpiY307aWYoZi5pbnN0YW50aWF0ZVdhc20pcmV0dXJuIG5ldyBQcm9taXNlKGM9PntmLmluc3RhbnRpYXRlV2FzbShiLChkLGUpPT57YyhhKGQsZSkpfSl9KTt4YT8/PWYubG9jYXRlRmlsZT9mLmxvY2F0ZUZpbGU/Zi5sb2NhdGVGaWxlKCJncy53YXNtIixmYSk6ZmErImdzLndhc20iOihuZXcgVVJMKCJncy53YXNtIixpbXBvcnQubWV0YS51cmwpKS5ocmVmO3JldHVybiBhKChhd2FpdCBBYShiKSkuaW5zdGFuY2UpfSgpKTtmdW5jdGlvbiBXYihhLGIpe3ZhciBjPVkoKTt0cnl7VC5nZXQoYSkoYil9Y2F0Y2goZCl7WChjKTtpZihkIT09ZCswKXRocm93IGQ7VygxLDApfX0KZnVuY3Rpb24gWGIoYSxiLGMpe3ZhciBkPVkoKTt0cnl7VC5nZXQoYSkoYixjKX1jYXRjaChlKXtYKGQpO2lmKGUhPT1lKzApdGhyb3cgZTtXKDEsMCl9fWZ1bmN0aW9uIFFiKGEsYil7dmFyIGM9WSgpO3RyeXtyZXR1cm4gVC5nZXQoYSkoYil9Y2F0Y2goZCl7WChjKTtpZihkIT09ZCswKXRocm93IGQ7VygxLDApfX1mdW5jdGlvbiBTYihhLGIsYyxkKXt2YXIgZT1ZKCk7dHJ5e3JldHVybiBULmdldChhKShiLGMsZCl9Y2F0Y2goZyl7WChlKTtpZihnIT09ZyswKXRocm93IGc7VygxLDApfX1mdW5jdGlvbiBSYihhLGIsYyl7dmFyIGQ9WSgpO3RyeXtyZXR1cm4gVC5nZXQoYSkoYixjKX1jYXRjaChlKXtYKGQpO2lmKGUhPT1lKzApdGhyb3cgZTtXKDEsMCl9fWZ1bmN0aW9uIFliKGEsYixjLGQpe3ZhciBlPVkoKTt0cnl7VC5nZXQoYSkoYixjLGQpfWNhdGNoKGcpe1goZSk7aWYoZyE9PWcrMCl0aHJvdyBnO1coMSwwKX19CmZ1bmN0aW9uIFpiKGEsYixjLGQsZSl7dmFyIGc9WSgpO3RyeXtULmdldChhKShiLGMsZCxlKX1jYXRjaChoKXtYKGcpO2lmKGghPT1oKzApdGhyb3cgaDtXKDEsMCl9fWZ1bmN0aW9uIFZiKGEsYixjLGQpe3ZhciBlPVkoKTt0cnl7cmV0dXJuIFQuZ2V0KGEpKGIsYyxkKX1jYXRjaChnKXtYKGUpO2lmKGchPT1nKzApdGhyb3cgZztXKDEsMCl9fWZ1bmN0aW9uIFRiKGEsYixjLGQsZSl7dmFyIGc9WSgpO3RyeXtyZXR1cm4gVC5nZXQoYSkoYixjLGQsZSl9Y2F0Y2goaCl7WChnKTtpZihoIT09aCswKXRocm93IGg7VygxLDApfX1mdW5jdGlvbiAkYihhLGIsYyxkLGUsZyl7dmFyIGg9WSgpO3RyeXtULmdldChhKShiLGMsZCxlLGcpfWNhdGNoKGspe1goaCk7aWYoayE9PWsrMCl0aHJvdyBrO1coMSwwKX19CmZ1bmN0aW9uIGFjKGEsYixjLGQsZSxnLGgpe3ZhciBrPVkoKTt0cnl7VC5nZXQoYSkoYixjLGQsZSxnLGgpfWNhdGNoKG4pe1goayk7aWYobiE9PW4rMCl0aHJvdyBuO1coMSwwKX19ZnVuY3Rpb24gVWIoYSxiLGMsZCxlLGcsaCxrLG4pe3ZhciByPVkoKTt0cnl7cmV0dXJuIFQuZ2V0KGEpKGIsYyxkLGUsZyxoLGssbil9Y2F0Y2gobSl7WChyKTtpZihtIT09bSswKXRocm93IG07VygxLDApfX1mdW5jdGlvbiBMYihhPVtdKXt2YXIgYj1NYjthLnVuc2hpZnQoY2EpO3ZhciBjPWEubGVuZ3RoLGQ9UGIoNCooYysxKSksZT1kO2EuZm9yRWFjaChoPT57dmFyIGs9eSxuPWU+PjIscj1RYShoKSsxLG09UGIocik7SihoLHcsbSxyKTtrW25dPW07ZSs9NH0pO3lbZT4+Ml09MDt0cnl7dmFyIGc9YihjLGQpO0ViKGcsITApO3JldHVybiBnfWNhdGNoKGgpe3JldHVybiBDYihoKX19CmZ1bmN0aW9uIGNjKCl7ZnVuY3Rpb24gYSgpe2YuY2FsbGVkUnVuPSEwO2lmKCFsYSl7cmE9ITA7Zi5ub0ZTSW5pdHx8SS5HYXx8YmIoKTtaLlcoKTtJLldhPSExO25hPy4oZik7Zi5vblJ1bnRpbWVJbml0aWFsaXplZD8uKCk7aWYoZi5wb3N0UnVuKWZvcigiZnVuY3Rpb24iPT10eXBlb2YgZi5wb3N0UnVuJiYoZi5wb3N0UnVuPVtmLnBvc3RSdW5dKTtmLnBvc3RSdW4ubGVuZ3RoOyl7dmFyIGI9Zi5wb3N0UnVuLnNoaWZ0KCk7RGEucHVzaChiKX1DYShEYSl9fWlmKDA8RSl0YT1jYztlbHNle2lmKGYucHJlUnVuKWZvcigiZnVuY3Rpb24iPT10eXBlb2YgZi5wcmVSdW4mJihmLnByZVJ1bj1bZi5wcmVSdW5dKTtmLnByZVJ1bi5sZW5ndGg7KUZhKCk7Q2EoRWEpOzA8RT90YT1jYzpmLnNldFN0YXR1cz8oZi5zZXRTdGF0dXMoIlJ1bm5pbmcuLi4iKSxzZXRUaW1lb3V0KCgpPT57c2V0VGltZW91dCgoKT0+Zi5zZXRTdGF0dXMoIiIpLDEpO2EoKX0sMSkpOmEoKX19CmlmKGYucHJlSW5pdClmb3IoImZ1bmN0aW9uIj09dHlwZW9mIGYucHJlSW5pdCYmKGYucHJlSW5pdD1bZi5wcmVJbml0XSk7MDxmLnByZUluaXQubGVuZ3RoOylmLnByZUluaXQuc2hpZnQoKSgpO2NjKCk7cmE/bW9kdWxlUnRuPWY6bW9kdWxlUnRuPW5ldyBQcm9taXNlKChhLGIpPT57bmE9YTtvYT1ifSk7CjtyZXR1cm4gbW9kdWxlUnRufWV4cG9ydCBkZWZhdWx0IE1vZHVsZTsK</script>
