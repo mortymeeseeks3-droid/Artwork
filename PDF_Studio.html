@@ -132,6 +132,15 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
 .th:hover canvas{outline-color:var(--dim)}
 .th.cur canvas{outline:2px solid var(--m7);outline-offset:2px}
 .th.cur{color:var(--tx)}
+.th{position:relative;user-select:none}
+.th.sel canvas{outline:3px solid var(--c8);outline-offset:2px;opacity:.55}
+.th.sel{color:var(--c8);font-weight:600}
+.th.sel::after{content:"\2713";position:absolute;top:6px;left:50%;transform:translateX(-50%);width:26px;height:26px;border-radius:50%;background:var(--c8);color:var(--panel);font:700 15px/26px var(--ui);text-align:center;pointer-events:none}
+#pgSel{display:none;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;border-bottom:1px solid var(--line);background:var(--c8bg);flex:0 0 auto}
+#pgSel.show{display:flex}
+#pgSel .hint{flex:1 1 100%;color:var(--tx)}
+button.dng{border-color:#d33;color:#fff;background:#c62828}
+button.dng:hover:not(:disabled){background:#e03030}
 .lay{display:flex;align-items:center;gap:9px;min-height:34px;padding:0 9px;margin-bottom:4px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;font-size:13px}
 .lay:hover{border-color:var(--line2)}
 .lay label{display:flex;gap:9px;align-items:center;cursor:pointer;flex:1}
@@ -355,6 +364,7 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
       <button data-cmd="save" data-need="doc">Save PDF<kbd>Ctrl+S</kbd></button>
       <hr><button data-cmd="combine">Combine files…</button>
       <button data-cmd="split" data-need="doc">Split document…</button>
+      <button data-cmd="delpages" data-need="doc">Delete pages…</button>
       <button data-cmd="resize" data-need="doc">Resize / scale pages…</button>
       <button data-cmd="crop" data-need="doc">Crop pages…</button>
       <button data-cmd="img">Create PDF from images…</button>
@@ -363,6 +373,7 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
     <div class="menu"><button class="mbtn">Edit</button><div class="drop">
       <button data-cmd="undo" data-need="undo">Undo<kbd>Ctrl+Z</kbd></button>
       <button data-cmd="redo" data-need="redo">Redo<kbd>Ctrl+Y</kbd></button>
+      <hr><button data-cmd="delpages" data-need="doc">Delete pages…<kbd>Del</kbd></button>
       <hr><button data-cmd="inspect" data-need="doc">Select &amp; inspect<kbd>I</kbd></button>
       <button data-cmd="edit" data-need="doc">Edit text<kbd>E</kbd></button>
       <button data-cmd="resize" data-need="doc">Resize / scale pages…</button>
@@ -391,6 +402,7 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
       <button data-cmd="edit" data-need="doc">Edit text</button>
       <button data-cmd="combine">Combine files…</button>
       <button data-cmd="split" data-need="doc">Split document…</button>
+      <button data-cmd="delpages" data-need="doc">Delete pages…</button>
       <button data-cmd="resize" data-need="doc">Resize / scale…</button>
       <button data-cmd="crop" data-need="doc">Crop pages…</button>
       <button data-cmd="repl" data-need="doc">Replace colour…</button>
@@ -441,6 +453,7 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
     <button class="strip" data-side="l" title="Show pages &amp; layers">Pages · Layers</button>
     <div class="pcont">
     <div class="phead">Pages <span class="hint" id="pgCount"></span><span class="pctl"><button class="sm pin" data-side="l">Pin</button><button class="sm hide" data-side="l" title="Hide this panel">Hide</button></span></div>
+    <div id="pgSel"><span class="hint" id="pgSelInfo">Click a page · Ctrl+click to add · Shift+click for a range</span><button class="sm" id="pgSelAll">Select all</button><button class="sm" id="pgSelNone">Clear</button><button class="sm dng" id="pgDel" disabled>Delete pages…</button></div>
     <div id="thumbs" class="pbody"></div>
     <div class="phead bt">Layers <span><button id="lAll" class="sm">All on</button> <button id="lNone" class="sm">All off</button></span></div>
     <div id="layers" class="pbody"><span class="hint">No layers</span></div>
@@ -477,6 +490,7 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
         <button id="bCombine">Combine files…</button>
         <button id="bImg">Images to PDF…</button>
         <button id="bSplit" disabled>Split document…</button>
+        <button id="bDelPg" disabled>Delete pages…</button>
         <button id="bResize" disabled>Resize / scale…</button>
         <button id="bCrop" disabled>Crop pages…</button>
         <button id="bExport" disabled>Export as image…</button>
@@ -535,6 +549,14 @@ main{display:grid;grid-template-columns:var(--lw,var(--lpw)) minmax(0,1fr) var(-
 <footer id="status"><span id="stSize">—</span><span id="stPos"></span><span class="grow"></span><span id="stMode">Select</span><span id="stZoom"></span></footer>
 </div>
 <div id="tip"></div>
+
+<div class="modal" id="mDel"><div class="box">
+  <h2>Delete pages</h2>
+  <div class="row"><label>Pages to delete</label><input type="text" id="dpRanges" placeholder="e.g. 2, 5-7, 10" style="flex:1"></div>
+  <div class="hint" style="margin-bottom:6px">Pre-filled from the pages selected in the Pages panel. Edit to change. After deleting, use Save PDF to write the file (Undo restores the pages).</div>
+  <div class="hint" id="dpPreview"></div>
+  <div class="foot"><button data-close>Cancel</button><button class="dng" id="dpGo" disabled>Delete pages</button></div>
+</div></div>
 
 <div class="modal" id="mSplit"><div class="box">
   <h2>Split PDF</h2>
@@ -1847,6 +1869,7 @@ async function openBytes(bytes, keep) {
   try { oldJs && oldJs.destroy(); oldOp && oldOp.destroy(); } catch (e) {}
   $('#thumbs').innerHTML = '';
   S.jsDoc = js; S.bytes = bytes; S.n = js.numPages; S.page = Math.min(Math.max(1, S.page), S.n);
+  if (!S.sel || S.selN !== S.n) { S.sel = new Set(); S.selAnchor = null; } S.selN = S.n;
   S.pcache = new Map(); S.hover = null; S.pinned = null; S.gen++;
   S.cfg = await js.getOptionalContentConfig();
   setupLayers(keep);
@@ -1859,7 +1882,7 @@ async function openBytes(bytes, keep) {
 }
 function updateUI() {
   const has = !!S.jsDoc;
-  ['#bSave', '#bSave2', '#bExport', '#bSplit', '#bResize', '#bCrop', '#bOP', '#cbOP', '#bPrev', '#bNext', '#tEdit'].forEach(s => $(s).disabled = !has);
+  ['#bSave', '#bSave2', '#bExport', '#bSplit', '#bDelPg', '#bResize', '#bCrop', '#bOP', '#cbOP', '#bPrev', '#bNext', '#tEdit'].forEach(s => $(s).disabled = !has);
   $('#bOPStrip').disabled = !has || !S.opCount;
   $('#bUndo').disabled = !S.undo.length; $('#bRedo').disabled = !S.redo.length;
   $('#drop').classList.toggle('hide', has); $('#pagewrap').classList.toggle('empty', !has);
@@ -1867,6 +1890,7 @@ function updateUI() {
   $('#bOP').classList.toggle('on', S.overprint); $('#cbOP').checked = S.overprint;
   $('#sepState').textContent = S.sepHidden.size ? `Previewing ${(S.inkList || []).length - [...S.sepHidden].filter(n => (S.inkList || []).some(i => i.name === n)).length} of ${(S.inkList || []).length} plates` + ([...S.colours.values()].some(c => c.kind === 'rgb' || c.kind === 'lab' || (c.kind === 'image' && /RGB|Lab/.test(c.label))) ? ' – RGB/Lab objects cannot be separated and stay visible' : '') : '';
   ['#sepAll', '#sepNone', '#sepProc', '#sepSpot'].forEach(x => $(x).disabled = !has);
+  updateSelUI();
   $('#docName').textContent = has ? S.name + (S.edited ? ' *' : '') : 'No document open';
   document.title = has ? S.name + ' – PDF Studio' : 'PDF Studio';
   $('#stMode').textContent = S.mode === 'edit' ? 'Edit text – click a line to edit' : 'Select – hover to inspect, click to pin';
@@ -2036,7 +2060,7 @@ async function renderThumbs() {
   const el = $('#thumbs'); const g = ++thumbGen; const doc = curDoc(); if (!doc) return;
   if (el.children.length !== S.n) {
     el.innerHTML = '';
-    for (let i = 1; i <= S.n; i++) { const d = document.createElement('div'); d.className = 'th' + (i === S.page ? ' cur' : ''); d.dataset.p = i; d.innerHTML = `<canvas></canvas>${i}`; d.onclick = () => goPage(i); el.appendChild(d); }
+    for (let i = 1; i <= S.n; i++) { const d = document.createElement('div'); d.className = 'th' + (i === S.page ? ' cur' : '') + (S.sel.has(i) ? ' sel' : ''); d.dataset.p = i; d.innerHTML = `<canvas></canvas>${i}`; d.onclick = e => thumbClick(i, e); el.appendChild(d); }
   }
   for (let i = 1; i <= S.n; i++) {
     if (g !== thumbGen) return;
@@ -2052,6 +2076,67 @@ async function renderThumbs() {
   }
 }
 function goPage(p) { p = Math.max(1, Math.min(S.n, p | 0)); if (p === S.page || !S.jsDoc) return; S.page = p; S.pinned = null; S.hover = null; closeEditor(); render(); showInspector(null); const t = document.querySelector(`.th[data-p="${p}"]`); t && t.scrollIntoView({ block: 'nearest' }); }
+/* ---------- page selection & deletion ---------- */
+function thumbClick(i, e) {
+  const mod = e.ctrlKey || e.metaKey;
+  if (e.shiftKey && S.selAnchor) { const a = Math.min(S.selAnchor, i), b = Math.max(S.selAnchor, i); if (!mod) S.sel.clear(); for (let k = a; k <= b; k++) S.sel.add(k); }
+  else if (mod) { S.sel.has(i) ? S.sel.delete(i) : S.sel.add(i); S.selAnchor = i; }
+  else { S.sel = new Set([i]); S.selAnchor = i; }
+  updateSelUI(); goPage(i);
+}
+function selRanges(set) {
+  const a = [...set].sort((x, y) => x - y), out = []; let i = 0;
+  while (i < a.length) { let j = i; while (j + 1 < a.length && a[j + 1] === a[j] + 1) j++; out.push(i === j ? '' + a[i] : a[i] + '-' + a[j]); i = j + 1; }
+  return out.join(', ');
+}
+function updateSelUI() {
+  const has = !!S.jsDoc; const sel = S.sel || new Set();
+  $('#pgSel').classList.toggle('show', has);
+  document.querySelectorAll('.th').forEach(t => t.classList.toggle('sel', sel.has(+t.dataset.p)));
+  $('#pgSelInfo').textContent = sel.size ? `${sel.size} of ${S.n} page${S.n > 1 ? 's' : ''} selected: ${selRanges(sel)}` : 'Click a page · Ctrl+click to add · Shift+click for a range';
+  $('#pgDel').disabled = !sel.size; $('#pgSelNone').disabled = !sel.size;
+}
+$('#pgSelAll').onclick = () => { if (!S.jsDoc) return; S.sel = new Set(Array.from({ length: S.n }, (_, k) => k + 1)); updateSelUI(); };
+$('#pgSelNone').onclick = () => { S.sel = new Set(); updateSelUI(); };
+function delTargets() { const v = $('#dpRanges').value.trim(); if (!v) return []; return [...new Set(parseRanges(v, S.n).flat().map(i => i + 1))].sort((a, b) => a - b); }
+function delPreview() {
+  let t = [], err = '';
+  try { t = delTargets(); } catch (e) { err = e.message; }
+  const left = S.n - t.length;
+  $('#dpPreview').textContent = err || (!t.length ? 'No pages chosen.' : left < 1 ? 'You cannot delete every page – at least one must remain.' : `${t.length} page${t.length > 1 ? 's' : ''} will be removed (${selRanges(new Set(t))}). ${left} page${left > 1 ? 's' : ''} will remain.`);
+  $('#dpPreview').style.color = err || left < 1 ? 'var(--warn)' : '';
+  $('#dpGo').disabled = !!err || !t.length || left < 1;
+}
+function openDelete() {
+  if (!S.jsDoc) return;
+  $('#dpRanges').value = selRanges(S.sel.size ? S.sel : new Set([S.page]));
+  delPreview(); showModal('#mDel'); setTimeout(() => $('#dpRanges').focus(), 50);
+}
+$('#dpRanges').addEventListener('input', delPreview);
+$('#dpRanges').addEventListener('keydown', e => { if (e.key === 'Enter' && !$('#dpGo').disabled) $('#dpGo').click(); });
+$('#pgDel').onclick = openDelete; $('#bDelPg').onclick = openDelete;
+$('#dpGo').onclick = async () => {
+  let t; try { t = delTargets(); } catch (e) { return toast(e.message, true); }
+  if (!t.length || t.length >= S.n) return;
+  showModal('#mDel', false); busy(true, `Deleting ${t.length} page${t.length > 1 ? 's' : ''}…`);
+  try {
+    /* rebuild from the kept pages so removed pages' content/images are dropped from the file (not just unlinked) */
+    const src = await PDFDocument.load(S.bytes, { ignoreEncryption: true, updateMetadata: false });
+    const kill = new Set(t.map(p => p - 1)); const keep = [...Array(S.n).keys()].filter(i => !kill.has(i));
+    const dst = await PDFDocument.create({ updateMetadata: false }); copyPagesWithOC(src, dst, keep);
+    const copier = PDFObjectCopier.for(src.context, dst.context);
+    for (const k of ['OutputIntents', 'Metadata', 'ViewerPreferences', 'PageLayout', 'PageMode', 'Lang']) { const v = src.catalog.get(PDFName.of(k)); if (v) dst.catalog.set(PDFName.of(k), copier.copy(v)); }
+    try { const info = src.context.lookup(src.context.trailerInfo.Info); if (info instanceof PDFDict) dst.context.trailerInfo.Info = dst.context.register(copier.copy(info)); } catch (e) {}
+    const out = await dst.save({ useObjectStreams: false });
+    const before = S.page, removedBefore = t.filter(p => p < before).length;
+    S.undo.push(S.bytes); if (S.undo.length > 30) S.undo.shift(); S.redo = []; S.edited = true;
+    S.sel = new Set(); S.selAnchor = null;
+    S.page = Math.max(1, before - removedBefore);
+    await openBytes(out, true);
+    toast(`Deleted ${t.length} page${t.length > 1 ? 's' : ''} – ${S.n} left. Use Save PDF to write the file.`);
+  } catch (e) { console.error(e); toast('Delete failed: ' + e.message, true); }
+  busy(false);
+};
 function zoom(f) { if (!S.jsDoc) return; S.fit = null; S.scale = Math.max(0.05, Math.min(16, S.scale * f)); closeEditor(); render(); }
 
 /* ---------- colour scanning (whole document) ---------- */
@@ -2571,7 +2656,7 @@ document.querySelectorAll('.menu .mbtn').forEach(b => {
 });
 document.addEventListener('click', e => { if (!e.target.closest('.menu')) closeMenus(); });
 const CMDS = {
-  open: () => $('#fOpen').click(), save: () => $('#bSave').click(), combine: () => $('#bCombine').click(), split: () => $('#bSplit').click(), resize: () => $('#bResize').click(), crop: () => $('#bCrop').click(), repl: () => openReplace(), ase: () => $('#fAse').click(), fontdir: () => $('#fFontDir').click(), export: () => $('#bExport').click(),
+  open: () => $('#fOpen').click(), save: () => $('#bSave').click(), combine: () => $('#bCombine').click(), split: () => $('#bSplit').click(), delpages: openDelete, resize: () => $('#bResize').click(), crop: () => $('#bCrop').click(), repl: () => openReplace(), ase: () => $('#fAse').click(), fontdir: () => $('#fFontDir').click(), export: () => $('#bExport').click(),
   undo, redo, inspect: () => setMode('inspect'), edit: () => setMode('edit'), strip: stripOverprint,
   zin: () => zoom(1.25), zout: () => zoom(0.8), z100: () => { S.fit = null; S.scale = 1; closeEditor(); render(); },
   fitp: () => { S.fit = 'page'; closeEditor(); render(); }, fitw: () => { S.fit = 'width'; closeEditor(); render(); }, op: toggleOverprint,
@@ -2643,6 +2728,8 @@ window.addEventListener('keydown', e => {
   if (mod && e.key === '1') { e.preventDefault(); CMDS.z100(); return; }
   if (e.key === 'Escape') { ['l', 'r'].forEach(x => { if (paneMode(x) === 'pop') setPane(x, 'col'); }); closeEditor(); S.pinned = null; showInspector(null); drawOverlay(); document.querySelectorAll('.modal.show').forEach(m => m.classList.remove('show')); }
   if (!S.jsDoc) return;
+  if (e.key === 'Delete' && !document.querySelector('.modal.show') && !S.editing) { e.preventDefault(); openDelete(); return; }
+  if (mod && e.key.toLowerCase() === 'a' && e.target.closest && e.target.closest('#lpane')) { e.preventDefault(); $('#pgSelAll').click(); return; }
   if (e.key === 'ArrowRight' || e.key === 'PageDown') goPage(S.page + 1);
   if (e.key === 'ArrowLeft' || e.key === 'PageUp') goPage(S.page - 1);
   if (e.key === '+' || e.key === '=') zoom(1.25);
