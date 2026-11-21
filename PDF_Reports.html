@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>PDF Report Studio</title>
+    <script>try{var _k=localStorage.getItem("rp-skin");if(_k)document.documentElement.dataset.skin=_k}catch(e){}</script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>if (!window.jspdf) document.write('<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"><\/script>');</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+    <script>if (!window.PDFLib) document.write('<script src="https://cdn.jsdelivr.net/npm/pdf-lib@1.17.1/dist/pdf-lib.min.js"><\/script>');</script>
+    <script>if (!window.PDFLib) document.write('<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"><\/script>');</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    </script>
+
+    <style>
+/* =====================================================================
+   Workbench design system (shared with Step & Repeat / Chaos Studio)
+   spot 7 magenta = primary action, spot 8 cyan = active / focus
+   ===================================================================== */
+:root{color-scheme:dark;--bg:#0e1116;--well:#0b0d11;--panel:#161a20;--panel2:#1c2129;--field:#0c0f13;--line:#262d37;--line2:#333b47;
+--tx:#e7eaef;--mut:#9aa3b2;--dim:#6b7486;--m7:#e6007e;--c8:#22cbe9;--c8bg:#0d333c;--warn:#ffb020;
+--m7hi:#ff1a92;--m7lo:#c4006a;--onm7:#fff;--glow:34,203,233;--err:#ff6b6b;--shadow:0,0,0;--hover:#43505f;--grid:255,255,255;--ga:.03;--gb:.055;--thumb:#333c49;
+--ui:"Segoe UI Variable Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+--head:"Bahnschrift SemiCondensed","Bahnschrift","Segoe UI Variable Display","Segoe UI",Roboto,sans-serif;
+--num:"Cascadia Mono","Cascadia Code",Consolas,"Roboto Mono","DejaVu Sans Mono",monospace;
+/* severity → theme */
+--sev-error:var(--err);--sev-warn:var(--warn);--sev-info:var(--mut);--sev-ok:var(--c8)}
+:root[data-skin=light]{color-scheme:light;--bg:#eef1f5;--well:#d3d9e1;--panel:#ffffff;--panel2:#f3f5f8;--field:#ffffff;--line:#dde2e9;--line2:#c3cad4;--tx:#18202b;--mut:#566273;--dim:#8793a3;--m7:#d6006f;--c8:#0a7fa0;--c8bg:#dff3f8;--warn:#b86e00;--m7hi:#f0007f;--m7lo:#b0005b;--onm7:#fff;--glow:10,127,160;--err:#c62828;--shadow:30,45,70;--hover:#9fabb9;--grid:20,30,50;--ga:.06;--gb:.1;--thumb:#c3cad4}
+:root[data-skin=neon]{color-scheme:dark;--bg:#0a0612;--well:#070411;--panel:#120a22;--panel2:#1a0f33;--field:#0b0618;--line:#2b1a52;--line2:#43297d;--tx:#f4eeff;--mut:#b7a6e6;--dim:#7e6bb5;--m7:#ff2bd6;--c8:#00f0ff;--c8bg:#06303a;--warn:#fff200;--m7hi:#ff66e6;--m7lo:#c800a4;--onm7:#fff;--glow:0,240,255;--err:#ff4d6d;--shadow:0,0,0;--hover:#6a47c0;--grid:180,120,255;--ga:.05;--gb:.09;--thumb:#43297d}
+:root[data-skin=bauhaus]{color-scheme:light;--bg:#f2efe6;--well:#f7c600;--panel:#f2efe6;--panel2:#ffffff;--field:#ffffff;--line:#111111;--line2:#111111;--tx:#111111;--mut:#444444;--dim:#666666;--m7:#e63222;--c8:#1d3fbb;--c8bg:#dde5ff;--warn:#b45309;--m7hi:#ff4433;--m7lo:#b81f12;--onm7:#fff;--glow:29,63,187;--err:#e63222;--shadow:17,17,17;--hover:#111111;--grid:17,17,17;--ga:.12;--gb:.22;--thumb:#111111}
+:root[data-skin=blueprint]{color-scheme:dark;--bg:#0b2a4a;--well:#0a2342;--panel:#0f335c;--panel2:#143e6c;--field:#0a2747;--line:#245585;--line2:#3b72a6;--tx:#eaf4ff;--mut:#a8c8e8;--dim:#7ea3c8;--m7:#ffd23f;--c8:#7fd4ff;--c8bg:#0f4a7a;--warn:#ffd23f;--m7hi:#ffe27a;--m7lo:#d9a800;--onm7:#0b2a4a;--glow:127,212,255;--err:#ff8a80;--shadow:0,0,0;--hover:#5b92c4;--grid:200,230,255;--ga:.05;--gb:.1;--thumb:#3b72a6}
+
+*{box-sizing:border-box;margin:0;padding:0}
+*{scrollbar-width:thin;scrollbar-color:var(--thumb) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--thumb);border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+:focus-visible{outline:2px solid var(--c8);outline-offset:2px}
+body{font:14px/1.4 var(--ui);background:var(--bg);color:var(--tx);-webkit-font-smoothing:antialiased;
+  display:grid;grid-template-columns:372px minmax(0,1fr);grid-template-rows:52px minmax(0,1fr);height:100dvh;overflow:hidden}
+
+/* ---- header ---- */
+header{grid-column:1/-1;background:var(--panel);border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;padding:0 14px}
+.logo{width:26px;height:26px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;flex-shrink:0}
+.logo span{background:var(--c8);border-radius:3px}
+.logo span:nth-child(1),.logo span:nth-child(4){background:var(--m7)}
+header h1{font:600 21px/1 var(--head);letter-spacing:.2px;color:var(--tx);white-space:nowrap}
+.badge{background:transparent;border:1px solid var(--line2);color:var(--dim);font:12px var(--num);padding:3px 8px;border-radius:5px;white-space:nowrap}
+#skins{margin-left:auto;display:flex;gap:8px;align-items:center}
+#skins button{width:22px;height:22px;min-width:22px;padding:0;border-radius:50%!important;border:2px solid var(--line2);cursor:pointer;background:linear-gradient(135deg,var(--s1) 50%,var(--s2) 50%)}
+#skins button:hover{border-color:var(--tx)}
+#skins button[aria-pressed=true]{outline:2px solid var(--c8);outline-offset:2px;border-color:var(--panel)}
+
+/* ---- sidebar ---- */
+aside{background:var(--panel);border-right:1px solid var(--line);padding:16px 16px 28px;display:flex;flex-direction:column;gap:18px;min-height:0;overflow-y:auto}
+.sec-label{font:600 15px/1.2 var(--head);letter-spacing:.1px;color:var(--tx);margin-bottom:8px;display:flex;justify-content:space-between;align-items:baseline}
+.sec-label .muted{font:12px var(--num)}
+.divider{height:1px;background:var(--line)}
+.upload-area{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;cursor:pointer;
+  background:var(--field);border:1px dashed var(--line2);border-radius:6px;padding:24px 14px;transition:border-color .15s,background .15s}
+.upload-area:hover,.upload-area.drag{background:var(--c8bg);border-color:var(--c8)}
+.upload-area input[type="file"]{display:none}
+.drop-icon{font-size:22px;color:var(--c8);margin-bottom:6px;line-height:1}
+.upload-area h3{font:600 14px var(--ui);color:var(--tx);margin-bottom:4px}
+.upload-area p{font-size:12px;color:var(--mut);line-height:1.5}
+.btn-group{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:12px}
+.btn{height:40px;padding:0 16px;background:var(--m7);border:1px solid var(--m7);border-radius:5px;color:var(--onm7);font:600 14.5px var(--ui);cursor:pointer;transition:background .12s}
+.btn:hover{background:var(--m7hi);border-color:var(--m7hi)}
+.btn:active{background:var(--m7lo)}
+.btn:disabled{opacity:.4;pointer-events:none}
+.btn.ghost{background:var(--panel2);border:1px solid var(--line2);color:var(--tx);font-weight:400;font-size:13.5px}
+.btn.ghost:hover{border-color:var(--c8);background:var(--panel2)}
+.opt{font-size:12px;color:var(--mut);display:flex;gap:8px;align-items:center;cursor:pointer}
+.opt input{accent-color:var(--c8)}
+
+/* ---- queue ---- */
+#preview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:8px}
+#preview-grid:empty::before{content:'No documents yet';grid-column:1/-1;font:12px var(--num);color:var(--dim);padding:6px 0}
+.preview-card{position:relative;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:12px 10px 10px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;transition:border-color .15s}
+.preview-card:hover{border-color:var(--line2)}
+.preview-card.active{border-color:var(--c8);box-shadow:inset 3px 0 0 var(--m7)}
+.preview-card canvas{max-width:90px;max-height:110px;display:block;border:1px solid var(--line2);box-shadow:0 6px 16px rgba(var(--shadow),.35)}
+.preview-card .filename{font:11px/1.35 var(--num);text-align:center;word-break:break-all;color:var(--tx)}
+.preview-card .status{font:11px var(--num);color:var(--c8);text-align:center}
+.preview-card .status.err{color:var(--err)}
+.preview-card .remove{position:absolute;top:4px;right:5px;background:none;border:none;color:var(--mut);font-size:15px;cursor:pointer;line-height:1;padding:2px 5px;border-radius:3px}
+.preview-card .remove:hover{color:var(--err)}
+
+/* ---- inspector (main) ---- */
+#main-container{min-height:0;overflow-y:auto;padding:28px 32px 80px;background:var(--bg)}
+#inspector{max-width:1200px;margin:0 auto}
+#inspector:empty{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;gap:6px}
+#inspector:empty::before{content:'';width:96px;height:96px;margin-bottom:14px;
+  background:linear-gradient(var(--c8),var(--c8)) 0 0/30px 30px no-repeat,linear-gradient(var(--m7),var(--m7)) 33px 33px/30px 30px no-repeat,linear-gradient(var(--c8),var(--c8)) 66px 66px/30px 30px no-repeat,
+  linear-gradient(var(--line2),var(--line2)) 33px 0/30px 30px no-repeat,linear-gradient(var(--line2),var(--line2)) 66px 0/30px 30px no-repeat,linear-gradient(var(--line2),var(--line2)) 0 33px/30px 30px no-repeat,
+  linear-gradient(var(--line2),var(--line2)) 66px 33px/30px 30px no-repeat,linear-gradient(var(--line2),var(--line2)) 0 66px/30px 30px no-repeat,linear-gradient(var(--line2),var(--line2)) 33px 66px/30px 30px no-repeat;border-radius:3px}
+#inspector:empty::after{content:'Drop PDFs in the sidebar, then select one in the queue to inspect it';font:12px var(--num);color:var(--mut);text-align:center}
+.section-title{font:600 15px/1.2 var(--head);letter-spacing:.1px;color:var(--tx);border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:14px}
+.insp-head{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.insp-head h2{font:600 22px/1.2 var(--head);letter-spacing:.1px;word-break:break-all}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font:12px var(--num);padding:4px 8px;border:1px solid var(--line2);border-radius:5px;color:var(--mut);background:var(--panel2)}
+.chip b{color:var(--tx);font-weight:600}
+.block{margin-bottom:32px}
+.two-col{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:32px}
+table.kv,table.dt{width:100%;border-collapse:collapse;font-size:13px}
+table.kv td{padding:6px 0;border-bottom:1px solid var(--line);vertical-align:top}
+table.kv td:first-child{color:var(--mut);font-size:12.5px;width:38%;padding-right:12px}
+table.kv td:last-child{word-break:break-word}
+.tbl-wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:4px 12px}
+table.dt th{text-align:left;font:600 12px var(--ui);color:var(--mut);padding:8px 12px 8px 0;border-bottom:1px solid var(--line2);white-space:nowrap}
+table.dt td{padding:7px 12px 7px 0;border-bottom:1px solid var(--line);vertical-align:top}
+table.dt tr:last-child td{border-bottom:0}
+.muted{color:var(--mut)}
+.sw{display:inline-block;width:14px;height:14px;border:1px solid var(--line2);border-radius:2px;vertical-align:-3px;margin-right:8px}
+.flags{list-style:none;display:flex;flex-direction:column;gap:6px}
+.flags li{display:grid;grid-template-columns:64px 1fr;gap:12px;font-size:13px;padding:8px 12px;background:var(--panel2);border:1px solid var(--line);border-left:3px solid var(--sev-info);border-radius:5px}
+.flags li .sev{font:600 11px var(--num);text-transform:uppercase;letter-spacing:.5px;padding-top:2px}
+.flags li .det{color:var(--mut);margin-top:3px;font-size:12px}
+.flags li.error{border-left-color:var(--sev-error)} .flags li.error .sev{color:var(--sev-error)}
+.flags li.warn{border-left-color:var(--sev-warn)} .flags li.warn .sev{color:var(--sev-warn)}
+.flags li.info .sev{color:var(--sev-info)}
+.flags li.ok{border-left-color:var(--sev-ok)} .flags li.ok .sev{color:var(--sev-ok)}
+.yes{color:var(--sev-ok)} .no{color:var(--sev-error)} .warn-t{color:var(--sev-warn)}
+.pages-grid{display:flex;flex-direction:column;gap:16px}
+.page-card{display:grid;grid-template-columns:240px 1fr;gap:24px;background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:16px}
+.page-card .tbl-wrap{background:transparent;border:0;padding:0;border-radius:0}
+.page-card .thumb{width:240px;min-height:180px;display:flex;align-items:center;justify-content:center;padding:12px;border-radius:5px;background-color:var(--well);
+  background-image:linear-gradient(rgba(var(--grid),var(--ga)) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--grid),var(--ga)) 1px,transparent 1px),linear-gradient(rgba(var(--grid),var(--gb)) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--grid),var(--gb)) 1px,transparent 1px);
+  background-size:20px 20px,20px 20px,100px 100px,100px 100px}
+.page-card .thumb canvas{max-width:216px;max-height:300px;border:1px solid var(--line2);box-shadow:0 12px 28px rgba(var(--shadow),.5)}
+.page-card h4{font:600 15px var(--head);color:var(--tx);margin-bottom:10px}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--mut);margin-top:10px}
+.legend i{display:inline-block;width:14px;height:0;border-top:2px solid;vertical-align:middle;margin-right:5px}
+details summary{cursor:pointer;font-size:12.5px;color:var(--mut);margin:10px 0 6px}
+details summary:hover{color:var(--tx)}
+
+/* ---- responsive ---- */
+@media (max-width:880px){
+  body{grid-template-columns:minmax(0,1fr);grid-template-rows:52px auto auto;height:auto;min-height:100dvh;overflow-x:hidden;overflow-y:auto}
+  .two-col{grid-template-columns:minmax(0,1fr)}
+  header h1{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  aside{border-right:0;border-bottom:1px solid var(--line);overflow:visible}
+  #main-container{overflow:visible;padding:20px 16px 60px}
+  .page-card{grid-template-columns:minmax(0,1fr)}
+  .page-card>div{min-width:0}
+  .page-card .thumb{width:100%}
+}
+@media (max-width:600px){
+  header{gap:9px;padding:0 12px}
+  header h1{font-size:17px}
+  .badge{display:none}
+  #skins{gap:6px}
+  #skins button{width:18px;height:18px;min-width:18px}
+}
+
+/* ---- skin accents ---- */
+:root[data-skin=neon] header{border-bottom-color:var(--m7);box-shadow:0 1px 18px rgba(255,43,214,.35)}
+:root[data-skin=neon] header h1{text-shadow:0 0 12px rgba(0,240,255,.65)}
+:root[data-skin=neon] .btn:not(.ghost){box-shadow:0 0 18px rgba(255,43,214,.6)}
+:root[data-skin=neon] .preview-card.active{box-shadow:inset 3px 0 0 var(--m7),0 0 10px rgba(0,240,255,.4)}
+:root[data-skin=neon] .page-card .thumb canvas{box-shadow:0 0 0 1px var(--line2),0 0 30px rgba(255,43,214,.25)}
+:root[data-skin=bauhaus] *{border-radius:0!important}
+:root[data-skin=bauhaus] #skins button{border-radius:50%!important}
+:root[data-skin=bauhaus] header{background:#111;border-bottom:4px solid var(--m7)}
+:root[data-skin=bauhaus] header h1{color:#f2efe6;text-transform:uppercase;font-weight:800;letter-spacing:.6px}
+:root[data-skin=bauhaus] .badge{color:#f2efe6;border-color:#f2efe6;background:transparent}
+:root[data-skin=bauhaus] aside{border-right:4px solid #111}
+:root[data-skin=bauhaus] .upload-area,:root[data-skin=bauhaus] .btn,:root[data-skin=bauhaus] .preview-card,:root[data-skin=bauhaus] .tbl-wrap,:root[data-skin=bauhaus] .page-card,:root[data-skin=bauhaus] .chip,:root[data-skin=bauhaus] .flags li{border-width:2px}
+:root[data-skin=bauhaus] .flags li{border-left-width:6px}
+:root[data-skin=bauhaus] .btn:not(.ghost){border:2px solid #111;box-shadow:4px 4px 0 #111}
+:root[data-skin=bauhaus] .btn:not(.ghost):hover{box-shadow:6px 6px 0 #111;transform:translate(-2px,-2px)}
+:root[data-skin=bauhaus] .btn:not(.ghost):active{box-shadow:1px 1px 0 #111;transform:translate(3px,3px)}
+:root[data-skin=bauhaus] .page-card .thumb canvas{border:3px solid #111;box-shadow:6px 6px 0 #111}
+:root[data-skin=bauhaus] .sec-label,:root[data-skin=bauhaus] .section-title,:root[data-skin=bauhaus] .insp-head h2,:root[data-skin=bauhaus] .page-card h4{text-transform:uppercase;font-weight:800;letter-spacing:.6px}
+:root[data-skin=bauhaus] .section-title{border-bottom:3px solid #111}
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo"><span></span><span></span><span></span><span></span></div>
+    <h1>PDF Report Studio</h1>
+    <span class="badge">PDF pre-press report</span>
+    <div id="skins" role="group" aria-label="Colour skin"><button type="button" data-skin="workbench" title="Workbench (dark)" aria-label="Workbench (dark)" aria-pressed="false" style="--s1:#161a20;--s2:#e6007e"></button><button type="button" data-skin="light" title="Light" aria-label="Light" aria-pressed="false" style="--s1:#ffffff;--s2:#d6006f"></button><button type="button" data-skin="neon" title="Neon" aria-label="Neon" aria-pressed="false" style="--s1:#120a22;--s2:#ff2bd6"></button><button type="button" data-skin="bauhaus" title="Bauhaus" aria-label="Bauhaus" aria-pressed="false" style="--s1:#f7c600;--s2:#e63222"></button><button type="button" data-skin="blueprint" title="Blueprint" aria-label="Blueprint" aria-pressed="false" style="--s1:#0f335c;--s2:#ffd23f"></button></div>
+</header>
+
+<aside>
+    <div>
+        <div class="sec-label">Source Documents</div>
+        <label class="upload-area" id="drop-zone">
+            <input type="file" id="file-input" multiple accept=".pdf,application/pdf">
+            <div class="drop-icon">⬡</div>
+            <h3>Drop PDFs here</h3>
+            <p>Extracts page boxes, spot colours, fonts, images and pre-press metadata</p>
+        </label>
+        <div class="btn-group">
+            <button class="btn" id="generate-btn" disabled>↓  Create Report</button>
+            <button class="btn ghost" id="clear-btn" disabled>Clear</button>
+        </div>
+    </div>
+    <div class="divider"></div>
+    <div>
+        <div class="sec-label">Queue <span class="muted">(<span id="queue-count">0</span>)</span></div>
+        <div id="preview-grid"></div>
+    </div>
+</aside>
+
+<main id="main-container">
+    <div id="inspector"></div>
+</main>
+
+<script>
+'use strict';
+// pdf-lib is optional: without it the app still runs on pdf.js alone (boxes fall back to the crop area).
+const _PL = window.PDFLib || {};
+const _Never = class {};
+const PDFName = _PL.PDFName || { of: () => null }, PDFArray = _PL.PDFArray || _Never, PDFDict = _PL.PDFDict || _Never,
+      PDFStream = _PL.PDFStream || _Never, PDFRef = _PL.PDFRef || _Never, PDFNumber = _PL.PDFNumber || _Never,
+      PDFString = _PL.PDFString || _Never, PDFHexString = _PL.PDFHexString || _Never, PDFBool = _PL.PDFBool || _Never;
+
+/* =========================================================================
+   CONSTANTS + SMALL HELPERS
+   ========================================================================= */
+const PT2MM = 25.4 / 72;
+const PROCESS = new Set(['Cyan', 'Magenta', 'Yellow', 'Black']);
+const STD14 = new Set(['Times-Roman','Times-Bold','Times-Italic','Times-BoldItalic','Helvetica','Helvetica-Bold','Helvetica-Oblique','Helvetica-BoldOblique','Courier','Courier-Bold','Courier-Oblique','Courier-BoldOblique','Symbol','ZapfDingbats']);
+const FILTER_LABEL = { DCTDecode: 'JPEG', DCT: 'JPEG', JPXDecode: 'JPEG 2000', FlateDecode: 'ZIP/Flate', Fl: 'ZIP/Flate', CCITTFaxDecode: 'CCITT', CCF: 'CCITT', JBIG2Decode: 'JBIG2', LZWDecode: 'LZW', LZW: 'LZW', RunLengthDecode: 'RLE', RL: 'RLE', ASCIIHexDecode: 'ASCIIHex', AHx: 'ASCIIHex', ASCII85Decode: 'ASCII85', A85: 'ASCII85' };
+const BOX_KEYS = ['MediaBox', 'CropBox', 'BleedBox', 'TrimBox', 'ArtBox'];
+const BOX_STYLE = {
+    MediaBox: { c: '#9e9e9e', rgb: [158, 158, 158], dash: null,   label: 'Media' },
+    CropBox:  { c: '#2979ff', rgb: [41, 121, 255],  dash: [6, 4], label: 'Crop' },
+    BleedBox: { c: '#ff1744', rgb: [255, 23, 68],   dash: null,   label: 'Bleed' },
+    TrimBox:  { c: '#00c853', rgb: [0, 200, 83],    dash: null,   label: 'Trim' },
+    ArtBox:   { c: '#ff9100', rgb: [255, 145, 0],   dash: [2, 3], label: 'Art' }
+};
+const KIND_LABEL = { cmyk: 'CMYK', rgb: 'RGB', gray: 'Grayscale', spot: 'Spot', lab: 'Lab', pattern: 'Pattern', registration: 'Registration (All)', other: 'Other' };
+const SEV_RGB = { error: [229, 115, 115], warn: [255, 183, 77], info: [144, 164, 174], ok: [181, 193, 157] };
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const fmt = (n, d = 2) => (n == null || !isFinite(n)) ? '—' : (+n).toFixed(d);
+const mm = pt => pt * PT2MM;
+const clamp = (x, a, b) => Math.min(Math.max(x, a), b);
+const interp = (x, x0, x1, y0, y1) => y0 + (x - x0) * (y1 - y0) / ((x1 - x0) || 1);
+const latin1 = bytes => new TextDecoder('latin1').decode(bytes);
+function fmtBytes(b) { if (b == null) return '—'; if (b < 1024) return b + ' B'; if (b < 1048576) return (b / 1024).toFixed(1) + ' KB'; return (b / 1048576).toFixed(2) + ' MB'; }
+function decodeName(s) {
+    s = String(s).replace(/^\//, '');
+    if (!s.includes('#')) return s;
+    const bytes = [];
+    for (let i = 0; i < s.length; i++) {
+        if (s[i] === '#' && /^[0-9A-Fa-f]{2}$/.test(s.substr(i + 1, 2))) { bytes.push(parseInt(s.substr(i + 1, 2), 16)); i += 2; }
+        else bytes.push(s.charCodeAt(i) & 0xff);
+    }
+    const u8 = new Uint8Array(bytes);
+    try { return new TextDecoder('utf-8', { fatal: true }).decode(u8); } catch (e) { return latin1(u8); }
+}
+function ranges(nums) {
+    const a = [...new Set(nums)].sort((x, y) => x - y); const out = [];
+    for (let i = 0; i < a.length; i++) {
+        let j = i; while (j + 1 < a.length && a[j + 1] === a[j] + 1) j++;
+        out.push(j > i ? `${a[i]}–${a[j]}` : `${a[i]}`); i = j;
+    }
+    return out.join(', ');
+}
+const normFont = n => String(n || '').replace(/^[A-Z]{6}\+/, '').replace(/[,_\s]/g, '-').toLowerCase();
+const sizeStr = (wPt, hPt) => `${fmt(mm(wPt))} × ${fmt(mm(hPt))} mm`;
+function intersect(a, b) { if (!a) return b; if (!b) return a; const r = [Math.max(a[0], b[0]), Math.max(a[1], b[1]), Math.min(a[2], b[2]), Math.min(a[3], b[3])]; return (r[2] > r[0] && r[3] > r[1]) ? r : a; }
+function fmtDate(raw) {
+    if (!raw) return '';
+    try { const d = pdfjsLib.PDFDateString.toDateObject(raw); if (d) return d.toLocaleString('en-GB'); } catch (e) {}
+    return String(raw);
+}
+
+/* =========================================================================
+   COLOUR MATHS (spot colour alternates → screen swatch)
+   ========================================================================= */
+function labToRgb(L, a, b) {
+    const fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - b / 200;
+    const f = t => t > 6 / 29 ? t * t * t : 3 * (6 / 29) ** 2 * (t - 4 / 29);
+    // D50 Lab → XYZ, Bradford-adapted to D65
+    const X50 = 0.9642 * f(fx), Y50 = f(fy), Z50 = 0.8249 * f(fz);
+    const X = 0.9555766 * X50 - 0.0230393 * Y50 + 0.0631636 * Z50;
+    const Y = -0.0282895 * X50 + 1.0099416 * Y50 + 0.0210077 * Z50;
+    const Z = 0.0122982 * X50 - 0.0204830 * Y50 + 1.3299098 * Z50;
+    const lin = [3.2406 * X - 1.5372 * Y - 0.4986 * Z, -0.9689 * X + 1.8758 * Y + 0.0415 * Z, 0.0557 * X - 0.2040 * Y + 1.0570 * Z];
+    return lin.map(c => { c = clamp(c, 0, 1); c = c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055; return Math.round(clamp(c, 0, 1) * 255); });
+}
+function altToRgb(alt, v) {
+    if (!alt || !v || !v.length) return null;
+    let r, g, b;
+    if (alt.kind === 'cmyk' && v.length >= 4) { r = (1 - v[0]) * (1 - v[3]); g = (1 - v[1]) * (1 - v[3]); b = (1 - v[2]) * (1 - v[3]); }
+    else if (alt.kind === 'rgb' && v.length >= 3) { [r, g, b] = v; }
+    else if (alt.kind === 'gray') { r = g = b = v[0]; }
+    else if (alt.kind === 'lab' && v.length >= 3) return labToRgb(v[0], v[1], v[2]);
+    else return null;
+    return [r, g, b].map(x => Math.round(clamp(x, 0, 1) * 255));
+}
+function altLabel(alt, v) {
+    if (!alt) return '—';
+    if (!v) return alt.label;
+    if (alt.kind === 'cmyk') return `${alt.label === 'DeviceCMYK' ? 'CMYK' : alt.label} ${v.slice(0, 4).map(x => Math.round(x * 100)).join(' / ')}`;
+    if (alt.kind === 'rgb') return `${alt.label === 'DeviceRGB' ? 'RGB' : alt.label} ${v.slice(0, 3).map(x => Math.round(x * 255)).join(' / ')}`;
+    if (alt.kind === 'gray') return `Gray ${Math.round((1 - v[0]) * 100)}% K`;
+    if (alt.kind === 'lab') return `Lab ${v.slice(0, 3).map(x => x.toFixed(1)).join(' / ')}`;
+    return alt.label;
+}
+function fallbackColor(name) {
+    const n = name.toUpperCase();
+    const map = [['RED', '#E53935'], ['BLUE', '#1E88E5'], ['GREEN', '#43A047'], ['YELLOW', '#FDD835'], ['ORANGE', '#FB8C00'], ['BLACK', '#212121'], ['WHITE', '#FFFFFF'], ['SILVER', '#BDBDBD'], ['GREY', '#BDBDBD'], ['GRAY', '#BDBDBD'], ['GOLD', '#FFB300'], ['VARNISH', '#F5F5DC'], ['CUT', '#FF00FF'], ['DIE', '#FF00FF']];
+    for (const [k, c] of map) if (n.includes(k)) return [parseInt(c.substr(1, 2), 16), parseInt(c.substr(3, 2), 16), parseInt(c.substr(5, 2), 16)];
+    let h = 0; for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+    return [h & 255, (h >> 8) & 255, (h >> 16) & 255];
+}
+
+/* =========================================================================
+   POSTSCRIPT CALCULATOR (Type 4 tint transforms)
+   ========================================================================= */
+function parsePS(src) {
+    const toks = src.replace(/[{}]/g, m => ` ${m} `).trim().split(/\s+/).filter(Boolean);
+    let i = 0;
+    const proc = () => { const out = []; while (i < toks.length) { const t = toks[i++]; if (t === '{') out.push(proc()); else if (t === '}') return out; else { const n = Number(t); out.push(isNaN(n) ? t : n); } } return out; };
+    const top = proc();
+    return (top.length === 1 && Array.isArray(top[0])) ? top[0] : top;
+}
+function execPS(proc, st) {
+    const D = Math.PI / 180;
+    for (const t of proc) {
+        if (typeof t === 'number' || Array.isArray(t)) { st.push(t); continue; }
+        let a, b, c;
+        switch (t) {
+            case 'add': b = st.pop(); a = st.pop(); st.push(a + b); break;
+            case 'sub': b = st.pop(); a = st.pop(); st.push(a - b); break;
+            case 'mul': b = st.pop(); a = st.pop(); st.push(a * b); break;
+            case 'div': b = st.pop(); a = st.pop(); st.push(b ? a / b : 0); break;
+            case 'idiv': b = st.pop(); a = st.pop(); st.push(b ? Math.trunc(a / b) : 0); break;
+            case 'mod': b = st.pop(); a = st.pop(); st.push(b ? a % b : 0); break;
+            case 'neg': st.push(-st.pop()); break;
+            case 'abs': st.push(Math.abs(st.pop())); break;
+            case 'ceiling': st.push(Math.ceil(st.pop())); break;
+            case 'floor': st.push(Math.floor(st.pop())); break;
+            case 'round': st.push(Math.floor(st.pop() + 0.5)); break;
+            case 'truncate': case 'cvi': st.push(Math.trunc(st.pop())); break;
+            case 'cvr': break;
+            case 'sqrt': st.push(Math.sqrt(st.pop())); break;
+            case 'sin': st.push(Math.sin(st.pop() * D)); break;
+            case 'cos': st.push(Math.cos(st.pop() * D)); break;
+            case 'atan': b = st.pop(); a = st.pop(); c = Math.atan2(a, b) / D; st.push(c < 0 ? c + 360 : c); break;
+            case 'exp': b = st.pop(); a = st.pop(); st.push(Math.pow(a, b)); break;
+            case 'ln': st.push(Math.log(st.pop())); break;
+            case 'log': st.push(Math.log10(st.pop())); break;
+            case 'eq': b = st.pop(); a = st.pop(); st.push(a === b); break;
+            case 'ne': b = st.pop(); a = st.pop(); st.push(a !== b); break;
+            case 'gt': b = st.pop(); a = st.pop(); st.push(a > b); break;
+            case 'ge': b = st.pop(); a = st.pop(); st.push(a >= b); break;
+            case 'lt': b = st.pop(); a = st.pop(); st.push(a < b); break;
+            case 'le': b = st.pop(); a = st.pop(); st.push(a <= b); break;
+            case 'and': b = st.pop(); a = st.pop(); st.push(typeof a === 'boolean' ? (a && b) : (a & b)); break;
+            case 'or': b = st.pop(); a = st.pop(); st.push(typeof a === 'boolean' ? (a || b) : (a | b)); break;
+            case 'xor': b = st.pop(); a = st.pop(); st.push(typeof a === 'boolean' ? (a !== b) : (a ^ b)); break;
+            case 'not': a = st.pop(); st.push(typeof a === 'boolean' ? !a : ~a); break;
+            case 'bitshift': b = st.pop(); a = st.pop(); st.push(b > 0 ? a << b : a >> -b); break;
+            case 'true': st.push(true); break;
+            case 'false': st.push(false); break;
+            case 'dup': st.push(st[st.length - 1]); break;
+            case 'exch': b = st.pop(); a = st.pop(); st.push(b, a); break;
+            case 'pop': st.pop(); break;
+            case 'copy': c = st.pop(); st.push(...st.slice(st.length - c)); break;
+            case 'index': c = st.pop(); st.push(st[st.length - 1 - c]); break;
+            case 'roll': { const j = st.pop(), n = st.pop(); if (n > 0) { const items = st.splice(st.length - n, n); const k = ((j % n) + n) % n; st.push(...items.slice(n - k), ...items.slice(0, n - k)); } break; }
+            case 'if': a = st.pop(); c = st.pop(); if (c) execPS(a, st); break;
+            case 'ifelse': b = st.pop(); a = st.pop(); c = st.pop(); execPS(c ? a : b, st); break;
+            default: throw new Error('PS op ' + t);
+        }
+    }
+}
+
+/* =========================================================================
+   ICC PROFILE HEADER PARSER
+   ========================================================================= */
+function parseICC(bytes) {
+    if (!bytes || bytes.length < 132) return null;
+    const dv = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+    const sig = o => String.fromCharCode(bytes[o], bytes[o + 1], bytes[o + 2], bytes[o + 3]);
+    const CLS = { mntr: 'Display', prtr: 'Output (printer)', scnr: 'Input', link: 'Device link', spac: 'Colour space', abst: 'Abstract', nmcl: 'Named colour' };
+    const r = { size: dv.getUint32(0), cmm: sig(4).trim(), version: `${bytes[8]}.${bytes[9] >> 4}.${bytes[9] & 15}`, cls: CLS[sig(12)] || sig(12), space: sig(16).trim(), pcs: sig(20).trim(), desc: '', copyright: '' };
+    const readText = (off, sz) => {
+        const type = sig(off);
+        if (type === 'desc') { const len = dv.getUint32(off + 8); return latin1(bytes.subarray(off + 12, off + 12 + Math.max(0, len - 1))); }
+        if (type === 'mluc') { const len = dv.getUint32(off + 20), o = dv.getUint32(off + 24); return new TextDecoder('utf-16be').decode(bytes.subarray(off + o, off + o + len)); }
+        if (type === 'text') return latin1(bytes.subarray(off + 8, off + sz)).replace(/\0+$/, '');
+        return '';
+    };
+    try {
+        const n = dv.getUint32(128);
+        for (let i = 0; i < n && i < 100; i++) {
+            const s = sig(132 + i * 12), off = dv.getUint32(136 + i * 12), sz = dv.getUint32(140 + i * 12);
+            if (s === 'desc') r.desc = readText(off, sz).replace(/\0/g, '').trim();
+            if (s === 'cprt') r.copyright = readText(off, sz).replace(/\0/g, '').trim();
+        }
+    } catch (e) {}
+    return r;
+}
+
+/* =========================================================================
+   XMP PARSER
+   ========================================================================= */
+function parseXMP(xml) {
+    const out = [];
+    if (!xml) return out;
+    try {
+        const dom = new DOMParser().parseFromString(xml, 'application/xml');
+        const RDF = 'http://www.w3.org/1999/02/22-rdf-syntax-ns#';
+        const descs = dom.getElementsByTagNameNS(RDF, 'Description');
+        for (const d of descs) {
+            for (const at of d.attributes) {
+                if (at.name.startsWith('xmlns') || at.name === 'rdf:about') continue;
+                out.push([at.name, at.value]);
+            }
+            for (const ch of d.children) {
+                if (/thumbnails/i.test(ch.tagName)) { out.push([ch.tagName, '(embedded thumbnail)']); continue; }
+                const lis = ch.getElementsByTagNameNS(RDF, 'li');
+                let val;
+                if (lis.length) {
+                    val = [...lis].map(li => {
+                        if (li.children.length) {
+                            const parts = [];
+                            for (const at of li.attributes) if (!at.name.startsWith('xmlns') && !at.name.startsWith('rdf:')) parts.push(`${at.name.split(':').pop()}=${at.value}`);
+                            for (const c of li.querySelectorAll('*')) if (!c.children.length && c.textContent.trim()) parts.push(`${c.localName}=${c.textContent.trim()}`);
+                            return parts.join(' ');
+                        }
+                        const parts = []; for (const at of li.attributes) if (!at.name.startsWith('xmlns') && !at.name.startsWith('rdf:')) parts.push(`${at.name.split(':').pop()}=${at.value}`);
+                        return li.textContent.trim() || parts.join(' ');
+                    }).filter(Boolean).join(' | ');
+                } else {
+                    const parts = [];
+                    for (const at of ch.attributes) if (!at.name.startsWith('xmlns') && !at.name.startsWith('rdf:')) parts.push(`${at.name.split(':').pop()}=${at.value}`);
+                    val = ch.textContent.trim() || parts.join(' ');
+                }
+                if (val) out.push([ch.tagName, val.length > 600 ? val.slice(0, 600) + '…' : val]);
+            }
+        }
+    } catch (e) {}
+    return out;
+}
+
+/* =========================================================================
+   PDF-LIB STRUCTURAL INSPECTOR
+   Reads boxes, colour spaces, spot colours, fonts, images, ExtGStates,
+   layers, output intents directly from the object tree (incl. object streams).
+   ========================================================================= */
+class PdfLibInspector {
+    constructor(doc) { this.doc = doc; this.ctx = doc.context; this.spots = new Map(); this.process = new Set(); this.fnCache = new Map(); }
+    L(o) { return (o instanceof PDFRef) ? this.ctx.lookup(o) : o; }
+    dict(o) { o = this.L(o); return o instanceof PDFDict ? o : (o instanceof PDFStream ? o.dict : null); }
+    get(d, k) { d = this.dict(d); if (!d) return undefined; return this.L(d.get(PDFName.of(k))); }
+    arr(o) { o = this.L(o); return o instanceof PDFArray ? o.asArray().map(x => this.L(x)) : null; }
+    num(o) { o = this.L(o); return o instanceof PDFNumber ? o.asNumber() : null; }
+    nums(o) { const a = this.arr(o); return a ? a.map(x => this.num(x)) : null; }
+    name(o) { o = this.L(o); return o instanceof PDFName ? decodeName(o.asString()) : null; }
+    bool(o) { o = this.L(o); return o instanceof PDFBool ? o.asBoolean() : null; }
+    text(o) {
+        o = this.L(o);
+        if (o instanceof PDFString || o instanceof PDFHexString) { try { return o.decodeText(); } catch (e) { return o.asString(); } }
+        if (o instanceof PDFName) return this.name(o);
+        if (o instanceof PDFNumber) return String(o.asNumber());
+        if (o instanceof PDFBool) return String(o.asBoolean());
+        return null;
+    }
+    decode(s) {
+        s = this.L(s);
+        if (!(s instanceof PDFStream)) return null;
+        try { if (s instanceof PDFLib.PDFRawStream) return PDFLib.decodePDFRawStream(s).decode(); if (s.getContents) return s.getContents(); } catch (e) {}
+        return null;
+    }
+    inherited(node, key) {
+        let n = this.dict(node), guard = 0;
+        while (n && guard++ < 64) { const v = n.get(PDFName.of(key)); if (v !== undefined) return this.L(v); n = this.dict(n.get(PDFName.of('Parent'))); }
+        return undefined;
+    }
+    box(node, key, inherit) {
+        const a = this.nums(inherit ? this.inherited(node, key) : this.get(node, key));
+        if (!a || a.length < 4 || a.slice(0, 4).some(x => x == null)) return null;
+        return [Math.min(a[0], a[2]), Math.min(a[1], a[3]), Math.max(a[0], a[2]), Math.max(a[1], a[3])];
+    }
+
+    /* ---- PDF functions (tint transforms) ---- */
+    buildFn(o) {
+        o = this.L(o);
+        if (this.fnCache.has(o)) return this.fnCache.get(o);
+        let f;
+        if (o instanceof PDFArray) { const fs = this.arr(o).map(x => this.buildFn(x)); f = inp => fs.flatMap(g => g(inp)); }
+        else {
+            const d = this.dict(o); if (!d) throw new Error('no function');
+            const type = this.num(this.get(d, 'FunctionType'));
+            const domain = this.nums(this.get(d, 'Domain')) || [0, 1];
+            const range = this.nums(this.get(d, 'Range'));
+            const clipIn = inp => inp.map((x, i) => clamp(x, domain[2 * i] ?? 0, domain[2 * i + 1] ?? 1));
+            const clipOut = out => range ? out.map((y, i) => (range[2 * i] == null) ? y : clamp(y, range[2 * i], range[2 * i + 1])) : out;
+            if (type === 2) {
+                const c0 = this.nums(this.get(d, 'C0')) || [0], c1 = this.nums(this.get(d, 'C1')) || [1], N = this.num(this.get(d, 'N')) ?? 1;
+                f = inp => { const x = clipIn(inp)[0]; const t = Math.pow(x, N); return clipOut(c0.map((v, i) => v + t * (c1[i] - v))); };
+            } else if (type === 3) {
+                const fns = (this.arr(this.get(d, 'Functions')) || []).map(x => this.buildFn(x));
+                const bounds = this.nums(this.get(d, 'Bounds')) || [], enc = this.nums(this.get(d, 'Encode')) || [];
+                f = inp => { const x = clipIn(inp)[0]; let i = 0; while (i < bounds.length && x >= bounds[i]) i++; const lo = i === 0 ? domain[0] : bounds[i - 1], hi = i === bounds.length ? domain[1] : bounds[i]; return clipOut(fns[i]([interp(x, lo, hi, enc[2 * i] ?? 0, enc[2 * i + 1] ?? 1)])); };
+            } else if (type === 0) {
+                const size = this.nums(this.get(d, 'Size')), bps = this.num(this.get(d, 'BitsPerSample')), m = size.length, nOut = range.length / 2;
+                const enc = this.nums(this.get(d, 'Encode')) || size.flatMap(s => [0, s - 1]);
+                const dec = this.nums(this.get(d, 'Decode')) || range;
+                const bytes = this.decode(o); if (!bytes) throw new Error('sample data');
+                const maxV = Math.pow(2, bps) - 1;
+                const sample = idx => {
+                    if (bps === 8) return bytes[idx];
+                    if (bps === 16) return (bytes[idx * 2] << 8) | bytes[idx * 2 + 1];
+                    let v = 0; const bit = idx * bps; for (let b = 0; b < bps; b++) { const bi = bit + b; v = v * 2 + ((bytes[bi >> 3] >> (7 - (bi & 7))) & 1); } return v;
+                };
+                f = inp => {
+                    const x = clipIn(inp);
+                    const e = x.map((xi, i) => clamp(interp(xi, domain[2 * i], domain[2 * i + 1], enc[2 * i], enc[2 * i + 1]), 0, size[i] - 1));
+                    const out = [];
+                    if (m === 1) {
+                        const i0 = Math.floor(e[0]), i1 = Math.min(i0 + 1, size[0] - 1), t = e[0] - i0;
+                        for (let j = 0; j < nOut; j++) out.push(interp(sample(i0 * nOut + j) * (1 - t) + sample(i1 * nOut + j) * t, 0, maxV, dec[2 * j], dec[2 * j + 1]));
+                    } else {
+                        let idx = 0, stride = 1; for (let i = 0; i < m; i++) { idx += Math.round(e[i]) * stride; stride *= size[i]; }
+                        for (let j = 0; j < nOut; j++) out.push(interp(sample(idx * nOut + j), 0, maxV, dec[2 * j], dec[2 * j + 1]));
+                    }
+                    return clipOut(out);
+                };
+            } else if (type === 4) {
+                const bytes = this.decode(o); if (!bytes) throw new Error('PS data');
+                const prog = parsePS(latin1(bytes)); const nOut = range.length / 2;
+                f = inp => { const st = clipIn(inp).slice(); execPS(prog, st); return clipOut(st.slice(-nOut).map(Number)); };
+            } else throw new Error('function type ' + type);
+        }
+        this.fnCache.set(o, f);
+        return f;
+    }
+
+    /* ---- colour spaces ---- */
+    registerSpot(name, type, alt, fnObj, inputs, sink) {
+        if (name === 'All' || name === 'None') return;
+        if (PROCESS.has(name)) { this.process.add(name); if (sink) sink.process.add(name); return; }
+        if (sink) sink.spots.add(name);
+        let e = this.spots.get(name);
+        if (!e) { e = { name, types: new Set(), alt: null, values: null, rgb: null, prio: 0, pages: new Set() }; this.spots.set(name, e); }
+        e.types.add(type);
+        const prio = type === 'Separation' ? 2 : 1;
+        if (e.values && e.prio >= prio) return;
+        try {
+            const out = this.buildFn(fnObj)(inputs);
+            if (out && out.length && out.every(v => isFinite(v))) { e.values = out; e.alt = alt; e.prio = prio; e.rgb = altToRgb(alt, out); }
+        } catch (err) { if (!e.alt) e.alt = alt; }
+    }
+    csInfo(o, sink, depth = 0) {
+        o = this.L(o);
+        if (depth > 8 || o == null) return { kind: 'other', label: '?', n: 0 };
+        const nm = this.name(o);
+        if (nm != null) {
+            const m = { DeviceRGB: ['rgb', 'DeviceRGB', 3], RGB: ['rgb', 'DeviceRGB', 3], DeviceCMYK: ['cmyk', 'DeviceCMYK', 4], CMYK: ['cmyk', 'DeviceCMYK', 4], DeviceGray: ['gray', 'DeviceGray', 1], G: ['gray', 'DeviceGray', 1], Pattern: ['pattern', 'Pattern', 0] }[nm];
+            return m ? { kind: m[0], label: m[1], n: m[2] } : { kind: 'other', label: nm, n: 0 };
+        }
+        const a = this.arr(o);
+        if (!a || !a.length) return { kind: 'other', label: '?', n: 0 };
+        const head = this.name(a[0]);
+        switch (head) {
+            case 'ICCBased': {
+                const n = this.num(this.get(a[1], 'N')) || 0;
+                const kind = n === 4 ? 'cmyk' : n === 3 ? 'rgb' : n === 1 ? 'gray' : 'other';
+                return { kind, label: `ICCBased ${n === 4 ? 'CMYK' : n === 3 ? 'RGB' : n === 1 ? 'Gray' : 'N=' + n}`, n };
+            }
+            case 'Indexed': case 'I': { const base = this.csInfo(a[1], sink, depth + 1); return { kind: base.kind, label: `Indexed (${base.label})`, n: 1 }; }
+            case 'Pattern': {
+                if (a[1]) { const base = this.csInfo(a[1], sink, depth + 1); return { kind: base.kind, label: `Pattern (${base.label})`, n: base.n }; }
+                return { kind: 'pattern', label: 'Pattern', n: 0 };
+            }
+            case 'Separation': {
+                const sn = this.name(a[1]) || this.text(a[1]) || '?';
+                const alt = this.csInfo(a[2], null, depth + 1);
+                this.registerSpot(sn, 'Separation', alt, a[3], [1], sink);
+                if (sn === 'All') return { kind: 'registration', label: 'Separation (All)', n: 1 };
+                if (sn === 'None') return { kind: 'other', label: 'Separation (None)', n: 1 };
+                if (PROCESS.has(sn)) return { kind: 'cmyk', label: `Separation (${sn})`, n: 1 };
+                return { kind: 'spot', label: `Separation (${sn})`, n: 1 };
+            }
+            case 'DeviceN': {
+                const names = (this.arr(a[1]) || []).map(x => this.name(x) || '?');
+                const alt = this.csInfo(a[2], null, depth + 1);
+                const colorants = this.dict(this.get(a[4], 'Colorants'));
+                if (colorants) for (const [, v] of colorants.entries()) { try { this.csInfo(v, sink, depth + 1); } catch (e) {} }
+                names.forEach((sn, i) => this.registerSpot(sn, 'DeviceN', alt, a[3], names.map((_, j) => j === i ? 1 : 0), sink));
+                const spotN = names.filter(n => !PROCESS.has(n) && n !== 'None' && n !== 'All');
+                return { kind: spotN.length ? 'spot' : 'cmyk', label: `DeviceN (${names.join(', ')})`, n: names.length };
+            }
+            case 'Lab': return { kind: 'lab', label: 'Lab', n: 3 };
+            case 'CalRGB': return { kind: 'rgb', label: 'CalRGB', n: 3 };
+            case 'CalGray': return { kind: 'gray', label: 'CalGray', n: 1 };
+            case 'CalCMYK': return { kind: 'cmyk', label: 'CalCMYK', n: 4 };
+            default:
+                if (['DeviceRGB', 'DeviceCMYK', 'DeviceGray'].includes(head)) return this.csInfo(a[0], sink, depth + 1);
+                return { kind: 'other', label: head || '?', n: 0 };
+        }
+    }
+
+    /* ---- whole-file sweep: every Separation / DeviceN anywhere ---- */
+    globalScan() {
+        const stats = { objects: 0, js: false, streams: 0, embeddedFiles: 0 };
+        const seen = new Set();
+        const visit = (o, depth) => {
+            if (o == null || depth > 40 || o instanceof PDFRef) return;
+            if (o instanceof PDFStream) { stats.streams++; visit(o.dict, depth + 1); return; }
+            if (o instanceof PDFArray) {
+                const h = o.size() ? this.name(o.get(0)) : null;
+                if (h === 'Separation' || h === 'DeviceN') { try { this.csInfo(o, null); } catch (e) {} }
+                for (const x of o.asArray()) visit(x, depth + 1);
+                return;
+            }
+            if (o instanceof PDFDict) {
+                if (seen.has(o)) return; seen.add(o);
+                if (this.name(o.get(PDFName.of('S'))) === 'JavaScript' || o.has(PDFName.of('JS'))) stats.js = true;
+                if (this.name(o.get(PDFName.of('Type'))) === 'EmbeddedFile') stats.embeddedFiles++;
+                for (const [, v] of o.entries()) visit(v, depth + 1);
+            }
+        };
+        for (const [, obj] of this.ctx.enumerateIndirectObjects()) { stats.objects++; try { visit(obj, 0); } catch (e) {} }
+        return stats;
+    }
+
+    /* ---- document catalogue ---- */
+    docInfo() {
+        const cat = this.doc.catalog, r = {};
+        r.version = this.name(this.get(cat, 'Version'));
+        r.pageLayout = this.name(this.get(cat, 'PageLayout'));
+        r.pageMode = this.name(this.get(cat, 'PageMode'));
+        r.lang = this.text(this.get(cat, 'Lang'));
+        r.tagged = this.bool(this.get(this.get(cat, 'MarkInfo'), 'Marked')) === true;
+        r.structTree = !!this.get(cat, 'StructTreeRoot');
+        const af = this.get(cat, 'AcroForm');
+        r.formFields = (this.arr(this.get(af, 'Fields')) || []).length;
+        r.xfa = !!this.get(af, 'XFA');
+        r.openAction = !!this.get(cat, 'OpenAction');
+        r.outputIntents = (this.arr(this.get(cat, 'OutputIntents')) || []).map(oi => {
+            const prof = this.get(oi, 'DestOutputProfile');
+            let icc = null; if (prof) { try { icc = parseICC(this.decode(prof)); } catch (e) {} }
+            return { S: this.name(this.get(oi, 'S')), id: this.text(this.get(oi, 'OutputConditionIdentifier')), cond: this.text(this.get(oi, 'OutputCondition')), registry: this.text(this.get(oi, 'RegistryName')), info: this.text(this.get(oi, 'Info')), hasProfile: !!prof, icc };
+        });
+        const ocp = this.get(cat, 'OCProperties');
+        const ocgs = this.arr(this.get(ocp, 'OCGs')) || [];
+        const D = this.get(ocp, 'D');
+        const off = new Set(this.arr(this.get(D, 'OFF')) || []);
+        const locked = new Set(this.arr(this.get(D, 'Locked')) || []);
+        const baseOff = this.name(this.get(D, 'BaseState')) === 'OFF';
+        const on = new Set(this.arr(this.get(D, 'ON')) || []);
+        r.layers = ocgs.map(g => {
+            const usage = this.get(g, 'Usage');
+            const print = this.name(this.get(this.get(usage, 'Print'), 'PrintState'));
+            const intentO = this.get(g, 'Intent');
+            const intent = this.name(intentO) || (this.arr(intentO) || []).map(x => this.name(x)).join(', ');
+            return { name: this.text(this.get(g, 'Name')) || '(unnamed)', on: baseOff ? on.has(g) : !off.has(g), locked: locked.has(g), print: print || '', intent: intent || 'View' };
+        });
+        const ti = this.ctx.trailerInfo || {};
+        const enc = this.dict(ti.Encrypt);
+        r.encrypt = enc ? { filter: this.name(this.get(enc, 'Filter')), V: this.num(this.get(enc, 'V')), R: this.num(this.get(enc, 'R')), len: this.num(this.get(enc, 'Length')), P: this.num(this.get(enc, 'P')) } : null;
+        const info = this.dict(ti.Info);
+        r.info = [];
+        if (info) for (const [k, v] of info.entries()) r.info.push([decodeName(k.asString()), this.text(v) ?? '']);
+        const md = this.get(cat, 'Metadata');
+        if (md) { const b = this.decode(md); if (b) r.xmpRaw = new TextDecoder('utf-8').decode(b); }
+        const ids = ti.ID ? this.arr(ti.ID) : null;
+        if (ids && ids[0]) { try { r.docId = this.L(ids[0]).asString().replace(/[<>]/g, ''); } catch (e) {} }
+        return r;
+    }
+
+    /* ---- per page resource walk ---- */
+    pageScan(node) {
+        const acc = { kinds: new Set(), csLabels: new Set(), spots: new Set(), process: new Set(), fonts: new Map(), images: new Map(), forms: 0, shadings: 0, patterns: 0, transparency: new Set(), overprint: new Set(), layers: new Set(), streams: [], namedCS: new Map(), ops: null, pieceInfo: [] };
+        const visited = new Set();
+        const contents = this.get(node, 'Contents');
+        if (contents instanceof PDFStream) acc.streams.push(contents);
+        else (this.arr(contents) || []).forEach(s => { if (s instanceof PDFStream) acc.streams.push(s); });
+        this.walkRes(this.inherited(node, 'Resources'), acc, visited, 0);
+        const grp = this.get(node, 'Group');
+        if (grp && this.name(this.get(grp, 'S')) === 'Transparency') acc.transparency.add('Page transparency group' + (this.name(this.get(grp, 'CS')) ? ` (${this.name(this.get(grp, 'CS'))})` : ''));
+        const pi = this.dict(this.get(node, 'PieceInfo'));
+        if (pi) for (const [k] of pi.entries()) acc.pieceInfo.push(decodeName(k.asString()));
+        this.analyzeStreams(acc);
+        return acc;
+    }
+    walkRes(res, acc, visited, depth) {
+        res = this.dict(res);
+        if (!res || visited.has(res) || depth > 14) return;
+        visited.add(res);
+        const cs = this.dict(this.get(res, 'ColorSpace'));
+        if (cs) for (const [k, v] of cs.entries()) { try { acc.namedCS.set(decodeName(k.asString()), this.csInfo(v, acc)); } catch (e) {} }
+        const fonts = this.dict(this.get(res, 'Font'));
+        if (fonts) for (const [, v] of fonts.entries()) {
+            const f = this.L(v);
+            if (f instanceof PDFDict && !acc.fonts.has(f)) { acc.fonts.set(f, this.fontInfo(f)); const r3 = this.get(f, 'Resources'); if (r3) this.walkRes(r3, acc, visited, depth + 1); }
+        }
+        const xo = this.dict(this.get(res, 'XObject'));
+        if (xo) for (const [, v] of xo.entries()) {
+            const s = this.L(v);
+            if (!(s instanceof PDFStream) || visited.has(s)) continue;
+            visited.add(s);
+            const st = this.name(this.get(s, 'Subtype'));
+            if (st === 'Image') this.imageInfo(s, acc);
+            else if (st === 'Form') { acc.forms++; this.walkForm(s, acc, visited, depth + 1); }
+        }
+        const gs = this.dict(this.get(res, 'ExtGState'));
+        if (gs) for (const [, v] of gs.entries()) this.gsInfo(this.dict(v), acc);
+        const sh = this.dict(this.get(res, 'Shading'));
+        if (sh) for (const [, v] of sh.entries()) this.shadingInfo(v, acc);
+        const pat = this.dict(this.get(res, 'Pattern'));
+        if (pat) for (const [, v] of pat.entries()) {
+            const p = this.L(v);
+            if (!p || visited.has(p)) continue; visited.add(p); acc.patterns++;
+            const pt = this.num(this.get(p, 'PatternType'));
+            if (pt === 1 && p instanceof PDFStream) { acc.streams.push(p); this.walkRes(this.get(p, 'Resources'), acc, visited, depth + 1); }
+            else if (pt === 2) { this.shadingInfo(this.get(p, 'Shading'), acc); this.gsInfo(this.dict(this.get(p, 'ExtGState')), acc); }
+        }
+        const props = this.dict(this.get(res, 'Properties'));
+        if (props) for (const [, v] of props.entries()) {
+            const p = this.dict(v); if (!p) continue;
+            const t = this.name(this.get(p, 'Type'));
+            if (t === 'OCG') acc.layers.add(this.text(this.get(p, 'Name')) || '(unnamed)');
+            else if (t === 'OCMD') {
+                const o = this.L(this.get(p, 'OCGs'));
+                const list = o instanceof PDFArray ? this.arr(o) : [o];
+                for (const g of list) { const n = this.text(this.get(g, 'Name')); if (n) acc.layers.add(n); }
+            }
+        }
+    }
+    walkForm(s, acc, visited, depth) {
+        acc.streams.push(s);
+        const g = this.get(s, 'Group');
+        if (g && this.name(this.get(g, 'S')) === 'Transparency') acc.transparency.add('Transparency group (form XObject)');
+        const oc = this.get(s, 'OC');
+        if (oc) { const n = this.text(this.get(oc, 'Name')); if (n) acc.layers.add(n); }
+        this.walkRes(this.get(s, 'Resources'), acc, visited, depth);
+    }
+    gsInfo(g, acc) {
+        if (!g) return;
+        const ca = this.num(this.get(g, 'ca')), CA = this.num(this.get(g, 'CA'));
+        if (ca != null && ca < 1) acc.transparency.add(`Fill opacity ${Math.round(ca * 100)}%`);
+        if (CA != null && CA < 1) acc.transparency.add(`Stroke opacity ${Math.round(CA * 100)}%`);
+        const bm = this.get(g, 'BM');
+        const bmn = this.name(bm) || ((this.arr(bm) || []).map(x => this.name(x))[0]);
+        if (bmn && bmn !== 'Normal' && bmn !== 'Compatible') acc.transparency.add(`Blend mode: ${bmn}`);
+        const sm = this.get(g, 'SMask');
+        if (sm instanceof PDFDict) acc.transparency.add(`Soft mask (${this.name(this.get(sm, 'S')) || 'mask'})`);
+        const OP = this.bool(this.get(g, 'OP')), op = this.bool(this.get(g, 'op'));
+        if (OP) acc.overprint.add('Stroke overprint');
+        if (op || (op == null && OP)) acc.overprint.add('Fill overprint');
+        if (this.num(this.get(g, 'OPM')) === 1 && (OP || op)) acc.overprint.add('Overprint mode 1');
+    }
+    shadingInfo(v, acc) {
+        const d = this.dict(v); if (!d) return;
+        acc.shadings++;
+        const info = this.csInfo(this.get(d, 'ColorSpace'), acc);
+        acc.kinds.add(info.kind); acc.csLabels.add(info.label);
+    }
+    imageInfo(s, acc) {
+        if (acc.images.has(s)) return;
+        const d = s.dict;
+        const isMask = this.bool(this.get(d, 'ImageMask')) === true;
+        let cs = null;
+        const c = this.get(d, 'ColorSpace');
+        if (!isMask && c) { try { cs = this.csInfo(c, acc); } catch (e) {} }
+        const f = this.get(d, 'Filter');
+        const filters = f instanceof PDFArray ? this.arr(f).map(n => this.name(n)) : [this.name(f)].filter(Boolean);
+        const info = {
+            w: this.num(this.get(d, 'Width')), h: this.num(this.get(d, 'Height')), bpc: this.num(this.get(d, 'BitsPerComponent')),
+            cs: cs ? cs.label : (isMask ? 'Stencil mask (1-bit)' : (filters.includes('JPXDecode') ? 'JPX embedded' : '?')),
+            kind: cs ? cs.kind : null,
+            filter: filters.map(x => FILTER_LABEL[x] || x).join(' + ') || 'Uncompressed',
+            smask: !!this.get(d, 'SMask'), isMask, bytes: s.contents ? s.contents.length : null,
+            interpolate: this.bool(this.get(d, 'Interpolate')) === true
+        };
+        if (cs) { acc.kinds.add(cs.kind); acc.csLabels.add(cs.label); }
+        if (info.smask) acc.transparency.add('Image with alpha (SMask)');
+        acc.images.set(s, info);
+    }
+    fontInfo(f) {
+        const subtype = this.name(this.get(f, 'Subtype'));
+        const base = this.name(this.get(f, 'BaseFont')) || this.text(this.get(f, 'Name')) || '(Type 3 font)';
+        let desc = this.get(f, 'FontDescriptor'), cidType = null;
+        if (subtype === 'Type0') {
+            const df = (this.arr(this.get(f, 'DescendantFonts')) || [])[0];
+            if (df) { cidType = this.name(this.get(df, 'Subtype')); desc = this.get(df, 'FontDescriptor'); }
+        }
+        let embedded = false, format = '';
+        if (subtype === 'Type3') { embedded = true; format = 'Type 3'; }
+        else if (desc) {
+            if (this.get(desc, 'FontFile')) { embedded = true; format = 'Type 1'; }
+            else if (this.get(desc, 'FontFile2')) { embedded = true; format = 'TrueType'; }
+            else { const ff3 = this.get(desc, 'FontFile3'); if (ff3) { embedded = true; const st = this.name(this.get(ff3, 'Subtype')); format = st === 'OpenType' ? 'OpenType' : st === 'Type1C' ? 'Type 1 (CFF)' : st === 'CIDFontType0C' ? 'CID (CFF)' : (st || 'CFF'); } }
+        }
+        const clean = base.replace(/^[A-Z]{6}\+/, '');
+        const enc = this.get(f, 'Encoding');
+        const encoding = this.name(enc) || (enc instanceof PDFStream ? 'Embedded CMap' : (enc instanceof PDFDict ? 'Custom (Differences)' : 'Built-in'));
+        return {
+            name: clean, rawName: base, type: subtype === 'Type0' ? `Type 0 / ${cidType || 'CID'}` : (subtype || '?'),
+            format: format || (STD14.has(clean) ? 'Standard 14' : '—'), embedded, subset: /^[A-Z]{6}\+/.test(base), encoding
+        };
+    }
+    analyzeStreams(acc) {
+        const ops = { rgb: 0, cmyk: 0, gray: 0, named: 0, sh: 0, inlineImg: 0, text: 0, bytes: 0 };
+        const used = new Set();
+        for (const s of acc.streams) {
+            const bytes = this.decode(s); if (!bytes) continue;
+            ops.bytes += bytes.length;
+            let str = latin1(bytes);
+            str = str.replace(/\((?:\\[\s\S]|[^\\()])*\)/g, ' ');
+            str = str.replace(/\bBI\b([\s\S]*?)\bID\b[\s\S]*?\bEI\b/g, (m, hdr) => {
+                ops.inlineImg++;
+                const mm2 = hdr.match(/\/(?:CS|ColorSpace)\s*\/([^\s\/\[\]<>]+)/);
+                if (mm2) { const k = { RGB: 'rgb', DeviceRGB: 'rgb', CMYK: 'cmyk', DeviceCMYK: 'cmyk', G: 'gray', DeviceGray: 'gray' }[mm2[1]]; if (k) acc.kinds.add(k); else used.add(mm2[1]); }
+                return ' ';
+            });
+            str = str.replace(/%[^\r\n]*/g, ' ');
+            const toks = str.match(/\/[^\s\/\[\]<>(){}%]*|[^\s\/\[\]<>(){}%]+/g) || [];
+            for (let i = 0; i < toks.length; i++) {
+                switch (toks[i]) {
+                    case 'rg': case 'RG': ops.rgb++; break;
+                    case 'k': case 'K': ops.cmyk++; break;
+                    case 'g': case 'G': ops.gray++; break;
+                    case 'cs': case 'CS': { const p = toks[i - 1]; if (p && p[0] === '/') used.add(decodeName(p)); ops.named++; break; }
+                    case 'sh': ops.sh++; break;
+                    case 'Tj': case 'TJ': case "'": case '"': ops.text++; break;
+                }
+            }
+        }
+        if (ops.rgb) { acc.kinds.add('rgb'); acc.csLabels.add('DeviceRGB'); }
+        if (ops.cmyk) { acc.kinds.add('cmyk'); acc.csLabels.add('DeviceCMYK'); }
+        if (ops.gray) { acc.kinds.add('gray'); acc.csLabels.add('DeviceGray'); }
+        for (const n of used) {
+            const direct = { DeviceRGB: ['rgb', 'DeviceRGB'], DeviceCMYK: ['cmyk', 'DeviceCMYK'], DeviceGray: ['gray', 'DeviceGray'], Pattern: ['pattern', 'Pattern'] }[n];
+            if (direct) { acc.kinds.add(direct[0]); acc.csLabels.add(direct[1]); continue; }
+            const info = acc.namedCS.get(n);
+            if (info) { acc.kinds.add(info.kind); acc.csLabels.add(info.label); }
+        }
+        acc.ops = ops;
+    }
+}
+
+/* =========================================================================
+   PDF.JS PAGE SCAN — effective image PPI, line weights, text sizes, annots
+   ========================================================================= */
+async function pdfjsPageScan(page) {
+    const OPS = pdfjsLib.OPS, U = pdfjsLib.Util;
+    const r = { placements: [], minStroke: null, hairlines: 0, strokes: 0, textChars: 0, textRuns: 0, fontSizes: new Map(), annots: {}, rotate: page.rotate || 0, view: page.view, userUnit: page.userUnit || 1 };
+    try {
+        const ol = await page.getOperatorList({ annotationMode: pdfjsLib.AnnotationMode.DISABLE });
+        let ctm = [1, 0, 0, 1, 0, 0], lw = 1; const st = [];
+        const det = m => Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2]));
+        const place = (w, h) => {
+            const wPt = Math.hypot(ctm[0], ctm[1]), hPt = Math.hypot(ctm[2], ctm[3]);
+            if (wPt < 0.5 || hPt < 0.5 || !w || !h) return;
+            r.placements.push({ w, h, wPt, hPt, ppi: Math.min(w / (wPt / 72), h / (hPt / 72)) });
+        };
+        for (let i = 0; i < ol.fnArray.length; i++) {
+            const fn = ol.fnArray[i], a = ol.argsArray[i];
+            switch (fn) {
+                case OPS.save: st.push([ctm, lw]); break;
+                case OPS.restore: { const s = st.pop(); if (s) { ctm = s[0]; lw = s[1]; } break; }
+                case OPS.transform: ctm = U.transform(ctm, a); break;
+                case OPS.paintFormXObjectBegin: st.push([ctm, lw]); if (a && a[0] && a[0].length === 6) ctm = U.transform(ctm, Array.from(a[0])); break;
+                case OPS.paintFormXObjectEnd: { const s = st.pop(); if (s) { ctm = s[0]; lw = s[1]; } break; }
+                case OPS.setLineWidth: lw = a[0]; break;
+                case OPS.stroke: case OPS.closeStroke: case OPS.fillStroke: case OPS.eoFillStroke: case OPS.closeFillStroke: case OPS.closeEOFillStroke: {
+                    r.strokes++; const eff = lw * det(ctm);
+                    if (r.minStroke == null || eff < r.minStroke) r.minStroke = eff;
+                    if (eff < 0.25) r.hairlines++;
+                    break;
+                }
+                case OPS.paintImageXObject: place(a[1], a[2]); break;
+                case OPS.paintInlineImageXObject: case OPS.paintImageMaskXObject: { const d = a && a[0]; if (d) place(d.width, d.height); break; }
+            }
+        }
+    } catch (e) { r.opError = e.message; }
+    try {
+        const tc = await page.getTextContent();
+        for (const it of tc.items) {
+            if (!it.str || !it.str.trim()) continue;
+            r.textRuns++; r.textChars += it.str.replace(/\s/g, '').length;
+            const sz = Math.hypot(it.transform[2], it.transform[3]);
+            let fname = null;
+            try { const fo = page.commonObjs.get(it.fontName); fname = fo && fo.name; } catch (e) {}
+            if (!fname) fname = (tc.styles[it.fontName] && tc.styles[it.fontName].fontFamily) || it.fontName;
+            const key = normFont(fname);
+            if (!r.fontSizes.has(key)) r.fontSizes.set(key, { label: String(fname).replace(/^[A-Z]{6}\+/, ''), sizes: new Set() });
+            r.fontSizes.get(key).sizes.add(Math.round(sz * 10) / 10);
+        }
+    } catch (e) {}
+    try { const an = await page.getAnnotations(); for (const a of an) r.annots[a.subtype] = (r.annots[a.subtype] || 0) + 1; } catch (e) {}
+    return r;
+}
+
+/* =========================================================================
+   RAW BYTE SCAN
+   ========================================================================= */
+function rawScan(bytes) {
+    const head = latin1(bytes.subarray(0, Math.min(2048, bytes.length)));
+    const v = head.match(/%PDF-(\d\.\d)/);
+    let eof = 0;
+    for (let i = 0; i + 4 < bytes.length; i++) if (bytes[i] === 37 && bytes[i + 1] === 37 && bytes[i + 2] === 69 && bytes[i + 3] === 79 && bytes[i + 4] === 70) eof++;
+    const tail = latin1(bytes.subarray(Math.max(0, bytes.length - 4096)));
+    return { header: v ? v[1] : null, linearized: /\/Linearized/.test(head), eofCount: eof, xrefStream: /\/Type\s*\/XRef/.test(tail) || !/\bxref\b/.test(tail) };
+}
+
+/* =========================================================================
+   FULL ANALYSIS
+   ========================================================================= */
+async function analyzeFile(entry, progress) {
+    const bytes = entry.bytes, pdf = entry.pdf;
+    const A = { raw: rawScan(bytes), numPages: pdf.numPages, pages: [], fonts: [], images: [], spots: [], flags: [] };
+
+    let lib = null;
+    if (!window.PDFLib) A.libError = 'pdf-lib library could not be loaded (check network / CDN access)';
+    else try {
+        const d = await PDFLib.PDFDocument.load(bytes.slice(), { ignoreEncryption: true, updateMetadata: false, throwOnInvalidObject: false });
+        lib = new PdfLibInspector(d);
+        entry.libDoc = d;
+    } catch (e) { A.libError = e.message; }
+
+    // pdf.js document level
+    try { const m = await pdf.getMetadata(); A.pjInfo = m.info || {}; A.xmpRaw = m.metadata && m.metadata.getRaw ? m.metadata.getRaw() : null; A.contentLength = m.contentLength; } catch (e) { A.pjInfo = {}; }
+    try { A.pageLabels = await pdf.getPageLabels(); } catch (e) {}
+    try { const at = await pdf.getAttachments(); A.attachments = at ? Object.values(at).map(x => ({ name: x.filename, size: x.content ? x.content.length : null, desc: x.description || '' })) : []; } catch (e) { A.attachments = []; }
+    try { A.permissions = await pdf.getPermissions(); } catch (e) {}
+    try { const ol = await pdf.getOutline(); let c = 0; const walk = it => (it || []).forEach(x => { c++; walk(x.items); }); walk(ol); A.bookmarks = c; } catch (e) { A.bookmarks = 0; }
+    A.fingerprint = (pdf.fingerprints && pdf.fingerprints[0]) || '';
+
+    // pdf-lib document level
+    A.doc = {}; A.global = null;
+    if (lib) {
+        try { A.doc = lib.docInfo(); } catch (e) { console.warn(e); }
+        try { A.global = lib.globalScan(); } catch (e) { console.warn(e); }
+    }
+    if (!A.xmpRaw && A.doc.xmpRaw) A.xmpRaw = A.doc.xmpRaw;
+    A.xmp = parseXMP(A.xmpRaw).filter(([k]) => !/CreatorTool|Producer/i.test(k));
+    if (A.doc.info) A.doc.info = A.doc.info.filter(([k]) => !/^(Creator|Producer)$/.test(k));
+
+    const libPages = lib ? lib.doc.getPages() : [];
+    const fontAgg = new Map(), imgAgg = new Map();
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+        progress && progress(i, pdf.numPages);
+        const page = await pdf.getPage(i);
+        const pj = await pdfjsPageScan(page);
+        let acc = null, node = null;
+        if (libPages[i - 1]) { node = libPages[i - 1].node; try { acc = lib.pageScan(node); } catch (e) { console.warn('page scan', i, e); } }
+
+        // ---- boxes
+        const raw = {};
+        if (node) {
+            raw.MediaBox = lib.box(node, 'MediaBox', true);
+            raw.CropBox = lib.box(node, 'CropBox', true);
+            raw.BleedBox = lib.box(node, 'BleedBox', false);
+            raw.TrimBox = lib.box(node, 'TrimBox', false);
+            raw.ArtBox = lib.box(node, 'ArtBox', false);
+        }
+        const media = raw.MediaBox || pj.view;
+        const crop = intersect(raw.CropBox || media, media);
+        const boxes = {
+            MediaBox: { r: media, defined: !!raw.MediaBox },
+            CropBox: { r: raw.CropBox ? crop : media, defined: !!raw.CropBox },
+            BleedBox: { r: raw.BleedBox ? intersect(raw.BleedBox, media) : crop, defined: !!raw.BleedBox, raw: raw.BleedBox },
+            TrimBox: { r: raw.TrimBox || crop, defined: !!raw.TrimBox },
+            ArtBox: { r: raw.ArtBox || crop, defined: !!raw.ArtBox }
+        };
+        const T = boxes.TrimBox.r, B = boxes.BleedBox.r, M = media;
+        const bleed = { l: mm(T[0] - B[0]), r: mm(B[2] - T[2]), b: mm(T[1] - B[1]), t: mm(B[3] - T[3]) };
+        const slug = { l: mm(T[0] - M[0]), r: mm(M[2] - T[2]), b: mm(T[1] - M[1]), t: mm(M[3] - T[3]) };
+        const userUnit = node ? (lib.num(lib.get(node, 'UserUnit')) || 1) : 1;
+
+        // ---- fonts on this page + sizes from pdf.js
+        const pageFonts = [];
+        if (acc) for (const [obj, info] of acc.fonts) {
+            const sizesEntry = pj.fontSizes.get(normFont(info.rawName));
+            const sizes = sizesEntry ? [...sizesEntry.sizes] : [];
+            pageFonts.push({ ...info, sizes });
+            let agg = fontAgg.get(obj);
+            if (!agg) { agg = { ...info, pages: new Set(), sizes: new Set() }; fontAgg.set(obj, agg); }
+            agg.pages.add(i); sizes.forEach(s => agg.sizes.add(s));
+        }
+        // pdf.js-only fonts (no pdf-lib)
+        if (!acc) for (const [, v] of pj.fontSizes) pageFonts.push({ name: v.label, type: '?', format: '?', embedded: null, subset: false, encoding: '', sizes: [...v.sizes] });
+
+        // ---- images
+        const pageImages = [];
+        if (acc) for (const [obj, info] of acc.images) {
+            const pl = pj.placements.filter(p => p.w === info.w && p.h === info.h);
+            const ppis = pl.map(p => p.ppi);
+            const img = { ...info, placed: pl.length, ppiMin: ppis.length ? Math.min(...ppis) : null, ppiMax: ppis.length ? Math.max(...ppis) : null, sizeMm: pl.length ? `${fmt(mm(pl[0].wPt), 1)} × ${fmt(mm(pl[0].hPt), 1)}` : '' };
+            pageImages.push(img);
+            let agg = imgAgg.get(obj);
+            if (!agg) { agg = { ...info, pages: new Set(), ppiMin: null, ppiMax: null }; imgAgg.set(obj, agg); }
+            agg.pages.add(i);
+            if (img.ppiMin != null) { agg.ppiMin = agg.ppiMin == null ? img.ppiMin : Math.min(agg.ppiMin, img.ppiMin); agg.ppiMax = agg.ppiMax == null ? img.ppiMax : Math.max(agg.ppiMax, img.ppiMax); }
+        }
+        const allPpi = pj.placements.map(p => p.ppi);
+
+        if (acc && lib) for (const s of acc.spots) { const e = lib.spots.get(s); if (e) e.pages.add(i); }
+
+        let minText = null;
+        for (const [, v] of pj.fontSizes) for (const s of v.sizes) if (s > 0 && (minText == null || s < minText)) minText = s;
+
+        A.pages.push({
+            n: i, label: (A.pageLabels && A.pageLabels[i - 1]) || String(i), rotate: pj.rotate, userUnit, boxes, bleed, slug,
+            trimW: T[2] - T[0], trimH: T[3] - T[1],
+            kinds: acc ? [...acc.kinds] : [], csLabels: acc ? [...acc.csLabels] : [], spots: acc ? [...acc.spots] : [], process: acc ? [...acc.process] : [],
+            fonts: pageFonts, images: pageImages, placements: pj.placements.length, minPPI: allPpi.length ? Math.min(...allPpi) : null,
+            minStroke: pj.minStroke, hairlines: pj.hairlines, strokes: pj.strokes, textChars: pj.textChars, textRuns: pj.textRuns, minText,
+            annots: pj.annots, transparency: acc ? [...acc.transparency] : [], overprint: acc ? [...acc.overprint] : [], layers: acc ? [...acc.layers] : [],
+            forms: acc ? acc.forms : 0, shadings: acc ? acc.shadings : 0, patterns: acc ? acc.patterns : 0, ops: acc ? acc.ops : null, pieceInfo: acc ? acc.pieceInfo : [], opError: pj.opError
+        });
+        page.cleanup();
+        if (i % 4 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+
+    A.fonts = [...fontAgg.values()].map(f => ({ ...f, pages: [...f.pages], sizes: [...f.sizes].sort((a, b) => a - b) })).sort((a, b) => a.name.localeCompare(b.name));
+    A.images = [...imgAgg.values()].map(f => ({ ...f, pages: [...f.pages] }));
+    if (lib) {
+        A.spots = [...lib.spots.values()].map(s => ({
+            name: s.name, types: [...s.types], alt: s.alt ? s.alt.label : '—', altValue: altLabel(s.alt, s.values),
+            rgb: s.rgb || fallbackColor(s.name), simulated: !s.rgb, pages: [...s.pages].sort((a, b) => a - b)
+        })).sort((a, b) => (b.pages.length ? 1 : 0) - (a.pages.length ? 1 : 0) || a.name.localeCompare(b.name));
+        A.processSeps = [...lib.process];
+    } else A.processSeps = [];
+    A.kinds = [...new Set(A.pages.flatMap(p => p.kinds))];
+    A.csLabels = [...new Set(A.pages.flatMap(p => p.csLabels))];
+    A.flags = buildFlags(A);
+    return A;
+}
+
+/* =========================================================================
+   PREFLIGHT FLAGS
+   ========================================================================= */
+function buildFlags(A) {
+    const F = [], P = A.pages;
+    const add = (sev, title, detail = '') => F.push({ sev, title, detail });
+    const pagesWhere = fn => P.filter(fn).map(p => p.n);
+
+    const noTrim = pagesWhere(p => !p.boxes.TrimBox.defined);
+    if (noTrim.length) add('warn', 'TrimBox not defined', `Pages ${ranges(noTrim)} — trim defaults to CropBox.`);
+    else add('ok', 'TrimBox defined on all pages');
+
+    const noBleedBox = pagesWhere(p => !p.boxes.BleedBox.defined);
+    if (noBleedBox.length) add('warn', 'BleedBox not defined', `Pages ${ranges(noBleedBox)} — bleed defaults to CropBox.`);
+    const lowBleed = pagesWhere(p => Math.min(p.bleed.l, p.bleed.r, p.bleed.t, p.bleed.b) < 2.95);
+    if (lowBleed.length) {
+        const ex = P[lowBleed[0] - 1].bleed;
+        add('warn', 'Bleed under 3 mm', `Pages ${ranges(lowBleed)} — e.g. p${lowBleed[0]}: L ${fmt(ex.l, 1)} / R ${fmt(ex.r, 1)} / T ${fmt(ex.t, 1)} / B ${fmt(ex.b, 1)} mm.`);
+    } else add('ok', 'Bleed 3 mm or more on all sides');
+
+    const sizes = new Map();
+    P.forEach(p => { const k = `${fmt(mm(p.rotate % 180 ? p.trimH : p.trimW))} × ${fmt(mm(p.rotate % 180 ? p.trimW : p.trimH))}`; if (!sizes.has(k)) sizes.set(k, []); sizes.get(k).push(p.n); });
+    if (sizes.size > 1) add('warn', `Mixed trim sizes (${sizes.size})`, [...sizes].map(([k, v]) => `${k} mm: p${ranges(v)}`).join(' · '));
+
+    const rotated = pagesWhere(p => p.rotate);
+    if (rotated.length) add('info', 'Rotated pages', `Pages ${ranges(rotated)} carry a /Rotate value.`);
+    const uu = pagesWhere(p => p.userUnit !== 1);
+    if (uu.length) add('warn', 'UserUnit scaling', `Pages ${ranges(uu)} use a UserUnit other than 1 — dimensions are scaled.`);
+
+    if (!A.doc.outputIntents || !A.doc.outputIntents.length) add('warn', 'No output intent', 'No OutputIntent / ICC destination profile embedded.');
+    const rgbPages = pagesWhere(p => p.kinds.includes('rgb'));
+    if (rgbPages.length) add('warn', 'RGB content', `Pages ${ranges(rgbPages)} contain RGB colour (vector, image or shading).`);
+    const labPages = pagesWhere(p => p.kinds.includes('lab'));
+    if (labPages.length) add('info', 'Lab colour', `Pages ${ranges(labPages)}.`);
+    if (A.spots.length) add('info', `${A.spots.length} spot colour${A.spots.length > 1 ? 's' : ''}`, A.spots.map(s => s.name).join(', '));
+    const unusedSpots = A.spots.filter(s => !s.pages.length);
+    if (unusedSpots.length) add('info', 'Spot colours defined but not referenced by page resources', unusedSpots.map(s => s.name).join(', '));
+
+    const notEmb = A.fonts.filter(f => f.embedded === false);
+    if (notEmb.length) add('error', 'Fonts not embedded', notEmb.map(f => f.name).join(', '));
+    else if (A.fonts.length) add('ok', `All ${A.fonts.length} fonts embedded`);
+    const t3 = A.fonts.filter(f => f.type === 'Type3');
+    if (t3.length) add('info', 'Type 3 fonts', `${t3.length} Type 3 font(s) — often bitmap or converted glyphs.`);
+    const small = pagesWhere(p => p.minText != null && p.minText < 6);
+    if (small.length) add('warn', 'Text under 6 pt', `Pages ${ranges(small)} — smallest ${fmt(Math.min(...small.map(n => P[n - 1].minText)), 1)} pt.`);
+    const noText = pagesWhere(p => p.textChars === 0);
+    if (noText.length === P.length) add('info', 'No live text', 'All text is outlined or rasterised (or the file has none).');
+
+    const lowRes = A.images.filter(im => im.ppiMin != null && im.ppiMin < 300 && !im.isMask);
+    const veryLow = lowRes.filter(im => im.ppiMin < 150);
+    if (veryLow.length) add('error', 'Images under 150 ppi', veryLow.map(im => `${im.w}×${im.h}px @ ${Math.round(im.ppiMin)} ppi (p${ranges(im.pages)})`).join(' · '));
+    if (lowRes.length > veryLow.length) add('warn', 'Images under 300 ppi', lowRes.filter(x => x.ppiMin >= 150).map(im => `${im.w}×${im.h}px @ ${Math.round(im.ppiMin)} ppi (p${ranges(im.pages)})`).join(' · '));
+    if (A.images.length && !lowRes.length) add('ok', 'All placed images 300 ppi or more');
+
+    const hair = pagesWhere(p => p.hairlines > 0);
+    if (hair.length) add('warn', 'Hairlines under 0.25 pt', `Pages ${ranges(hair)} — thinnest ${fmt(Math.min(...hair.map(n => P[n - 1].minStroke)), 3)} pt.`);
+    const tr = pagesWhere(p => p.transparency.length);
+    if (tr.length) add('info', 'Live transparency', `Pages ${ranges(tr)} — ${[...new Set(P.flatMap(p => p.transparency))].slice(0, 6).join(', ')}.`);
+    const op = pagesWhere(p => p.overprint.length);
+    if (op.length) add('info', 'Overprint set', `Pages ${ranges(op)} — ${[...new Set(P.flatMap(p => p.overprint))].join(', ')}.`);
+
+    const layers = A.doc.layers || [];
+    if (layers.length) {
+        const hidden = layers.filter(l => !l.on);
+        add(hidden.length ? 'warn' : 'info', `${layers.length} layer${layers.length > 1 ? 's' : ''} (OCGs)`, hidden.length ? `Hidden by default: ${hidden.map(l => l.name).join(', ')}` : layers.map(l => l.name).join(', '));
+        const noPrint = layers.filter(l => l.print === 'OFF');
+        if (noPrint.length) add('warn', 'Non-printing layers', noPrint.map(l => l.name).join(', '));
+    }
+    const annotPages = pagesWhere(p => Object.keys(p.annots).some(k => k !== 'Link'));
+    if (annotPages.length) add('warn', 'Annotations / comments present', `Pages ${ranges(annotPages)} — ${[...new Set(annotPages.flatMap(n => Object.keys(P[n - 1].annots)))].join(', ')}.`);
+    if (A.doc.formFields) add('info', 'Interactive form fields', `${A.doc.formFields} top-level field(s).`);
+    if (A.global && A.global.js) add('warn', 'JavaScript present');
+    if (A.doc.encrypt) add('warn', 'Encrypted', `${A.doc.encrypt.filter || ''} V${A.doc.encrypt.V ?? '?'} R${A.doc.encrypt.R ?? '?'}${A.doc.encrypt.len ? ' ' + A.doc.encrypt.len + '-bit' : ''}`);
+    if (A.attachments && A.attachments.length) add('info', 'Embedded attachments', A.attachments.map(a => a.name).join(', '));
+    if (A.raw.eofCount > 1) add('info', 'Incrementally saved', `${A.raw.eofCount - 1} incremental update(s) appended.`);
+    if (A.libError) add('error', 'Structure parser failed', A.libError + ' — box, spot and font data are limited.');
+    const order = { error: 0, warn: 1, info: 2, ok: 3 };
+    return F.sort((a, b) => order[a.sev] - order[b.sev]);
+}
+
+/* =========================================================================
+   PAGE RENDER WITH BOX OVERLAYS (whole MediaBox shown)
+   ========================================================================= */
+async function renderPage(entry, n, maxPx, overlay = true) {
+    const page = await entry.pdf.getPage(n);
+    const p = entry.analysis && entry.analysis.pages[n - 1];
+    const media = p ? p.boxes.MediaBox.r : page.view;
+    const w = media[2] - media[0], h = media[3] - media[1];
+    const scale = Math.min(4, maxPx / Math.max(w, h), 4096 / Math.max(w, h));
+    let vp = page.getViewport({ scale, rotation: page.rotate });
+    if (p) { try { vp = new vp.constructor({ viewBox: media, scale, rotation: page.rotate, offsetX: 0, offsetY: 0 }); } catch (e) {} }
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.ceil(vp.width)); canvas.height = Math.max(1, Math.ceil(vp.height));
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    await page.render({ canvasContext: ctx, viewport: vp }).promise;
+    if (p && overlay) {
+        const rect = r => { const q = vp.convertToViewportRectangle(r); return [Math.min(q[0], q[2]), Math.min(q[1], q[3]), Math.abs(q[2] - q[0]), Math.abs(q[3] - q[1])]; };
+        const t = rect(p.boxes.TrimBox.r);
+        ctx.save(); ctx.fillStyle = 'rgba(0,0,0,0.10)'; ctx.beginPath(); ctx.rect(0, 0, canvas.width, canvas.height); ctx.rect(t[0], t[1], t[2], t[3]); ctx.fill('evenodd'); ctx.restore();
+        const lw = Math.max(1.2, canvas.width / 450);
+        for (const k of ['MediaBox', 'CropBox', 'ArtBox', 'BleedBox', 'TrimBox']) {
+            const b = p.boxes[k]; if (!b.defined && k !== 'TrimBox') continue;
+            const s = BOX_STYLE[k], q = rect(b.r);
+            ctx.save(); ctx.strokeStyle = s.c; ctx.lineWidth = lw;
+            if (s.dash) ctx.setLineDash(s.dash.map(d => d * lw)); else if (!b.defined) ctx.setLineDash([3 * lw, 3 * lw]);
+            ctx.strokeRect(q[0] + lw / 2, q[1] + lw / 2, Math.max(0, q[2] - lw), Math.max(0, q[3] - lw));
+            ctx.restore();
+        }
+    }
+    page.cleanup();
+    return canvas;
+}
+
+/* =========================================================================
+   UI — QUEUE
+   ========================================================================= */
+const entries = [];
+let selectedId = null, idSeq = 0;
+const $ = id => document.getElementById(id);
+
+function refreshButtons() {
+    $('queue-count').innerText = entries.length;
+    $('generate-btn').disabled = !entries.some(e => e.analysis);
+    $('clear-btn').disabled = !entries.length;
+}
+
+async function handleFiles(fileList) {
+    for (const file of fileList) {
+        if (!(file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'))) continue;
+        const entry = { id: ++idSeq, name: file.name, size: file.size, bytes: null, pdf: null, analysis: null, error: null };
+        const card = document.createElement('div');
+        card.className = 'preview-card';
+        card.innerHTML = `<button class="remove" title="Remove">×</button><div class="thumbslot"></div><div class="filename">${esc(file.name)}</div><div class="status">Loading…</div>`;
+        $('preview-grid').appendChild(card);
+        entry.card = card;
+        entries.push(entry);
+        refreshButtons();
+        card.querySelector('.remove').onclick = ev => { ev.stopPropagation(); removeEntry(entry); };
+        card.onclick = () => selectEntry(entry);
+        const status = card.querySelector('.status');
+        try {
+            entry.bytes = new Uint8Array(await file.arrayBuffer());
+            const task = pdfjsLib.getDocument({ data: entry.bytes.slice() });
+            task.onPassword = (cb, reason) => {
+                const p = prompt(reason === pdfjsLib.PasswordResponses.INCORRECT_PASSWORD ? `Incorrect password for "${file.name}". Try again:` : `"${file.name}" is password protected. Enter password:`);
+                if (p === null) task.destroy(); else cb(p);
+            };
+            entry.pdf = await task.promise;
+            const thumb = await renderPage(entry, 1, 240, false);
+            card.querySelector('.thumbslot').appendChild(thumb);
+            entry.analysis = await analyzeFile(entry, (i, n) => { status.textContent = `Analyzing ${i}/${n}`; });
+            const A = entry.analysis;
+            const errs = A.flags.filter(f => f.sev === 'error').length, warns = A.flags.filter(f => f.sev === 'warn').length;
+            status.textContent = `${A.numPages} pp · ${A.spots.length} spot · ${errs ? errs + ' err · ' : ''}${warns} warn`;
+            if (errs) status.classList.add('err');
+            if (!selectedId || selectedId === entry.id) selectEntry(entry);
+        } catch (e) {
+            console.error(e);
+            entry.error = e.message || String(e);
+            status.textContent = 'Failed: ' + entry.error.slice(0, 60);
+            status.classList.add('err');
+        }
+        refreshButtons();
+    }
+}
+
+function removeEntry(entry) {
+    const i = entries.indexOf(entry);
+    if (i >= 0) entries.splice(i, 1);
+    entry.card.remove();
+    try { entry.pdf && entry.pdf.destroy(); } catch (e) {}
+    if (selectedId === entry.id) { selectedId = null; $('inspector').innerHTML = ''; const next = entries.find(e => e.analysis); if (next) selectEntry(next); }
+    refreshButtons();
+}
+
+$('file-input').addEventListener('change', e => { handleFiles([...e.target.files]); e.target.value = ''; });
+const dz = $('drop-zone');
+['dragenter', 'dragover'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.add('drag'); }));
+['dragleave', 'drop'].forEach(t => dz.addEventListener(t, e => { e.preventDefault(); dz.classList.remove('drag'); }));
+dz.addEventListener('drop', e => handleFiles([...e.dataTransfer.files]));
+$('generate-btn').addEventListener('click', e => generateMergedReport(e.currentTarget));
+$('clear-btn').addEventListener('click', () => { [...entries].forEach(removeEntry); });
+
+/* =========================================================================
+   UI — INSPECTOR
+   ========================================================================= */
+let thumbObserver = null;
+const kv = rows => `<table class="kv">${rows.filter(r => r && r[1] !== undefined && r[1] !== null && r[1] !== '').map(r => `<tr><td>${esc(r[0])}</td><td>${r[2] ? r[1] : esc(r[1])}</td></tr>`).join('')}</table>`;
+const dt = (head, rows) => `<div class="tbl-wrap"><table class="dt"><thead><tr>${head.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r => `<tr>${r.map(c => `<td>${c}</td>`).join('')}</tr>`).join('')}</tbody></table></div>`;
+const yn = (v, goodWhenTrue = true) => v == null ? '<span class="muted">—</span>' : `<span class="${v === goodWhenTrue ? 'yes' : 'no'}">${v ? 'Yes' : 'No'}</span>`;
+const legendHtml = p => `<div class="legend">${BOX_KEYS.filter(k => p.boxes[k].defined || k === 'TrimBox').map(k => `<span><i style="border-color:${BOX_STYLE[k].c};${BOX_STYLE[k].dash || !p.boxes[k].defined ? 'border-top-style:dashed' : ''}"></i>${BOX_STYLE[k].label}${p.boxes[k].defined ? '' : ' (default)'}</span>`).join('')}</div>`;
+
+function docRows(entry) {
+    const A = entry.analysis, I = A.pjInfo || {}, D = A.doc || {};
+    const val = v => v == null ? '' : (typeof v === 'object' ? (v.name || JSON.stringify(v)) : String(v));
+    const pdfx = (I.Custom && (I.Custom.GTS_PDFXVersion || I.Custom.GTS_PDFXConformance)) || (A.xmp.find(x => /GTS_PDFXVersion/i.test(x[0])) || [])[1] || '';
+    const pdfaPart = (A.xmp.find(x => /pdfaid:part/i.test(x[0])) || [])[1], pdfaConf = (A.xmp.find(x => /pdfaid:conformance/i.test(x[0])) || [])[1];
+    const plates = (A.xmp.find(x => /PlateNames/i.test(x[0])) || [])[1];
+    return {
+        file: [
+            ['File name', entry.name], ['File size', fmtBytes(entry.size)], ['Pages', A.numPages],
+            ['PDF version', `${A.raw.header || I.PDFFormatVersion || '?'}${D.version ? ` (catalog overrides → ${D.version})` : ''}`],
+            ['Objects', A.global ? A.global.objects.toLocaleString() : ''], ['Streams', A.global ? A.global.streams.toLocaleString() : ''],
+            ['Cross-reference', A.raw.xrefStream ? 'XRef stream (compressed)' : 'Classic xref table'],
+            ['Linearized', A.raw.linearized ? 'Yes (fast web view)' : 'No'], ['Saves', A.raw.eofCount > 1 ? `${A.raw.eofCount - 1} incremental update(s)` : 'Single save'],
+            ['Encrypted', D.encrypt ? `Yes — ${D.encrypt.filter || ''} V${D.encrypt.V ?? '?'} R${D.encrypt.R ?? '?'}` : 'No'],
+            ['Tagged', D.tagged ? 'Yes' : (D.structTree ? 'Structure tree, not marked' : 'No')], ['Language', D.lang || ''],
+            ['Bookmarks', A.bookmarks || 0], ['Form fields', D.formFields ? `${D.formFields}${D.xfa ? ' (XFA)' : ''}` : 'None'],
+            ['JavaScript', A.global ? (A.global.js ? 'Present' : 'None') : ''], ['Attachments', A.attachments && A.attachments.length ? A.attachments.map(a => `${a.name} (${fmtBytes(a.size)})`).join(', ') : 'None'],
+            ['Page layout', D.pageLayout || ''], ['Page mode', D.pageMode || ''], ['Open action', D.openAction ? 'Yes' : ''],
+            ['Fingerprint', A.fingerprint], ['Document ID', D.docId || '']
+        ],
+        meta: [
+            ['Title', val(I.Title)], ['Author', val(I.Author)], ['Subject', val(I.Subject)], ['Keywords', val(I.Keywords)],
+            ['Created', fmtDate(I.CreationDate)], ['Modified', fmtDate(I.ModDate)]
+        ],
+        prepress: [
+            ['Colour spaces', A.csLabels.join(', ') || '—'],
+            ['Colour model', A.kinds.map(k => KIND_LABEL[k] || k).join(' + ') || '—'],
+            ['Output intent', (D.outputIntents || []).map(o => `${o.id || o.cond || '?'}${o.S ? ` [${o.S}]` : ''}`).join('; ') || 'None'],
+            ['ICC profile', (D.outputIntents || []).filter(o => o.icc).map(o => `${o.icc.desc || '?'} — ${o.icc.space}, v${o.icc.version}, ${o.icc.cls}, ${fmtBytes(o.icc.size)}`).join('; ') || ''],
+            ['Condition', (D.outputIntents || []).map(o => o.cond || o.info || '').filter(Boolean).join('; ')],
+            ['Registry', (D.outputIntents || []).map(o => o.registry || '').filter(Boolean).join('; ')],
+            ['PDF/X', pdfx], ['PDF/A', pdfaPart ? `${pdfaPart}${pdfaConf || ''}` : ''],
+            ['Trapped', val(I.Trapped)],
+            ['Spot colours', A.spots.length ? String(A.spots.length) : 'None'],
+            ['Process plates', A.processSeps.length ? A.processSeps.join(', ') + ' (as Separation/DeviceN)' : ''],
+            ['XMP plate names', plates || ''],
+            ['Transparency', [...new Set(A.pages.flatMap(p => p.transparency))].join(', ') || 'None'],
+            ['Overprint', [...new Set(A.pages.flatMap(p => p.overprint))].join(', ') || 'None'],
+            ['Layers', (D.layers || []).length ? `${D.layers.length}` : 'None'],
+            ['Images', A.images.length ? `${A.images.length} unique` : 'None'],
+            ['Fonts', A.fonts.length ? `${A.fonts.length}` : 'None']
+        ]
+    };
+}
+
+function geometryGroups(A) {
+    const g = new Map();
+    for (const p of A.pages) {
+        const key = BOX_KEYS.map(k => p.boxes[k].defined ? `${k}:${fmt(p.boxes[k].r[2] - p.boxes[k].r[0])}x${fmt(p.boxes[k].r[3] - p.boxes[k].r[1])}` : `${k}:-`).join('|') + '|' + [p.bleed.l, p.bleed.r, p.bleed.t, p.bleed.b].map(x => fmt(x, 2)).join(',') + '|' + p.rotate;
+        if (!g.has(key)) g.set(key, { p, pages: [] });
+        g.get(key).pages.push(p.n);
+    }
+    return [...g.values()];
+}
+
+function selectEntry(entry) {
+    if (!entry.analysis) return;
+    selectedId = entry.id;
+    entries.forEach(e => e.card.classList.toggle('active', e === entry));
+    const A = entry.analysis, R = docRows(entry);
+    const errs = A.flags.filter(f => f.sev === 'error').length, warns = A.flags.filter(f => f.sev === 'warn').length;
+    const p1 = A.pages[0];
+    let h = `<div class="insp-head"><h2>${esc(entry.name)}</h2><div class="chips">
+        <span class="chip"><b>${A.numPages}</b> pages</span>
+        <span class="chip"><b>${sizeStr(p1.trimW, p1.trimH)}</b> trim p1</span>
+        <span class="chip"><b>${A.spots.length}</b> spot</span>
+        <span class="chip"><b>${A.fonts.length}</b> fonts</span>
+        <span class="chip"><b>${A.images.length}</b> images</span>
+        <span class="chip" style="${errs ? 'border-color:var(--sev-error)' : ''}"><b>${errs}</b> errors</span>
+        <span class="chip" style="${warns ? 'border-color:var(--sev-warn)' : ''}"><b>${warns}</b> warnings</span></div></div>`;
+
+    h += `<div class="block"><h3 class="section-title">Preflight</h3><ul class="flags">${A.flags.map(f => `<li class="${f.sev}"><span class="sev">${f.sev}</span><div>${esc(f.title)}${f.detail ? `<div class="det">${esc(f.detail)}</div>` : ''}</div></li>`).join('')}</ul></div>`;
+
+    h += `<div class="block two-col"><div><h3 class="section-title">File Architecture</h3>${kv(R.file)}</div><div><h3 class="section-title">Pre-Press Profile</h3>${kv(R.prepress)}<h3 class="section-title" style="margin-top:30px">Document Info</h3>${kv(R.meta)}</div></div>`;
+
+    // geometry groups
+    const groups = geometryGroups(A);
+    h += `<div class="block"><h3 class="section-title">Page Geometry (${groups.length} distinct)</h3>${dt(['Pages', 'Trim (W × H)', 'Bleed box', 'Media', 'Crop', 'Art', 'Bleed L / R / T / B mm', 'Rotate'],
+        groups.map(({ p, pages }) => {
+            const bx = k => { const b = p.boxes[k]; return b.defined ? sizeStr(b.r[2] - b.r[0], b.r[3] - b.r[1]) : '<span class="muted">not set</span>'; };
+            return [ranges(pages), (p.boxes.TrimBox.defined ? '' : '<span class="warn-t">default </span>') + sizeStr(p.trimW, p.trimH), bx('BleedBox'), bx('MediaBox'), bx('CropBox'), bx('ArtBox'),
+                [p.bleed.l, p.bleed.r, p.bleed.t, p.bleed.b].map(x => `<span class="${x < 2.95 ? 'warn-t' : ''}">${fmt(x, 2)}</span>`).join(' / '), p.rotate + '°'];
+        }))}</div>`;
+
+    // spots
+    h += `<div class="block"><h3 class="section-title">Spot Colours (${A.spots.length})</h3>${A.spots.length ? dt(['Name', 'Defined as', 'Alternate', 'Alternate value', 'Pages'],
+        A.spots.map(s => [`<span class="sw" style="background:rgb(${s.rgb.join(',')})"></span>${esc(s.name)}${s.simulated ? ' <span class="muted">(sim.)</span>' : ''}`, esc(s.types.join(', ')), esc(s.alt), esc(s.altValue), s.pages.length ? ranges(s.pages) : '<span class="muted">unused</span>'])) : '<p class="muted" style="font-size:.72rem">No named spot colours detected.</p>'}</div>`;
+
+    // fonts
+    h += `<div class="block"><h3 class="section-title">Typography (${A.fonts.length})</h3>${A.fonts.length ? dt(['Font', 'Type', 'Format', 'Embedded', 'Subset', 'Encoding', 'Sizes (pt)', 'Pages'],
+        A.fonts.map(f => [esc(f.name), esc(f.type), esc(f.format), yn(f.embedded), f.subset ? 'Yes' : 'No', esc(f.encoding), esc(f.sizes.length ? (f.sizes.length > 8 ? `${f.sizes[0]}–${f.sizes[f.sizes.length - 1]} (${f.sizes.length})` : f.sizes.join(', ')) : '—'), ranges(f.pages)])) : '<p class="muted" style="font-size:.72rem">No fonts — text is outlined, rasterised or absent.</p>'}</div>`;
+
+    // images
+    h += `<div class="block"><h3 class="section-title">Images (${A.images.length})</h3>${A.images.length ? dt(['Pixels', 'Colour', 'Bits', 'Compression', 'Data', 'Alpha', 'Effective ppi', 'Pages'],
+        A.images.map(im => [`${im.w} × ${im.h}`, esc(im.cs), im.bpc ?? '—', esc(im.filter), fmtBytes(im.bytes), im.smask ? 'Yes' : 'No',
+            im.ppiMin == null ? '<span class="muted">not placed</span>' : `<span class="${im.ppiMin < 150 ? 'no' : im.ppiMin < 300 ? 'warn-t' : ''}">${Math.round(im.ppiMin)}${Math.round(im.ppiMax) !== Math.round(im.ppiMin) ? '–' + Math.round(im.ppiMax) : ''}</span>`, ranges(im.pages)])) : '<p class="muted" style="font-size:.72rem">No raster images.</p>'}</div>`;
+
+    // layers
+    if ((A.doc.layers || []).length) {
+        h += `<div class="block"><h3 class="section-title">Layers / Optional Content (${A.doc.layers.length})</h3>${dt(['Layer', 'Default', 'Print', 'Locked', 'Intent', 'Pages'],
+            A.doc.layers.map(l => [esc(l.name), l.on ? '<span class="yes">Visible</span>' : '<span class="warn-t">Hidden</span>', esc(l.print || 'Follows view'), l.locked ? 'Yes' : 'No', esc(l.intent), ranges(A.pages.filter(p => p.layers.includes(l.name)).map(p => p.n)) || '—']))}</div>`;
+    }
+
+    // metadata
+    const infoRows = (A.doc.info || []).map(([k, v]) => [esc(k), esc(v)]);
+    if (infoRows.length || A.xmp.length) {
+        h += `<div class="block"><h3 class="section-title">Metadata</h3>`;
+        if (infoRows.length) h += `<details open><summary>Info dictionary (${infoRows.length})</summary>${dt(['Key', 'Value'], infoRows)}</details>`;
+        if (A.xmp.length) h += `<details><summary>XMP (${A.xmp.length})</summary>${dt(['Property', 'Value'], A.xmp.map(([k, v]) => [esc(k), esc(v)]))}</details>`;
+        h += `</div>`;
+    }
+
+    // pages
+    h += `<div class="block"><h3 class="section-title">Pages (${A.numPages})</h3><div class="pages-grid">`;
+    for (const p of A.pages) h += pageCardHtml(p);
+    h += `</div></div>`;
+
+    $('inspector').innerHTML = h;
+
+    if (thumbObserver) thumbObserver.disconnect();
+    thumbObserver = new IntersectionObserver(async ents => {
+        for (const e of ents) {
+            if (!e.isIntersecting) continue;
+            const slot = e.target; thumbObserver.unobserve(slot);
+            if (selectedId !== entry.id) return;
+            try { const c = await renderPage(entry, +slot.dataset.page, 440, true); slot.innerHTML = ''; slot.appendChild(c); } catch (err) { slot.textContent = 'Render failed'; }
+        }
+    }, { root: getComputedStyle($('main-container')).overflowY === 'auto' ? $('main-container') : null, rootMargin: '400px' });
+    document.querySelectorAll('.thumb[data-page]').forEach(el => thumbObserver.observe(el));
+}
+
+function pageCardHtml(p) {
+    const boxRows = BOX_KEYS.map(k => {
+        const b = p.boxes[k], r = b.r;
+        return [`<span class="sw" style="width:10px;height:10px;background:${BOX_STYLE[k].c}"></span>${k}`,
+            b.defined ? '<span class="yes">Set</span>' : `<span class="${k === 'TrimBox' || k === 'BleedBox' ? 'warn-t' : 'muted'}">${k === 'MediaBox' ? '—' : 'Default → ' + (k === 'CropBox' ? 'Media' : 'Crop')}</span>`,
+            sizeStr(r[2] - r[0], r[3] - r[1]), `${fmt(r[2] - r[0])} × ${fmt(r[3] - r[1])}`, `${fmt(r[0])}, ${fmt(r[1])}`,
+            k === 'TrimBox' ? '—' : `${fmt(mm(p.boxes.TrimBox.r[0] - r[0]), 2)} / ${fmt(mm(r[2] - p.boxes.TrimBox.r[2]), 2)} / ${fmt(mm(r[3] - p.boxes.TrimBox.r[3]), 2)} / ${fmt(mm(p.boxes.TrimBox.r[1] - r[1]), 2)}`];
+    });
+    const annots = Object.entries(p.annots).map(([k, v]) => `${k} ×${v}`).join(', ');
+    const info = [
+        ['Label', p.label !== String(p.n) ? p.label : ''],
+        ['Trim size', sizeStr(p.trimW, p.trimH) + (p.boxes.TrimBox.defined ? '' : ' (from CropBox)')],
+        ['Bleed L/R/T/B', [p.bleed.l, p.bleed.r, p.bleed.t, p.bleed.b].map(x => fmt(x, 2)).join(' / ') + ' mm'],
+        ['Media margin L/R/T/B', [p.slug.l, p.slug.r, p.slug.t, p.slug.b].map(x => fmt(x, 2)).join(' / ') + ' mm'],
+        ['Rotation', p.rotate ? p.rotate + '°' : '0°'], ['UserUnit', p.userUnit !== 1 ? p.userUnit : ''],
+        ['Colour', p.csLabels.join(', ') || '—'],
+        ['Spot colours', p.spots.join(', ') || 'None'],
+        ['Fonts', p.fonts.map(f => `${f.name}${f.sizes.length ? ` (${f.sizes.slice(0, 6).join(', ')}${f.sizes.length > 6 ? '…' : ''} pt)` : ''}${f.embedded === false ? ' — NOT EMBEDDED' : ''}`).join('; ') || 'None'],
+        ['Live text', p.textChars ? `${p.textChars.toLocaleString()} chars, min ${fmt(p.minText, 1)} pt` : 'None'],
+        ['Images', p.images.length ? p.images.map(im => `${im.w}×${im.h} ${im.cs}${im.ppiMin != null ? ` @ ${Math.round(im.ppiMin)} ppi` : ''}`).join('; ') : 'None'],
+        ['Strokes', p.strokes ? `${p.strokes.toLocaleString()}, thinnest ${fmt(p.minStroke, 3)} pt${p.hairlines ? ` — ${p.hairlines} hairline(s)` : ''}` : ''],
+        ['Transparency', p.transparency.join(', ') || 'None'], ['Overprint', p.overprint.join(', ') || 'None'],
+        ['Layers', p.layers.join(', ')], ['Annotations', annots],
+        ['Form XObjects', p.forms || ''], ['Shadings', p.shadings || ''],
+        ['Colour operators', p.ops ? `CMYK ${p.ops.cmyk} · RGB ${p.ops.rgb} · Gray ${p.ops.gray} · Named ${p.ops.named}` : ''],
+        ['App data', p.pieceInfo.join(', ')]
+    ];
+    return `<div class="page-card"><div><div class="thumb" data-page="${p.n}"><span class="muted" style="font-size:.65rem">Rendering…</span></div>${legendHtml(p)}</div>
+        <div><h4>Page ${p.n}${p.label !== String(p.n) ? ` · ${esc(p.label)}` : ''}</h4>
+        ${dt(['Box', 'Status', 'W × H mm', 'W × H pt', 'Origin pt', 'Δ Trim L / R / T / B mm'], boxRows)}
+        <div style="margin-top:12px">${kv(info)}</div></div></div>`;
+}
+
+/* =========================================================================
+   DOSSIER (jsPDF) — one landscape A4 sheet per document
+   ========================================================================= */
+const ACC = [181, 193, 157];
+const PW = 297, PH = 210, PM = 12, PR = PW - 12;
+function pdfSafe(s) { return String(s ?? '').replace(/[–—]/g, '-').replace(/[‘’]/g, "'").replace(/[“”]/g, '"').replace(/×/g, 'x').replace(/…/g, '...').replace(/Δ/g, 'd').replace(/[^\x20-\x7E\xA0-\xFF]/g, '?'); }
+const spaced = t => t.toUpperCase().split(' ').map(w => w.split('').join(' ')).join('   ');
+function fitText(doc, text, maxW) {
+    let s = pdfSafe(text);
+    if (doc.getTextWidth(s) <= maxW) return s;
+    while (s.length > 1 && doc.getTextWidth(s + '...') > maxW) s = s.slice(0, -1);
+    return s + '...';
+}
+
+// Quiet but legible palette
+const T_HEAD = [150, 160, 128], T_LBL = [112, 112, 112], T_VAL = [190, 190, 190], T_RULE = [60, 60, 60];
+const SEV_DIM = { error: [214, 118, 118], warn: [222, 165, 88], info: [128, 142, 150], ok: [140, 152, 120] };
+
+function dHeading(doc, t, x, y, w) {
+    doc.setFont('helvetica', 'normal'); doc.setFontSize(5.8); doc.setTextColor(...T_HEAD);
+    doc.text(spaced(t), x, y);
+    doc.setDrawColor(...T_RULE); doc.setLineWidth(0.1); doc.line(x, y + 1.6, x + w, y + 1.6);
+    return y + 5.8;
+}
+
+function dKV(doc, rows, x, y, w, maxY, labelW = 25, maxLines = 2) {
+    for (const [k, v, col] of rows.filter(r => r && r[1] !== '' && r[1] != null)) {
+        doc.setFontSize(7);
+        const all = doc.splitTextToSize(pdfSafe(v), w - labelW);
+        const lines = all.slice(0, maxLines);
+        if (all.length > maxLines) lines[maxLines - 1] = fitText(doc, lines[maxLines - 1] + '...', w - labelW);
+        const h = 4.1 + (lines.length - 1) * 3;
+        if (y + h - 4.1 > maxY) break;
+        doc.setFontSize(5.2); doc.setTextColor(...T_LBL); doc.text(pdfSafe(String(k).toUpperCase()), x, y);
+        doc.setFontSize(7); doc.setTextColor(...(col || T_VAL)); doc.text(lines, x + labelW, y);
+        y += h;
+    }
+    return y;
+}
+
+// cols: [{label, f}] where f = fraction of width
+function dTable(doc, x, y, w, cols, rows, maxY, emptyMsg) {
+    const rh = 4.1, ws = cols.map(c => c.f * w);
+    doc.setFontSize(4.9); doc.setTextColor(...T_LBL);
+    let cx = x; cols.forEach((c, i) => { doc.text(pdfSafe(c.label.toUpperCase()), cx, y); cx += ws[i]; });
+    y += 1.3; doc.setDrawColor(...T_RULE); doc.setLineWidth(0.1); doc.line(x, y, x + w, y); y += 3.4;
+    if (!rows.length) { doc.setFontSize(6.6); doc.setTextColor(...T_LBL); doc.text(pdfSafe(emptyMsg || 'None'), x, y); return y + rh; }
+    const fit = Math.max(1, Math.floor((maxY - y + rh) / rh));
+    const show = rows.length > fit ? rows.slice(0, fit - 1) : rows;
+    show.forEach(r => {
+        let cx = x;
+        doc.setFontSize(6.6);
+        r.cells.forEach((cell, i) => {
+            let tx = cx;
+            if (i === 0 && r.swatch) {
+                doc.setFillColor(...r.swatch); doc.rect(cx, y - 2.5, 2.9, 2.9, 'F');
+                doc.setDrawColor(90, 90, 90); doc.rect(cx, y - 2.5, 2.9, 2.9, 'S'); tx += 4.2;
+            }
+            doc.setTextColor(...((r.colors && r.colors[i]) || T_VAL));
+            doc.text(fitText(doc, cell ?? '', ws[i] - (tx - cx) - 1.2), tx, y);
+            cx += ws[i];
+        });
+        doc.setDrawColor(46, 46, 46); doc.line(x, y + 1.3, x + w, y + 1.3);
+        y += rh;
+    });
+    if (show.length < rows.length) { doc.setFontSize(6); doc.setTextColor(...T_HEAD); doc.text(`+ ${rows.length - show.length} more`, x, y); y += rh; }
+    return y;
+}
+
+function dLegend(doc, p, x, y) {
+    doc.setFontSize(5);
+    BOX_KEYS.filter(k => p.boxes[k].defined || k === 'TrimBox').forEach(k => {
+        const s = BOX_STYLE[k], t = s.label.toUpperCase() + (p.boxes[k].defined ? '' : ' (DEF)');
+        doc.setDrawColor(...s.rgb); doc.setLineWidth(0.5); doc.line(x, y - 1, x + 4.5, y - 1); doc.setLineWidth(0.1);
+        doc.setTextColor(...T_LBL); doc.text(t, x + 5.8, y);
+        x += 9 + doc.getTextWidth(t);
+    });
+}
+
+const VECTOR_JOBS = [];
+const MM2PT = 72 / 25.4;
+
+// Places each source page into the report as an embedded vector page (Form XObject), then draws box outlines as vectors.
+async function placeVectorPages(reportBytes, jobs) {
+    const { PDFDocument, rgb, degrees } = PDFLib;
+    const out = await PDFDocument.load(reportBytes);
+    for (const job of jobs) {
+        const { p, entry } = job;
+        const sheet = out.getPage(job.sheet - 1);
+        const src = entry.libDoc.getPage(p.n - 1);
+        const m = p.boxes.MediaBox.r, rot = ((p.rotate % 360) + 360) % 360;
+        const mw = m[2] - m[0], mh = m[3] - m[1];
+        const dw = rot % 180 ? mh : mw;
+        // sheet rectangle in pt (pdf-lib origin bottom-left)
+        const L = job.x * MM2PT, B = (PH - job.y - job.h) * MM2PT, Wd = job.w * MM2PT, Hd = job.h * MM2PT;
+        const s = Wd / dw;
+        let emb;
+        try { emb = await out.embedPage(src, { left: m[0], bottom: m[1], right: m[2], top: m[3] }); }
+        catch (e) { console.warn('embed failed p' + p.n, e); continue; }
+        // origin so the rotated form lands on the target rectangle (pdf-lib rotates about x,y; /Rotate is clockwise)
+        let ox = L, oy = B;
+        if (rot === 90) { oy = B + mw * s; }
+        else if (rot === 180) { ox = L + mw * s; oy = B + mh * s; }
+        else if (rot === 270) { ox = L + mh * s; }
+        sheet.drawPage(emb, { x: ox, y: oy, xScale: s, yScale: s, rotate: degrees(-rot) });
+
+        // map source user-space point → sheet pt
+        const map = (px, py) => {
+            const u = (px - m[0]) * s, v = (py - m[1]) * s;
+            if (rot === 90) return [ox + v, oy - u];
+            if (rot === 180) return [ox - u, oy - v];
+            if (rot === 270) return [ox - v, oy + u];
+            return [ox + u, oy + v];
+        };
+        const rectOf = r => { const a = map(r[0], r[1]), b = map(r[2], r[3]); return { x: Math.min(a[0], b[0]), y: Math.min(a[1], b[1]), w: Math.abs(b[0] - a[0]), h: Math.abs(b[1] - a[1]) }; };
+
+        // dim area outside trim
+        const t = rectOf(p.boxes.TrimBox.r), shade = { color: rgb(0, 0, 0), opacity: 0.08 };
+        [[L, B, Wd, t.y - B], [L, t.y + t.h, Wd, B + Hd - t.y - t.h], [L, t.y, t.x - L, t.h], [t.x + t.w, t.y, L + Wd - t.x - t.w, t.h]]
+            .forEach(([x, y, w, h]) => { if (w > 0.01 && h > 0.01) sheet.drawRectangle({ x, y, width: w, height: h, ...shade }); });
+
+        for (const k of ['MediaBox', 'CropBox', 'ArtBox', 'BleedBox', 'TrimBox']) {
+            const b = p.boxes[k]; if (!b.defined && k !== 'TrimBox') continue;
+            const st = BOX_STYLE[k], r = rectOf(b.r), lw = 0.6;
+            const opt = { x: r.x + lw / 2, y: r.y + lw / 2, width: Math.max(0, r.w - lw), height: Math.max(0, r.h - lw), borderColor: rgb(st.rgb[0] / 255, st.rgb[1] / 255, st.rgb[2] / 255), borderWidth: lw };
+            if (st.dash) opt.borderDashArray = st.dash.map(d => d * 0.6); else if (!b.defined) opt.borderDashArray = [2, 2];
+            sheet.drawRectangle(opt);
+        }
+    }
+    // carry layer (OCG) default visibility across, so hidden layers stay hidden
+    const state = new Map();
+    jobs.forEach(j => (j.entry.analysis.doc.layers || []).forEach(l => { if (!state.has(l.name)) state.set(l.name, l.on); }));
+    const ocgs = [], off = [];
+    for (const [ref, obj] of out.context.enumerateIndirectObjects()) {
+        if (!(obj instanceof PDFDict)) continue;
+        const t = obj.get(PDFName.of('Type'));
+        if (!(t instanceof PDFName) || decodeName(t.asString()) !== 'OCG') continue;
+        ocgs.push(ref);
+        const n = obj.get(PDFName.of('Name'));
+        let name = ''; try { name = n.decodeText(); } catch (e) {}
+        if (state.get(name) === false) off.push(ref);
+    }
+    if (ocgs.length) out.catalog.set(PDFName.of('OCProperties'), out.context.obj({ OCGs: ocgs, D: { Order: ocgs, OFF: off } }));
+    return out.save();
+}
+
+function pageFlags(A, p) {
+    const F = [], add = (sev, title) => F.push({ sev, title });
+    const minBleed = Math.min(p.bleed.l, p.bleed.r, p.bleed.t, p.bleed.b);
+    if (!p.boxes.TrimBox.defined) add('warn', 'TrimBox not defined');
+    if (!p.boxes.BleedBox.defined) add('warn', 'BleedBox not defined');
+    if (minBleed < 2.95) add('warn', `Bleed under 3 mm (min ${fmt(minBleed, 1)} mm)`);
+    const ne = p.fonts.filter(f => f.embedded === false);
+    if (ne.length) add('error', `Fonts not embedded: ${ne.map(f => f.name).join(', ')}`);
+    const vlow = p.images.filter(im => !im.isMask && im.ppiMin != null && im.ppiMin < 150);
+    const low = p.images.filter(im => !im.isMask && im.ppiMin != null && im.ppiMin >= 150 && im.ppiMin < 300);
+    if (vlow.length) add('error', `${vlow.length} image${vlow.length > 1 ? 's' : ''} under 150 ppi`);
+    if (low.length) add('warn', `${low.length} image${low.length > 1 ? 's' : ''} under 300 ppi`);
+    if (p.kinds.includes('rgb')) add('warn', 'RGB content');
+    if (p.minText != null && p.minText < 6) add('warn', `Text under 6 pt (min ${fmt(p.minText, 1)} pt)`);
+    if (p.hairlines) add('warn', `Hairlines under 0.25 pt (${fmt(p.minStroke, 2)} pt)`);
+    const ann = Object.keys(p.annots).filter(k => k !== 'Link');
+    if (ann.length) add('warn', `Annotations: ${ann.join(', ')}`);
+    if (p.userUnit !== 1) add('warn', `UserUnit ${p.userUnit}`);
+    if (!A.doc.outputIntents || !A.doc.outputIntents.length) add('warn', 'No output intent (document)');
+    if (A.doc.encrypt) add('warn', 'Encrypted (document)');
+    if (A.global && A.global.js) add('warn', 'JavaScript (document)');
+    if (p.rotate) add('info', `Rotated ${p.rotate}°`);
+    if (p.spots.length) add('info', `${p.spots.length} spot colour${p.spots.length > 1 ? 's' : ''}`);
+    if (p.transparency.length) add('info', 'Live transparency');
+    if (p.overprint.length) add('info', 'Overprint set');
+    if (p.layers.length) add('info', `${p.layers.length} layer${p.layers.length > 1 ? 's' : ''}`);
+    if (!p.textChars) add('info', 'No live text on page');
+    const order = { error: 0, warn: 1, info: 2 };
+    return F.sort((a, b) => order[a.sev] - order[b.sev]);
+}
+
+async function generateMergedReport(btn) {
+    const list = entries.filter(e => e.analysis);
+    if (!list.length) return;
+    const original = btn.innerText;
+    btn.disabled = true;
+    try {
+        if (!window.jspdf || !window.jspdf.jsPDF) throw new Error('jsPDF module failed to load.');
+        const doc = new window.jspdf.jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4', compress: true });
+        VECTOR_JOBS.length = 0;
+        const total = list.reduce((a, e) => a + e.analysis.numPages, 0);
+        let sheet = 0;
+        for (const entry of list) {
+            for (const p of entry.analysis.pages) {
+                sheet++;
+                btn.innerText = `Creating ${sheet}/${total}…`;
+                if (sheet > 1) doc.addPage('a4', 'landscape');
+                await writeSheet(doc, entry, p, sheet, total);
+                await new Promise(r => setTimeout(r, 0));
+            }
+        }
+        const fname = `PDF_Report_${Date.now()}.pdf`;
+        if (VECTOR_JOBS.length && window.PDFLib) {
+            btn.innerText = 'Placing vector artwork…';
+            const bytes = await placeVectorPages(doc.output('arraybuffer'), VECTOR_JOBS);
+            const url = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+            const a = document.createElement('a'); a.href = url; a.download = fname; document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+        } else doc.save(fname);
+    } catch (e) {
+        alert('Report generation failed. Error: ' + e.message);
+        console.error(e);
+    } finally {
+        btn.innerText = original;
+        btn.disabled = false;
+    }
+}
+
+async function writeSheet(doc, entry, p, sheet, total) {
+    const A = entry.analysis, R = docRows(entry);
+    doc.setFillColor(34, 34, 34); doc.rect(0, 0, PW, PH, 'F');
+
+    const LX = PM, LW = 176, RX = LX + LW + 10, RW = PR - RX;
+    const top = 12, bottom = 200;
+    const pageSpots = A.spots.filter(s => s.pages.includes(p.n));
+    const flags = pageFlags(A, p);
+    const errs = flags.filter(f => f.sev === 'error').length, warns = flags.filter(f => f.sev === 'warn').length;
+
+    // ---- header ----
+    doc.setFontSize(5.8); doc.setTextColor(...T_HEAD);
+    doc.text(spaced('Pre-Press Index'), LX, top);
+    doc.text(new Date().toLocaleDateString('en-GB').split('/').join(' . ') + `     ${sheet} / ${total}`, PR, top, { align: 'right' });
+    doc.setFontSize(11); doc.setTextColor(215, 215, 215);
+    const pageTitle = `Page ${p.n} of ${A.numPages}${p.label !== String(p.n) ? '  (' + p.label + ')' : ''}`;
+    doc.text(fitText(doc, entry.name, LW - 10 - doc.getTextWidth(pdfSafe(pageTitle)) * 0.75), LX, top + 8);
+    doc.setFontSize(8); doc.setTextColor(...T_HEAD);
+    doc.text(pdfSafe(pageTitle), LX + LW, top + 8, { align: 'right' });
+    doc.setFontSize(6.6); doc.setTextColor(...T_LBL);
+    doc.text(pdfSafe(`${fmtBytes(entry.size)}   ·   PDF ${A.raw.header || '?'}   ·   ${errs} errors   ·   ${warns} warnings`), PR, top + 8, { align: 'right' });
+    doc.setDrawColor(...T_RULE); doc.setLineWidth(0.1); doc.line(LX, top + 11, PR, top + 11);
+
+    // ---- artwork (takes all height the band below doesn't need) ----
+    const nMax = Math.max(pageSpots.length, p.fonts.length, p.images.length);
+    const bandRows = Math.min(10, Math.max(1, nMax) + (nMax > 10 ? 1 : 0));
+    const aTop = top + 16, bandTop = Math.max(128, bottom - (5.8 + 4.7 + bandRows * 4.1) - 1), aH = bandTop - aTop - 10;
+    const media = p.boxes.MediaBox.r, rot = ((p.rotate % 360) + 360) % 360;
+    const mw = media[2] - media[0], mh = media[3] - media[1];
+    const dw = rot % 180 ? mh : mw, dh = rot % 180 ? mw : mh;       // displayed size, pt
+    const canVector = !!(entry.libDoc && !A.doc.encrypt);
+    let iw, ih;
+    if (canVector) {
+        const ratio = Math.min(LW / dw, aH / dh);
+        iw = dw * ratio; ih = dh * ratio;
+        doc.setFillColor(255, 255, 255); doc.rect(LX, aTop, iw, ih, 'F');   // paper; vector page is placed on top afterwards
+        VECTOR_JOBS.push({ sheet, entry, p, x: LX, y: aTop, w: iw, h: ih });
+    } else {
+        const canvas = await renderPage(entry, p.n, 2200, true);
+        const ratio = Math.min(LW / canvas.width, aH / canvas.height);
+        iw = canvas.width * ratio; ih = canvas.height * ratio;
+        doc.addImage(canvas.toDataURL('image/jpeg', 0.92), 'JPEG', LX, aTop, iw, ih);
+    }
+    doc.setDrawColor(70, 70, 70); doc.setLineWidth(0.1); doc.rect(LX, aTop, iw, ih);
+    dLegend(doc, p, LX, aTop + ih + 4.5);
+
+    // ---- band: this page's spots / fonts / images ----
+    const g = 6, w1 = 66, w2 = 58, w3 = LW - w1 - w2 - 2 * g;
+    let bx = LX, y;
+    y = dHeading(doc, `Spot Colours (${pageSpots.length})`, bx, bandTop, w1);
+    dTable(doc, bx, y, w1, [{ label: 'Name', f: 0.55 }, { label: 'Alternate', f: 0.45 }],
+        pageSpots.map(sp => ({ swatch: sp.rgb, cells: [sp.name + (sp.simulated ? ' *' : ''), sp.altValue.replace(/ \/ /g, '/')] })),
+        bottom, 'None - process colour only');
+
+    bx += w1 + g;
+    y = dHeading(doc, `Fonts (${p.fonts.length})`, bx, bandTop, w2);
+    dTable(doc, bx, y, w2, [{ label: 'Font', f: 0.56 }, { label: 'Emb', f: 0.14 }, { label: 'Sizes pt', f: 0.3 }],
+        p.fonts.map(f => ({ cells: [f.name, f.embedded == null ? '?' : f.embedded ? 'Yes' : 'No', f.sizes.length > 4 ? `${Math.min(...f.sizes)}-${Math.max(...f.sizes)}` : f.sizes.sort((a, b) => a - b).join(', ') || '-'], colors: [null, f.embedded === false ? SEV_DIM.error : null, f.sizes.length && Math.min(...f.sizes) < 6 ? SEV_DIM.warn : null] })),
+        bottom, 'None - outlined / no text');
+
+    bx += w2 + g;
+    y = dHeading(doc, `Images (${p.images.length})`, bx, bandTop, w3);
+    dTable(doc, bx, y, w3, [{ label: 'Pixels', f: 0.42 }, { label: 'ppi', f: 0.22 }, { label: 'Colour', f: 0.36 }],
+        p.images.map(im => ({ cells: [`${im.w}x${im.h}`, im.ppiMin == null ? '-' : String(Math.round(im.ppiMin)), im.kind ? (KIND_LABEL[im.kind] || im.kind) : (im.isMask ? 'Mask' : '?')],
+            colors: [null, im.ppiMin != null && im.ppiMin < 300 ? (im.ppiMin < 150 ? SEV_DIM.error : SEV_DIM.warn) : null, im.kind === 'rgb' ? SEV_DIM.warn : null] })),
+        bottom, 'None');
+
+    // ---- right panel ----
+    const minBleed = Math.min(p.bleed.l, p.bleed.r, p.bleed.t, p.bleed.b);
+    y = dHeading(doc, 'Page', RX, aTop, RW);
+    y = dKV(doc, [
+        ['Trim', sizeStr(p.trimW, p.trimH) + (p.boxes.TrimBox.defined ? '' : ' (from CropBox)'), p.boxes.TrimBox.defined ? null : SEV_DIM.warn],
+        ['Bleed L/R/T/B', [p.bleed.l, p.bleed.r, p.bleed.t, p.bleed.b].map(x => fmt(x, 1)).join(' / ') + ' mm', minBleed < 2.95 ? SEV_DIM.warn : null],
+        ['Rotation', p.rotate ? p.rotate + '°' : ''],
+        ['Colour', p.csLabels.join(', ') || '-', p.kinds.includes('rgb') ? SEV_DIM.warn : null],
+        ['Live text', p.textChars ? `${p.textChars.toLocaleString()} chars, min ${fmt(p.minText, 1)} pt` : 'None'],
+        ['Transparency', p.transparency.join(', ') || 'None'],
+        ['Overprint', p.overprint.join(', ') || 'None'],
+        ['Layers', p.layers.join(', ')],
+        ['Annotations', Object.entries(p.annots).map(([k, v]) => `${k} x${v}`).join(', ')]
+    ], RX, y, RW, 78, 25, 2) + 3;
+
+    y = dHeading(doc, 'Page Boxes', RX, y, RW);
+    const T = p.boxes.TrimBox.r;
+    y = dTable(doc, RX, y, RW, [{ label: 'Box', f: 0.22 }, { label: 'Status', f: 0.2 }, { label: 'W x H mm', f: 0.32 }, { label: 'Min vs trim', f: 0.26 }],
+        BOX_KEYS.map(k => {
+            const b = p.boxes[k], r = b.r;
+            const d = k === 'TrimBox' ? '-' : fmt(Math.min(mm(T[0] - r[0]), mm(r[2] - T[2]), mm(r[3] - T[3]), mm(T[1] - r[1])), 2) + ' mm';
+            return { swatch: BOX_STYLE[k].rgb, cells: [k.replace('Box', ''), b.defined ? 'Set' : (k === 'MediaBox' ? '-' : 'Default'), `${fmt(mm(r[2] - r[0]))} x ${fmt(mm(r[3] - r[1]))}`, d],
+                colors: [null, !b.defined && (k === 'TrimBox' || k === 'BleedBox') ? SEV_DIM.warn : T_LBL] };
+        }), 200) + 3;
+
+    y = dHeading(doc, 'Document', RX, y, RW);
+    y = dKV(doc, R.prepress.filter(r => ['Output intent', 'PDF/X'].includes(r[0])).concat(R.file.filter(r => ['Encrypted'].includes(r[0]))).concat(R.meta.filter(r => ['Created', 'Modified'].includes(r[0]))), RX, y, RW, 160, 25, 1) + 3;
+
+    y = dHeading(doc, 'Preflight', RX, y, RW);
+    if (!flags.length) { doc.setFontSize(7); doc.setTextColor(...SEV_DIM.ok); doc.text('No issues found', RX, y); }
+    for (let i = 0; i < flags.length; i++) {
+        if (y > bottom - 1) { doc.setFontSize(6); doc.setTextColor(...T_HEAD); doc.text(`+ ${flags.length - i} more`, RX, y); break; }
+        const f = flags[i];
+        doc.setFillColor(...SEV_DIM[f.sev]); doc.circle(RX + 0.9, y - 1.1, 0.75, 'F');
+        doc.setFontSize(7); doc.setTextColor(...T_VAL); doc.text(fitText(doc, f.title, RW - 4), RX + 3.5, y);
+        y += 4.3;
+    }
+}
+
+/* =========================================================================
+   COLOUR SKINS (shared with Step & Repeat)
+   ========================================================================= */
+function applySkin(name, save) {
+    const root = document.documentElement, btns = [...document.querySelectorAll('#skins button')];
+    if (!btns.some(b => b.dataset.skin === name)) name = 'workbench';
+    root.dataset.skin = name;
+    btns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.skin === name)));
+    if (save) { try { localStorage.setItem('rp-skin', name); } catch (e) {} }
+}
+$('skins').addEventListener('click', e => { const b = e.target.closest('button'); if (b) applySkin(b.dataset.skin, true); });
+applySkin(document.documentElement.dataset.skin || 'workbench', false);
+</script>
+</body>
+</html>

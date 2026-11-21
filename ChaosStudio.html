@@ -1,0 +1,2876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Chaos Studio — Image Editor</title>
+<script>try{var _k=localStorage.getItem("cs-skin");if(_k)document.documentElement.dataset.skin=_k}catch(e){}</script>
+<style>
+    :root {
+        --bg: #0a0a0f;
+        --surface: #14141c;
+        --surface-2: #1c1c27;
+        --surface-3: #24242f;
+        --accent-1: #a855f7;
+        --accent-2: #ec4899;
+        --accent-grad: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+        --text: #f5f5f7;
+        --text-secondary: #8a8a96;
+        --text-dim: #55555f;
+        --border: rgba(255,255,255,0.07);
+        --danger: #ef4444;
+        --success: #22c55e;
+        --r-color: #ff5c6c;
+        --g-color: #4ade80;
+        --b-color: #5b9dff;
+        --radius: 16px;
+        --radius-sm: 10px;
+        --safe-top: env(safe-area-inset-top, 0px);
+        --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    body {
+        margin: 0; padding: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        display: flex; flex-direction: column;
+        height: 100dvh;
+        overflow: hidden;
+        user-select: none;
+        -webkit-user-select: none;
+    }
+
+    /* ---------- Loading Overlay ---------- */
+    #loadingOverlay {
+        position: fixed; inset: 0;
+        background: rgba(10,10,15,0.92);
+        backdrop-filter: blur(8px);
+        display: none; flex-direction: column; justify-content: center; align-items: center;
+        z-index: 9999; gap: 16px;
+    }
+    .spinner {
+        width: 48px; height: 48px; border-radius: 50%;
+        background: conic-gradient(var(--accent-1), var(--accent-2), var(--accent-1));
+        -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+        mask: radial-gradient(farthest-side, transparent calc(100% - 5px), #000 calc(100% - 4px));
+        animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+    #loadingText { font-size: 14px; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.02em; }
+
+    /* ---------- Header ---------- */
+    header {
+        padding: calc(12px + var(--safe-top)) 16px 12px;
+        background: var(--surface);
+        display: flex; justify-content: space-between; align-items: center;
+        border-bottom: 1px solid var(--border);
+        z-index: 20; flex-shrink: 0;
+    }
+    .brand { display: flex; align-items: center; gap: 10px; }
+    .brand-mark {
+        width: 30px; height: 30px; border-radius: 9px;
+        background: var(--accent-grad);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 14px; font-weight: 800; color: #fff;
+        box-shadow: 0 3px 10px rgba(168,85,247,0.35);
+    }
+    .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+    .brand-title { font-size: 14px; font-weight: 700; }
+    .brand-sub { font-size: 11px; color: var(--text-dim); }
+
+    .btn-add {
+        background: var(--accent-grad); color: #fff; border: none;
+        padding: 9px 16px 9px 12px; border-radius: 999px; font-weight: 700;
+        font-size: 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+        box-shadow: 0 4px 14px rgba(168,85,247,0.3);
+        transition: transform 0.12s ease;
+    }
+    .btn-add:active { transform: scale(0.94); }
+    input[type="file"] { display: none; }
+
+    /* ---------- Preview ---------- */
+    .preview-container {
+        flex: 1 1 auto; position: relative;
+        display: flex; align-items: center; justify-content: center;
+        padding: 14px; overflow: hidden;
+        background:
+            linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px) 0 0/24px 24px,
+            linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px) 0 0/24px 24px,
+            radial-gradient(circle at 50% 40%, #14141c 0%, #08080b 100%);
+        touch-action: none;
+    }
+
+    .canvas-wrap {
+        position: relative; display: flex; align-items: center; justify-content: center;
+        max-width: 100%; max-height: 100%;
+        transition: transform 0.15s ease;
+    }
+
+    #imageCanvas {
+        max-width: 100%; max-height: 100%; object-fit: contain;
+        border-radius: 10px;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.06);
+        background-image:
+            linear-gradient(45deg, #26262f 25%, transparent 25%),
+            linear-gradient(-45deg, #26262f 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #26262f 75%),
+            linear-gradient(-45deg, transparent 75%, #26262f 75%);
+        background-size: 16px 16px;
+        background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+        background-color: #1a1a20;
+    }
+
+    .empty-state {
+        position: absolute; inset: 0; display: flex; flex-direction: column;
+        align-items: center; justify-content: center; gap: 14px;
+        color: var(--text-dim); text-align: center; padding: 30px;
+        transition: opacity 0.2s ease;
+    }
+    .empty-state.hidden { display: none; }
+    .empty-icon {
+        width: 68px; height: 68px; border-radius: 50%;
+        background: var(--surface-2); border: 1px dashed var(--border);
+        display: flex; align-items: center; justify-content: center;
+    }
+    .empty-state h3 { margin: 0; font-size: 15px; color: var(--text-secondary); font-weight: 600; }
+    .empty-state p { margin: 0; font-size: 12.5px; max-width: 220px; line-height: 1.5; }
+    .preview-container.drag-over .empty-icon { background: var(--accent-1); border-style: solid; }
+    .preview-container.drag-over::after {
+        content: ''; position: absolute; inset: 8px; border: 2px dashed var(--accent-1);
+        border-radius: 14px; pointer-events: none;
+    }
+
+    .zoom-controls {
+        position: absolute; bottom: 14px; right: 14px;
+        display: flex; flex-direction: column; gap: 6px;
+        opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+    }
+    .zoom-controls.visible { opacity: 1; pointer-events: auto; }
+    .zoom-btn {
+        width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--border);
+        background: rgba(20,20,28,0.85); backdrop-filter: blur(6px); color: var(--text);
+        display: flex; align-items: center; justify-content: center; cursor: pointer;
+    }
+    .zoom-btn:active { background: var(--surface-3); }
+
+    /* ---------- Toast ---------- */
+    #toast {
+        position: fixed; top: calc(64px + var(--safe-top)); left: 50%;
+        transform: translateX(-50%) translateY(-12px);
+        background: var(--surface-3); color: var(--text);
+        padding: 10px 18px; border-radius: 999px; font-size: 13px; font-weight: 600;
+        border: 1px solid var(--border); box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        display: flex; align-items: center; gap: 8px;
+        opacity: 0; pointer-events: none; transition: all 0.25s cubic-bezier(.2,.8,.2,1);
+        z-index: 500; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    #toast.error { border-color: rgba(239,68,68,0.4); }
+    #toast .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); flex-shrink: 0; }
+    #toast.error .dot { background: var(--danger); }
+
+    /* ---------- Tab Nav ---------- */
+    .tab-nav {
+        display: flex; background: var(--surface); border-top: 1px solid var(--border);
+        flex-shrink: 0; padding: 4px 6px 0;
+    }
+    .tab-btn {
+        flex: 1; padding: 10px 0 9px; background: transparent; color: var(--text-dim);
+        border: none; font-weight: 600; font-size: 11px; cursor: pointer;
+        display: flex; flex-direction: column; align-items: center; gap: 4px;
+        position: relative; transition: color 0.15s ease;
+    }
+    .tab-btn svg { width: 19px; height: 19px; opacity: 0.7; transition: opacity 0.15s ease; }
+    .tab-btn.active { color: var(--text); }
+    .tab-btn.active svg { opacity: 1; stroke: url(#tabGrad); }
+    .tab-btn .indicator {
+        position: absolute; top: -4px; left: 20%; right: 20%; height: 3px;
+        border-radius: 3px; background: var(--accent-grad); opacity: 0; transform: scaleX(0.5);
+        transition: all 0.2s ease;
+    }
+    .tab-btn.active .indicator { opacity: 1; transform: scaleX(1); }
+
+    /* ---------- Controls Area ---------- */
+    .controls-container {
+        background: var(--surface); height: 40dvh; min-height: 260px;
+        padding: 14px 16px calc(14px + var(--safe-bottom));
+        box-sizing: border-box; overflow-y: auto; flex-shrink: 0;
+        border-top: 1px solid var(--border);
+    }
+    .controls-container::-webkit-scrollbar { width: 4px; }
+    .controls-container::-webkit-scrollbar-thumb { background: var(--surface-3); border-radius: 4px; }
+
+    .tab-content { display: none; flex-direction: column; gap: 16px; }
+    .tab-content.active { display: flex; animation: fadeUp 0.2s ease; }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+    .section-label {
+        font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+        color: var(--text-dim); display: flex; align-items: center; justify-content: space-between;
+    }
+    .reset-link {
+        color: var(--accent-1); font-size: 11px; font-weight: 700; background: none; border: none;
+        cursor: pointer; display: flex; align-items: center; gap: 4px; text-transform: none; letter-spacing: 0;
+    }
+    .reset-link svg { width: 12px; height: 12px; }
+
+    /* ---------- Layer List ---------- */
+    .layer-list { display: flex; flex-direction: column; gap: 8px; }
+    .layer-card {
+        display: flex; align-items: center; gap: 10px;
+        background: var(--surface-2); border: 1.5px solid transparent;
+        border-radius: var(--radius-sm); padding: 8px; cursor: pointer;
+        transition: border-color 0.15s ease, background 0.15s ease;
+    }
+    .layer-card.active { border-color: var(--accent-1); background: var(--surface-3); }
+    .layer-thumb {
+        width: 42px; height: 42px; border-radius: 8px; flex-shrink: 0; object-fit: cover;
+        background-image:
+            linear-gradient(45deg, #33333f 25%, transparent 25%),
+            linear-gradient(-45deg, #33333f 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, #33333f 75%),
+            linear-gradient(-45deg, transparent 75%, #33333f 75%);
+        background-size: 10px 10px; background-position: 0 0, 0 5px, 5px -5px, -5px 0px;
+        background-color: #26262f;
+    }
+    .layer-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+    .layer-name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .layer-meta { font-size: 11px; color: var(--text-dim); }
+    .layer-actions { display: flex; align-items: center; gap: 2px; flex-shrink: 0; }
+    .icon-btn {
+        width: 30px; height: 30px; border-radius: 8px; border: none; background: transparent;
+        color: var(--text-secondary); display: flex; align-items: center; justify-content: center;
+        cursor: pointer; flex-shrink: 0;
+    }
+    .icon-btn svg { width: 16px; height: 16px; }
+    .icon-btn:active { background: var(--surface-3); }
+    .icon-btn.danger:active { background: rgba(239,68,68,0.15); color: var(--danger); }
+    .icon-btn.dim { opacity: 0.35; }
+    .layer-empty {
+        text-align: center; color: var(--text-dim); font-size: 13px; padding: 24px 0;
+    }
+
+    /* Blend chips */
+    .chip-row { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+    .chip-row::-webkit-scrollbar { display: none; }
+    .blend-chip {
+        flex-shrink: 0; padding: 7px 13px; border-radius: 999px; font-size: 12px; font-weight: 600;
+        background: var(--surface-2); color: var(--text-secondary); border: 1px solid var(--border);
+        cursor: pointer; white-space: nowrap;
+    }
+    .blend-chip.active { background: var(--accent-grad); color: #fff; border-color: transparent; }
+
+    /* ---------- Sliders ---------- */
+    .control-group { display: flex; flex-direction: column; gap: 6px; }
+    .control-group label {
+        display: flex; justify-content: space-between; align-items: center;
+        font-size: 12.5px; font-weight: 600; color: var(--text-secondary);
+    }
+    .control-group label .icon-tag { display: flex; align-items: center; gap: 6px; }
+    .control-group label .icon-tag svg { width: 14px; height: 14px; opacity: 0.7; }
+    .control-group label span.value { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+    input[type="range"] {
+        -webkit-appearance: none; appearance: none; width: 100%; height: 20px;
+        background: transparent; cursor: pointer;
+    }
+    input[type="range"]::-webkit-slider-runnable-track { height: 5px; border-radius: 3px; }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none; height: 19px; width: 19px; border-radius: 50%;
+        background: #fff; margin-top: -7px; box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 0 3px rgba(255,255,255,0.08);
+        border: none;
+    }
+    input[type="range"]:active::-webkit-slider-thumb { transform: scale(1.12); }
+
+    #hue::-webkit-slider-runnable-track {
+        background: linear-gradient(to right, #ff0000, #ffff00, #00ff00, #00ffff, #0000ff, #ff00ff, #ff0000);
+    }
+
+    /* ---------- Action / Export ---------- */
+    .action-buttons { display: flex; gap: 10px; }
+    .action-buttons button {
+        flex: 1; padding: 13px; border: none; border-radius: 12px;
+        background: var(--surface-3); color: var(--text); font-weight: 700; font-size: 13.5px;
+        cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .action-buttons button svg { width: 16px; height: 16px; }
+    .action-buttons button.primary { background: var(--accent-grad); color: #fff; box-shadow: 0 4px 14px rgba(168,85,247,0.3); }
+    .action-buttons button:active { transform: scale(0.97); }
+
+    .export-preview {
+        display: flex; gap: 12px; align-items: center; background: var(--surface-2);
+        border-radius: var(--radius-sm); padding: 10px; border: 1px solid var(--border);
+    }
+    .export-preview img {
+        width: 52px; height: 52px; border-radius: 8px; object-fit: cover; flex-shrink: 0;
+        background-color: #26262f;
+    }
+    .export-preview-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; }
+    .export-preview-text b { color: var(--text); }
+
+.tab-nav{overflow-x:auto;scrollbar-width:none}.tab-nav::-webkit-scrollbar{display:none}
+.tab-btn{flex:1 0 auto;padding:12px 15px 11px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
+.chips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}.chips.c3{grid-template-columns:repeat(3,1fr)}.chips.c6{grid-template-columns:repeat(6,1fr)}
+.chip{padding:9px 0;border-radius:10px;font-size:11px;font-weight:700;background:var(--surface-2);color:var(--text-secondary);border:1px solid var(--border);text-align:center;cursor:pointer;white-space:nowrap;min-width:0}
+.chip.on{background:var(--accent-grad);color:#fff;border-color:transparent}
+.ctl{transition:opacity .2s}.ctl.dim,.chip.dim{opacity:.22;pointer-events:none}
+.chip.madness{border-color:var(--danger);color:var(--danger);background:transparent}.chip.madness:active{background:var(--danger);color:#fff}
+.zoom-btn svg{width:15px;height:15px}
+select.sel{width:100%;background:var(--surface-2);color:var(--text);border:1px solid var(--border);border-radius:10px;padding:10px;font-size:13px}
+input[type=color]{width:100%;height:36px;border:1px solid var(--border);border-radius:10px;background:var(--surface-2);padding:2px}
+
+#vecHost{position:absolute;inset:0;display:none;pointer-events:none}
+#vecHost svg{width:100%;height:100%;display:block;border-radius:10px}
+.vec-note{font-size:11.5px;color:var(--text-secondary);line-height:1.5;background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:9px 11px}
+.vec-stats{font-size:11px;color:var(--text-dim);font-variant-numeric:tabular-nums;min-height:14px}
+
+/* =====================================================================
+   THEME — Workbench design system (shared with Step & Repeat)
+   spot 7 magenta = primary action, spot 8 cyan = active / focus
+   ===================================================================== */
+:root{color-scheme:dark;--bg:#0e1116;--well:#0b0d11;--panel:#161a20;--panel2:#1c2129;--field:#0c0f13;--line:#262d37;--line2:#333b47;
+--tx:#e7eaef;--mut:#9aa3b2;--dim:#6b7486;--m7:#e6007e;--c8:#22cbe9;--c8bg:#0d333c;--warn:#ffb020;
+--m7hi:#ff1a92;--m7lo:#c4006a;--onm7:#fff;--glow:34,203,233;--err:#ff6b6b;--shadow:0,0,0;--hover:#43505f;--grid:255,255,255;--ga:.03;--gb:.055;--thumb:#333c49;
+--arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%239aa3b2' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+--ui:"Segoe UI Variable Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+--head:"Bahnschrift SemiCondensed","Bahnschrift","Segoe UI Variable Display","Segoe UI",Roboto,sans-serif;
+--num:"Cascadia Mono","Cascadia Code",Consolas,"Roboto Mono","DejaVu Sans Mono",monospace;
+/* legacy Chaos tokens → workbench tokens */
+--surface:var(--panel);--surface-2:var(--panel2);--surface-3:var(--line2);--accent-1:var(--c8);--accent-2:var(--m7);--accent-grad:var(--m7);
+--text:var(--tx);--text-secondary:var(--mut);--text-dim:var(--dim);--border:var(--line);--danger:var(--err);--success:var(--c8);--radius:6px;--radius-sm:5px}
+:root[data-skin=light]{color-scheme:light;--bg:#eef1f5;--well:#d3d9e1;--panel:#ffffff;--panel2:#f3f5f8;--field:#ffffff;--line:#dde2e9;--line2:#c3cad4;--tx:#18202b;--mut:#566273;--dim:#8793a3;--m7:#d6006f;--c8:#0a7fa0;--c8bg:#dff3f8;--warn:#b86e00;--m7hi:#f0007f;--m7lo:#b0005b;--onm7:#fff;--glow:10,127,160;--err:#c62828;--shadow:30,45,70;--hover:#9fabb9;--grid:20,30,50;--ga:.06;--gb:.1;--thumb:#c3cad4;--arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23566273' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+:root[data-skin=neon]{color-scheme:dark;--bg:#0a0612;--well:#070411;--panel:#120a22;--panel2:#1a0f33;--field:#0b0618;--line:#2b1a52;--line2:#43297d;--tx:#f4eeff;--mut:#b7a6e6;--dim:#7e6bb5;--m7:#ff2bd6;--c8:#00f0ff;--c8bg:#06303a;--warn:#fff200;--m7hi:#ff66e6;--m7lo:#c800a4;--onm7:#fff;--glow:0,240,255;--err:#ff4d6d;--shadow:0,0,0;--hover:#6a47c0;--grid:180,120,255;--ga:.05;--gb:.09;--thumb:#43297d;--arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23b7a6e6' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+:root[data-skin=bauhaus]{color-scheme:light;--bg:#f2efe6;--well:#f7c600;--panel:#f2efe6;--panel2:#ffffff;--field:#ffffff;--line:#111111;--line2:#111111;--tx:#111111;--mut:#444444;--dim:#666666;--m7:#e63222;--c8:#1d3fbb;--c8bg:#dde5ff;--warn:#b45309;--m7hi:#ff4433;--m7lo:#b81f12;--onm7:#fff;--glow:29,63,187;--err:#e63222;--shadow:17,17,17;--hover:#111111;--grid:17,17,17;--ga:.12;--gb:.22;--thumb:#111111;--arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23444444' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+:root[data-skin=blueprint]{color-scheme:dark;--bg:#0b2a4a;--well:#0a2342;--panel:#0f335c;--panel2:#143e6c;--field:#0a2747;--line:#245585;--line2:#3b72a6;--tx:#eaf4ff;--mut:#a8c8e8;--dim:#7ea3c8;--m7:#ffd23f;--c8:#7fd4ff;--c8bg:#0f4a7a;--warn:#ffd23f;--m7hi:#ffe27a;--m7lo:#d9a800;--onm7:#0b2a4a;--glow:127,212,255;--err:#ff8a80;--shadow:0,0,0;--hover:#5b92c4;--grid:200,230,255;--ga:.05;--gb:.1;--thumb:#3b72a6;--arrow:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23a8c8e8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")}
+
+*{scrollbar-width:thin;scrollbar-color:var(--thumb) transparent}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--thumb);border-radius:6px;border:2px solid transparent;background-clip:padding-box}
+body{font:14px/1.4 var(--ui);background:var(--bg);color:var(--tx)}
+:focus-visible{outline:2px solid var(--c8);outline-offset:2px}
+
+/* ---- header ---- */
+header{background:var(--panel);border-bottom:1px solid var(--line);padding:calc(8px + var(--safe-top)) 14px 8px;min-height:52px;gap:12px;justify-content:flex-start}
+.logo{width:26px;height:26px;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:3px;flex-shrink:0}
+.logo span{background:var(--c8);border-radius:3px}
+.logo span:nth-child(1),.logo span:nth-child(4){background:var(--m7)}
+header h1{margin:0;font:600 21px/1 var(--head);letter-spacing:.2px;color:var(--tx);white-space:nowrap}
+.badge{background:transparent;border:1px solid var(--line2);color:var(--dim);font:12px var(--num);padding:3px 8px;border-radius:5px;white-space:nowrap}
+#skins{margin-left:auto;display:flex;gap:8px;align-items:center}
+#skins button{width:22px;height:22px;min-width:22px;padding:0;border-radius:50%!important;border:2px solid var(--line2);cursor:pointer;background:linear-gradient(135deg,var(--s1) 50%,var(--s2) 50%)}
+#skins button:hover{border-color:var(--tx)}
+#skins button[aria-pressed=true]{outline:2px solid var(--c8);outline-offset:2px;border-color:var(--panel)}
+
+/* ---- buttons ---- */
+.btn-add{background:var(--m7);border:1px solid var(--m7);border-radius:5px;color:var(--onm7);font:600 13.5px var(--ui);height:34px;padding:0 14px;box-shadow:none;transition:background .12s}
+.btn-add:hover{background:var(--m7hi);border-color:var(--m7hi)}
+.btn-add:active{background:var(--m7lo);transform:none}
+.action-buttons button{background:var(--panel2);border:1px solid var(--line2);border-radius:5px;color:var(--tx);font:400 13.5px var(--ui);height:36px;padding:0 10px;box-shadow:none}
+.action-buttons button:hover{border-color:var(--c8)}
+.action-buttons button:active{transform:none;background:var(--c8bg)}
+.action-buttons button.primary{background:var(--m7);border-color:var(--m7);color:var(--onm7);font-weight:600;box-shadow:none}
+.action-buttons button.primary:hover{background:var(--m7hi);border-color:var(--m7hi)}
+.action-buttons button.primary:active{background:var(--m7lo)}
+.chip,.blend-chip{background:var(--panel2);border:1px solid var(--line2);border-radius:5px;color:var(--tx);font:400 12.5px var(--ui);padding:7px 0;transition:border-color .12s}
+.blend-chip{padding:6px 12px}
+.chip:hover,.blend-chip:hover{border-color:var(--c8)}
+.chip.on,.blend-chip.active{background:var(--c8bg);border-color:var(--c8);color:var(--c8);font-weight:600}
+.chip.madness{background:transparent;border-color:var(--m7);color:var(--m7);font-weight:700}
+.chip.madness:active{background:var(--m7);color:var(--onm7)}
+.reset-link{color:var(--c8);font:400 12px var(--ui)}
+.icon-btn{color:var(--mut);border-radius:4px}
+.icon-btn:hover{color:var(--tx);background:var(--panel)}
+.icon-btn:active{background:var(--c8bg);color:var(--c8)}
+.icon-btn.danger:active{background:transparent;color:var(--err)}
+
+/* ---- fields ---- */
+select.sel,input[type=color]{font:inherit;color:var(--tx);background-color:var(--field);border:1px solid var(--line2);border-radius:5px;height:34px}
+select.sel{appearance:none;-webkit-appearance:none;padding:0 26px 0 8px;cursor:pointer;background-image:var(--arrow);background-repeat:no-repeat;background-position:right 9px center}
+option,optgroup{background:var(--panel2);color:var(--tx)}
+input[type=color]{padding:3px}
+select:hover,input[type=color]:hover{border-color:var(--hover)}
+select:focus,input:focus{outline:none;border-color:var(--c8);box-shadow:0 0 0 3px rgba(var(--glow),.18)}
+
+/* ---- sliders ---- */
+input[type=range]{height:4px;margin:9px 0;border-radius:3px;background:var(--line2)}
+input[type=range]::-webkit-slider-runnable-track{height:4px;border-radius:3px;background:transparent}
+input[type=range]::-webkit-slider-thumb{height:16px;width:16px;margin-top:-6px;border-radius:50%;background:var(--tx);border:3px solid var(--c8);box-shadow:0 1px 4px rgba(var(--shadow),.35)}
+input[type=range]::-moz-range-track{height:4px;background:transparent}
+input[type=range]::-moz-range-thumb{height:10px;width:10px;border-radius:50%;background:var(--tx);border:3px solid var(--c8)}
+input[type=range]:focus{box-shadow:none}
+#hue{background:linear-gradient(to right,#ff0000,#ffff00,#00ff00,#00ffff,#0000ff,#ff00ff,#ff0000)}
+#hue::-webkit-slider-runnable-track{background:transparent}
+.control-group label{color:var(--mut);font:400 12.5px var(--ui)}
+.control-group label span.value,.control-group label .value{color:var(--tx);font:400 12.5px var(--num)}
+
+/* ---- labels & notes ---- */
+.section-label{font:600 15px/1.2 var(--head);letter-spacing:.1px;text-transform:none;color:var(--tx)}
+.vec-note{background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--mut);font:12px/1.5 var(--ui)}
+.vec-stats{color:var(--dim);font:11.5px var(--num)}
+.export-preview{background:var(--panel2);border:1px solid var(--line);border-radius:6px}
+.export-preview img{border-radius:3px;background-color:var(--field)}
+.export-preview-text{color:var(--mut);font-size:12.5px}
+.export-preview-text b{color:var(--tx);font-family:var(--num);font-weight:400}
+
+/* ---- layers ---- */
+.layer-card{background:var(--panel2);border:1px solid var(--line);border-radius:6px}
+.layer-card:hover{border-color:var(--line2)}
+.layer-card.active{background:var(--panel2);border-color:var(--c8);box-shadow:inset 3px 0 0 var(--m7)}
+.layer-name{font:600 13px var(--ui);color:var(--tx)}
+.layer-meta{font:11.5px var(--num);color:var(--mut)}
+.layer-thumb,#imageCanvas{background-color:var(--panel2);
+  background-image:linear-gradient(45deg,var(--line) 25%,transparent 25%),linear-gradient(-45deg,var(--line) 25%,transparent 25%),linear-gradient(45deg,transparent 75%,var(--line) 75%),linear-gradient(-45deg,transparent 75%,var(--line) 75%)}
+.layer-thumb{border-radius:3px}
+.layer-empty{color:var(--mut);font:12px var(--num)}
+
+/* ---- tabs (segmented) ---- */
+.tab-nav{background:var(--panel);border-top:1px solid var(--line);padding:8px 10px;gap:0}
+.tab-btn{flex:1 0 auto;height:32px;padding:0 12px;background:var(--panel2);border:1px solid var(--line2);border-radius:0;margin-left:-1px;color:var(--tx);font:400 13px var(--ui);position:relative}
+.tab-btn:first-child{border-radius:5px 0 0 5px;margin-left:0}
+.tab-btn:last-child{border-radius:0 5px 5px 0}
+.tab-btn:hover{border-color:var(--c8);z-index:1}
+.tab-btn.active{background:var(--c8bg);border-color:var(--c8);color:var(--c8);font-weight:600;z-index:2}
+.tab-btn .indicator{display:none}
+.tab-btn{display:flex;align-items:center;justify-content:center;flex-direction:row;white-space:nowrap}
+.canvas-wrap{width:100%;height:100%}
+#imageCanvas{max-width:100%;max-height:100%}
+.btn-add{white-space:nowrap;flex-shrink:0}
+.controls-container{background:var(--panel);border-top:1px solid var(--line);padding:16px 16px calc(24px + var(--safe-bottom))}
+.tab-content{gap:18px}
+
+/* ---- preview well ---- */
+.preview-container{background-color:var(--well);
+  background-image:linear-gradient(rgba(var(--grid),var(--ga)) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--grid),var(--ga)) 1px,transparent 1px),linear-gradient(rgba(var(--grid),var(--gb)) 1px,transparent 1px),linear-gradient(90deg,rgba(var(--grid),var(--gb)) 1px,transparent 1px);
+  background-size:20px 20px,20px 20px,100px 100px,100px 100px}
+.preview-container.drag-over::after{border:2px dashed var(--c8);border-radius:6px}
+#imageCanvas{border-radius:2px;box-shadow:0 0 0 1px var(--line2),0 20px 48px rgba(var(--shadow),.6)}
+#vecHost svg{border-radius:2px}
+.empty-state{color:var(--mut)}
+.empty-grid{display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:6px;width:84px;height:84px;margin-bottom:6px}
+.empty-grid span{background:var(--line2);border-radius:3px}
+.empty-grid span:nth-child(1),.empty-grid span:nth-child(9){background:var(--c8)}
+.empty-grid span:nth-child(5){background:var(--m7)}
+.empty-state h3{font:600 20px/1.2 var(--head);color:var(--tx)}
+.empty-state p{font:12px/1.5 var(--num);color:var(--mut)}
+.zoom-btn{background:var(--panel2);border:1px solid var(--line2);border-radius:5px;color:var(--tx);backdrop-filter:none}
+.zoom-btn:hover{border-color:var(--c8)}
+.zoom-btn:active{background:var(--c8bg);color:var(--c8)}
+
+/* ---- toast & loading ---- */
+#toast{background:var(--panel2);color:var(--tx);border:1px solid var(--line2);border-radius:5px;font:12.5px var(--num);box-shadow:0 8px 24px rgba(var(--shadow),.45)}
+#toast .dot{background:var(--c8)}
+#toast.error{border-color:var(--err)}
+#toast.error .dot{background:var(--err)}
+#loadingOverlay{background:rgba(var(--shadow),.55)}
+.spinner{background:conic-gradient(var(--c8),var(--m7),var(--c8))}
+#loadingText{font:12.5px var(--num);color:var(--tx);background:var(--panel2);border:1px solid var(--line2);border-radius:5px;padding:5px 10px}
+
+/* ---- desktop: workbench sidebar layout ---- */
+@media (min-width:881px){
+  body{display:grid;grid-template-columns:372px minmax(0,1fr);grid-template-rows:auto auto minmax(0,1fr);height:100dvh}
+  header{grid-column:1/-1;grid-row:1}
+  .tab-nav{grid-column:1;grid-row:2;display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding:14px 16px 6px;border-top:0;border-right:1px solid var(--line);overflow:visible}
+  .tab-btn{border-radius:5px!important;margin:0!important;padding:0 4px}
+  .controls-container{grid-column:1;grid-row:3;height:auto;min-height:0;border-top:0;border-right:1px solid var(--line)}
+  .preview-container{grid-column:2;grid-row:2/4;min-height:0;padding:32px}
+}
+@media (max-width:600px){
+  header{gap:9px;padding-left:12px;padding-right:12px}
+  header h1{font-size:18px}
+  .badge{display:none}
+  #skins{gap:6px}
+  #skins button{width:18px;height:18px;min-width:18px}
+  .btn-add{padding:0 10px}
+}
+@media (max-width:480px){ header .btn-add .btn-txt{display:none} header .btn-add{width:34px;padding:0;justify-content:center} }
+
+/* ---- skin accents ---- */
+:root[data-skin=neon] header{border-bottom-color:var(--m7);box-shadow:0 1px 18px rgba(255,43,214,.35)}
+:root[data-skin=neon] header h1{text-shadow:0 0 12px rgba(0,240,255,.65)}
+:root[data-skin=neon] .btn-add,:root[data-skin=neon] .action-buttons button.primary{box-shadow:0 0 18px rgba(255,43,214,.6)}
+:root[data-skin=neon] .chip.on,:root[data-skin=neon] .blend-chip.active,:root[data-skin=neon] .tab-btn.active{box-shadow:0 0 10px rgba(0,240,255,.4)}
+:root[data-skin=neon] #imageCanvas{box-shadow:0 0 0 1px var(--line2),0 0 40px rgba(255,43,214,.25)}
+:root[data-skin=neon] input[type=range]::-webkit-slider-thumb{box-shadow:0 0 8px rgba(0,240,255,.7)}
+:root[data-skin=bauhaus] *{border-radius:0!important}
+:root[data-skin=bauhaus] #skins button{border-radius:50%!important}
+:root[data-skin=bauhaus] header{background:#111;border-bottom:4px solid var(--m7)}
+:root[data-skin=bauhaus] header h1{color:#f2efe6;text-transform:uppercase;font-weight:800;letter-spacing:.6px}
+:root[data-skin=bauhaus] .badge{color:#f2efe6;border-color:#f2efe6}
+:root[data-skin=bauhaus] .tab-nav,:root[data-skin=bauhaus] .controls-container{border-right-width:4px;border-right-color:#111}
+:root[data-skin=bauhaus] select.sel,:root[data-skin=bauhaus] input[type=color],:root[data-skin=bauhaus] .chip,:root[data-skin=bauhaus] .blend-chip,:root[data-skin=bauhaus] .tab-btn,:root[data-skin=bauhaus] .action-buttons button,:root[data-skin=bauhaus] .layer-card,:root[data-skin=bauhaus] .zoom-btn,:root[data-skin=bauhaus] .export-preview,:root[data-skin=bauhaus] .vec-note{border-width:2px}
+:root[data-skin=bauhaus] .btn-add,:root[data-skin=bauhaus] .action-buttons button.primary{border:2px solid #111;box-shadow:4px 4px 0 #111}
+:root[data-skin=bauhaus] .btn-add:hover,:root[data-skin=bauhaus] .action-buttons button.primary:hover{box-shadow:6px 6px 0 #111;transform:translate(-2px,-2px)}
+:root[data-skin=bauhaus] .btn-add:active,:root[data-skin=bauhaus] .action-buttons button.primary:active{box-shadow:1px 1px 0 #111;transform:translate(3px,3px)}
+:root[data-skin=bauhaus] #imageCanvas{box-shadow:0 0 0 3px #111,8px 8px 0 3px #111}
+:root[data-skin=bauhaus] .section-label,:root[data-skin=bauhaus] .empty-state h3{text-transform:uppercase;font-weight:800;letter-spacing:.6px}
+:root[data-skin=bauhaus] .empty-state,:root[data-skin=bauhaus] .empty-state p{color:#111}
+:root[data-skin=bauhaus] input[type=range]{height:6px;border:2px solid #111}
+</style>
+</head>
+<body>
+    <svg width="0" height="0" style="position:absolute;overflow:hidden">
+        <defs>
+            <filter id="chRedOnly"><feColorMatrix type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0"/></filter>
+            <filter id="chBlueOnly"><feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0"/></filter>
+        </defs>
+    </svg>
+<svg width="0" height="0" style="position:absolute">
+    <defs>
+        <linearGradient id="tabGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#a855f7"/>
+            <stop offset="100%" stop-color="#ec4899"/>
+        </linearGradient>
+    </defs>
+</svg>
+
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div id="loadingText">Exporting High-Res...</div>
+</div>
+
+<div id="toast"><span class="dot"></span><span id="toastMsg"></span></div>
+
+<header>
+    <div class="logo"><span></span><span></span><span></span><span></span></div>
+    <h1>Chaos Studio</h1>
+    <span class="badge" id="layerCountLabel">No layers</span>
+    <div id="skins" role="group" aria-label="Colour skin"><button type="button" data-skin="workbench" title="Workbench (dark)" aria-label="Workbench (dark)" aria-pressed="false" style="--s1:#161a20;--s2:#e6007e"></button><button type="button" data-skin="light" title="Light" aria-label="Light" aria-pressed="false" style="--s1:#ffffff;--s2:#d6006f"></button><button type="button" data-skin="neon" title="Neon" aria-label="Neon" aria-pressed="false" style="--s1:#120a22;--s2:#ff2bd6"></button><button type="button" data-skin="bauhaus" title="Bauhaus" aria-label="Bauhaus" aria-pressed="false" style="--s1:#f7c600;--s2:#e63222"></button><button type="button" data-skin="blueprint" title="Blueprint" aria-label="Blueprint" aria-pressed="false" style="--s1:#0f335c;--s2:#ffd23f"></button></div>
+    <label for="imageLoader" class="btn-add">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" width="14" height="14"><path d="M12 5v14M5 12h14"/></svg>
+        <span class="btn-txt">Add Image</span>
+    </label>
+    <input type="file" id="imageLoader" accept="image/*" multiple />
+</header>
+
+<div class="preview-container" id="previewContainer">
+    <div class="canvas-wrap" id="canvasWrap">
+        <canvas id="imageCanvas"></canvas>
+    </div>
+    <div class="empty-state" id="emptyState">
+        <div class="empty-grid"><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span><span></span></div>
+        <h3>Chaos Studio</h3>
+        <p>Tap "Add Image" or drop photos here to start editing</p><button class="btn-add" id="emptyCurate" style="margin-top:6px">Generate Color Field art</button>
+    </div>
+    <div class="zoom-controls" id="zoomControls">
+        <button class="zoom-btn" id="zoomInBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="15" height="15"><path d="M12 5v14M5 12h14"/></svg></button>
+        <button class="zoom-btn" id="zoomOutBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" width="15" height="15"><path d="M5 12h14"/></svg></button>
+        <button class="zoom-btn" id="zoomResetBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="15" height="15"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg></button>
+    </div>
+</div>
+<div class="tab-nav" id="tabNav"><button class="tab-btn active" data-tab="layers">Layers<span class="indicator"></span></button><button class="tab-btn" data-tab="adjust">Adjust<span class="indicator"></span></button><button class="tab-btn" data-tab="color">Channels<span class="indicator"></span></button><button class="tab-btn" data-tab="grade">Grade<span class="indicator"></span></button><button class="tab-btn" data-tab="warp">Warp<span class="indicator"></span></button><button class="tab-btn" data-tab="noise">Noise<span class="indicator"></span></button><button class="tab-btn" data-tab="pop">Pop<span class="indicator"></span></button><button class="tab-btn" data-tab="glitch">Glitch<span class="indicator"></span></button><button class="tab-btn" data-tab="export">Export<span class="indicator"></span></button></div>
+<div class="controls-container">
+    <div id="tab-layers" class="tab-content active">
+        <div class="section-label">Layers <span id="layerCountTag"></span></div>
+        <div class="layer-list" id="layerList">
+            <div class="layer-empty">No layers yet — add an image to begin</div>
+        </div>
+
+        <div class="action-buttons"><button id="curateBtn">+ Color Field art layer</button></div>
+<div class="section-label" style="margin-top:2px;">Blend Mode</div>
+        <div class="chip-row" id="blendChips"></div>
+
+        <div class="control-group">
+            <label>
+                <span class="icon-tag">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 000 20"/></svg>
+                    Opacity
+                </span>
+                <span class="value" id="val-opacity">100%</span>
+            </label>
+            <input type="range" id="opacity" min="0" max="100" value="100">
+        </div>
+    </div>
+
+    <div id="tab-adjust" class="tab-content">
+        <div class="section-label">
+            Tonal Adjustments
+            <button class="reset-link" id="resetAdjustBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+            </button>
+        </div>
+        <div class="control-group">
+            <label><span class="icon-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>Brightness</span><span class="value" id="val-brightness">100%</span></label>
+            <input type="range" id="brightness" min="0" max="200" value="100">
+        </div>
+        <div class="control-group">
+            <label><span class="icon-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a10 10 0 000 20z" fill="currentColor" stroke="none"/></svg>Contrast</span><span class="value" id="val-contrast">100%</span></label>
+            <input type="range" id="contrast" min="0" max="200" value="100">
+        </div>
+        <div class="control-group">
+            <label><span class="icon-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>Saturation</span><span class="value" id="val-saturate">100%</span></label>
+            <input type="range" id="saturate" min="0" max="200" value="100">
+        </div>
+    </div>
+
+    <div id="tab-color" class="tab-content">
+        <div class="section-label">
+            Channel Mixer
+            <button class="reset-link" id="resetColorBtn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 109-9 9.75 9.75 0 00-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Reset
+            </button>
+        </div>
+        <div class="control-group">
+            <label><span class="icon-tag">Hue Rotate</span><span class="value" id="val-hue">0°</span></label>
+            <input type="range" id="hue" min="-180" max="180" value="0">
+        </div>
+        <div class="control-group">
+            <label><span class="icon-tag" style="color:var(--r-color);">Red Channel</span><span class="value" id="val-r">100%</span></label>
+            <input type="range" id="r" min="0" max="200" value="100">
+        </div>
+        <div class="control-group">
+            <label><span class="icon-tag" style="color:var(--g-color);">Green Channel</span><span class="value" id="val-g">100%</span></label>
+            <input type="range" id="g" min="0" max="200" value="100">
+        </div>
+        <div class="control-group">
+            <label><span class="icon-tag" style="color:var(--b-color);">Blue Channel</span><span class="value" id="val-b">100%</span></label>
+            <input type="range" id="b" min="0" max="200" value="100">
+        </div>
+    </div>
+<div id="fxPanes"></div>
+<div id="tab-export" class="tab-content">
+<div class="section-label">Export</div>
+<div class="export-preview"><img id="exportThumb" src="" alt=""><div class="export-preview-text">Composite of <b id="exportLayerCount">0 layers</b> with all FX.<br>Output size: <b id="exportSize">—</b></div></div>
+<div class="section-label">Scale</div>
+<div class="chips c3" id="scaleChips"><button class="chip on" data-s="1">1× STD</button><button class="chip" data-s="2">2×</button><button class="chip" data-s="4">4× HI-RES</button></div>
+<div class="control-group"><label><span class="icon-tag">WEBP Quality</span><span class="value" id="val-quality">92%</span></label><input type="range" id="quality" min="10" max="100" value="92"></div>
+<div class="action-buttons"><button id="savePngBtn">Save PNG</button><button id="saveWebpBtn" class="primary">Save WEBP</button></div>
+<div class="section-label">Vector Pop (settings in Pop tab)</div>
+<div class="action-buttons"><button id="btn-vsvg2">Pop → SVG</button><button id="btn-vpdf2">Pop → PDF</button></div>
+</div>
+</div>
+<script>
+    const canvas = document.getElementById('imageCanvas');
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    const previewContainer = document.getElementById('previewContainer');
+    const canvasWrap = document.getElementById('canvasWrap');
+    const emptyState = document.getElementById('emptyState');
+    const zoomControls = document.getElementById('zoomControls');
+
+    // ---------- State ----------
+    let layers = [];
+    let activeLayerId = null;
+    let nextId = 1;
+    let renderPending = false;
+    let zoom = 1;
+
+    const PREVIEW_MAX = 1200;
+    const BLEND_MODES = [
+        { v: 'source-over', label: 'Normal' },
+        { v: 'multiply', label: 'Multiply' },
+        { v: 'screen', label: 'Screen' },
+        { v: 'overlay', label: 'Overlay' },
+        { v: 'color-dodge', label: 'Color Dodge' },
+        { v: 'difference', label: 'Difference' },
+{ v: 'soft-light', label: 'Soft Light' },{ v: 'hard-light', label: 'Hard Light' },{ v: 'darken', label: 'Darken' },{ v: 'lighten', label: 'Lighten' },{ v: 'exclusion', label: 'Exclusion' },{ v: 'color', label: 'Color' },{ v: 'luminosity', label: 'Luminosity' },
+    ];
+
+    const ui = {
+        sliders: {
+            opacity: document.getElementById('opacity'),
+            brightness: document.getElementById('brightness'),
+            contrast: document.getElementById('contrast'),
+            saturate: document.getElementById('saturate'),
+            hue: document.getElementById('hue'),
+            r: document.getElementById('r'),
+            g: document.getElementById('g'),
+            b: document.getElementById('b'),
+        },
+        labels: {
+            opacity: document.getElementById('val-opacity'),
+            brightness: document.getElementById('val-brightness'),
+            contrast: document.getElementById('val-contrast'),
+            saturate: document.getElementById('val-saturate'),
+            hue: document.getElementById('val-hue'),
+            r: document.getElementById('val-r'),
+            g: document.getElementById('val-g'),
+            b: document.getElementById('val-b'),
+        }
+    };
+
+    const SLIDER_COLORS = { r: 'var(--r-color)', g: 'var(--g-color)', b: 'var(--b-color)' };
+
+    function tint(input, pct) {
+        const color = SLIDER_COLORS[input.id] || 'var(--accent-1)';
+        input.style.background = `linear-gradient(to right, ${color} ${pct}%, var(--line2) ${pct}%)`;
+    }
+    function pctFor(input) {
+        const min = parseFloat(input.min), max = parseFloat(input.max), val = parseFloat(input.value);
+        return ((val - min) / (max - min)) * 100;
+    }
+    function refreshSliderFill(input) {
+        if (input.id === 'hue') return; // rainbow track stays fixed
+        tint(input, pctFor(input));
+    }
+
+    // ---------- Toast ----------
+    let toastTimer;
+    function showToast(msg, isError) {
+        const t = document.getElementById('toast');
+        document.getElementById('toastMsg').textContent = msg;
+        t.classList.toggle('error', !!isError);
+        t.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    function haptic() { if (navigator.vibrate) navigator.vibrate(8); }
+
+const PREVIEW_DIM = 1000, MAX_EXPORT_PIXELS = 12000000, MAX_HI_PIXELS = 48000000;
+const scratchCanvas = document.createElement('canvas'), scratchCtx = scratchCanvas.getContext('2d', { willReadFrequently: true });
+const baseCanvas = document.createElement('canvas'), baseCtx = baseCanvas.getContext('2d', { willReadFrequently: true });
+let baseImage = baseCanvas, isImageLoaded = false, madnessMode = false, RS = 1, comparing = false, fullW = 0, fullH = 0;
+let currentArtState = null, glitchOn = false, glitchSeed = 1, currentDistortion = 5, customHighlightColor = '#ff0055', exportScale = 1;
+const fxState = { melt: false, leaks: false, hud: false };
+let capturePrePop = false, prePop = null; // pre-pop composite for vector tracing
+let _s = 1;
+function seedRng(a) { _s = (a >>> 0) || 1; }
+function grnd() { _s = (_s + 0x6D2B79F5) >>> 0; let t = _s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+const $ = id => document.getElementById(id);
+function setSize(w, h) { [canvas, scratchCanvas, baseCanvas].forEach(c => { if (c.width !== w || c.height !== h) { c.width = w; c.height = h; } }); }
+function initCanvasFor(w, h) {
+    if (w * h > MAX_EXPORT_PIXELS) { const r = Math.sqrt(MAX_EXPORT_PIXELS / (w * h)); w = Math.floor(w * r); h = Math.floor(h * r); }
+    fullW = w; fullH = h;
+    const r = Math.min(1, PREVIEW_DIM / Math.max(w, h));
+    setSize(Math.max(1, Math.floor(w * r)), Math.max(1, Math.floor(h * r)));
+}
+
+        // ====================================================================
+        // WARP ENGINE — inverse-mapped displacement with bilinear sampling
+        // ====================================================================
+        const WARP_MODES = ['wave', 'grid', 'ripple', 'swirl', 'bulge', 'pinch', 'liquid', 'glass', 'kaleido'];
+        const POP_MODES = ['off', 'dots', 'cmyk', 'comic', 'warhol'];
+        let warpMode = 'wave';
+        let warpSeed = 1;
+        let popMode = 'off';
+        let popPalette = 0;   // 0 = original colors, 1-4 = gradient palettes
+        let popPanels = false; // Warhol 2x2 layout
+        const TAU = Math.PI * 2;
+
+        function hash2(ix, iy, seed) {
+            let n = (Math.imul(ix, 374761393) + Math.imul(iy, 668265263) + Math.imul(seed, 1442695041)) | 0;
+            n = Math.imul(n ^ (n >>> 13), 1274126177);
+            n ^= n >>> 16;
+            return (n >>> 0) / 4294967295;
+        }
+
+        function vnoise(x, y, seed) {
+            const ix = Math.floor(x), iy = Math.floor(y);
+            let fx = x - ix, fy = y - iy;
+            fx = fx * fx * (3 - 2 * fx);
+            fy = fy * fy * (3 - 2 * fy);
+            const a = hash2(ix, iy, seed), b = hash2(ix + 1, iy, seed);
+            const c = hash2(ix, iy + 1, seed), d = hash2(ix + 1, iy + 1, seed);
+            return a + (b - a) * fx + (c - a) * fy + (a - b - c + d) * fx * fy;
+        }
+
+        function applyWarp(w, h, amp) {
+            const src = scratchCtx.getImageData(0, 0, w, h).data;
+            const out = ctx.createImageData(w, h);
+            const dst = out.data;
+
+            const fv = parseFloat(controls.wfreq.value);
+            const phase = parseFloat(controls.wphase.value) * Math.PI / 180;
+            const cx = parseFloat(controls.wcx.value) / 100 * w;
+            const cy = parseFloat(controls.wcy.value) / 100 * h;
+            const minDim = Math.min(w, h);
+            const seed = warpSeed;
+            const ampPx = amp * RS; // displacement in pixels scales with resolution
+            let sx = 0, sy = 0;
+            let map;
+
+            switch (warpMode) {
+                case 'grid': {
+                    const k = fv * 0.001 / RS;
+                    map = (x, y) => {
+                        sx = x + Math.sin(y * k + phase) * ampPx;
+                        sy = y + Math.sin(x * k + phase * 1.3) * ampPx;
+                    };
+                    break;
+                }
+                case 'ripple': {
+                    const k = fv * 0.001 / RS;
+                    map = (x, y) => {
+                        const dx = x - cx, dy = y - cy;
+                        const d = Math.sqrt(dx * dx + dy * dy) || 1;
+                        const o = Math.sin(d * k - phase) * ampPx * 0.9;
+                        sx = x + dx / d * o;
+                        sy = y + dy / d * o;
+                    };
+                    break;
+                }
+                case 'swirl': {
+                    const R = minDim * (0.15 + fv / 100 * 0.85);
+                    const maxA = amp / 100 * Math.PI * 5;
+                    map = (x, y) => {
+                        const dx = x - cx, dy = y - cy;
+                        const d = Math.sqrt(dx * dx + dy * dy);
+                        if (d >= R) { sx = x; sy = y; return; }
+                        const t = 1 - d / R;
+                        const a = maxA * t * t;
+                        const c = Math.cos(a), s = Math.sin(a);
+                        sx = cx + dx * c - dy * s;
+                        sy = cy + dx * s + dy * c;
+                    };
+                    break;
+                }
+                case 'bulge':
+                case 'pinch': {
+                    const R = minDim * (0.15 + fv / 100 * 0.85);
+                    const kk = amp / 100 * 0.9;
+                    const pinch = warpMode === 'pinch';
+                    map = (x, y) => {
+                        const dx = x - cx, dy = y - cy;
+                        const d = Math.sqrt(dx * dx + dy * dy);
+                        if (d >= R) { sx = x; sy = y; return; }
+                        const t = 1 - d / R;
+                        const f = pinch ? 1 + kk * 3 * t * t : 1 - kk * t * t;
+                        sx = cx + dx * f;
+                        sy = cy + dy * f;
+                    };
+                    break;
+                }
+                case 'liquid': {
+                    const cell = Math.max(16, 300 - fv * 2.8) * RS;
+                    const px = ampPx * 1.6;
+                    const ph = phase * 0.8;
+                    map = (x, y) => {
+                        const u = x / cell, v = y / cell;
+                        const a = vnoise(u + ph, v, seed);
+                        const b = vnoise(u, v + ph, seed + 7);
+                        const a2 = vnoise(u * 2.1 + 5.2 + b * 1.5, v * 2.1 + a * 1.5, seed + 13);
+                        const b2 = vnoise(u * 2.1 + b * 1.5 + 3.3, v * 2.1 + a * 1.5 + 1.7, seed + 29);
+                        sx = x + ((a - 0.5) + 0.45 * (a2 - 0.5)) * 2 * px;
+                        sy = y + ((b - 0.5) + 0.45 * (b2 - 0.5)) * 2 * px;
+                    };
+                    break;
+                }
+                case 'glass': {
+                    const tile = Math.max(6, Math.round(130 - fv * 1.2)) * RS;
+                    const px = ampPx * 1.0;
+                    const lens = amp / 100 * 0.6;
+                    map = (x, y) => {
+                        const tx = Math.floor(x / tile), ty = Math.floor(y / tile);
+                        const tcx = (tx + 0.5) * tile, tcy = (ty + 0.5) * tile;
+                        const ox = (hash2(tx, ty, seed) - 0.5) * 2 * px;
+                        const oy = (hash2(tx, ty, seed + 101) - 0.5) * 2 * px;
+                        sx = tcx + (x - tcx) * (1 - lens) + ox * 0.6;
+                        sy = tcy + (y - tcy) * (1 - lens) + oy * 0.6;
+                    };
+                    break;
+                }
+                case 'kaleido': {
+                    const n = 2 * Math.round(1 + fv / 100 * 7);
+                    const seg = TAU / n;
+                    const mix = amp / 100;
+                    map = (x, y) => {
+                        const dx = x - cx, dy = y - cy;
+                        const d = Math.sqrt(dx * dx + dy * dy);
+                        let a = Math.atan2(dy, dx);
+                        a = ((a % seg) + seg) % seg;
+                        if (a > seg / 2) a = seg - a;
+                        a += phase;
+                        const kx = cx + d * Math.cos(a), ky = cy + d * Math.sin(a);
+                        sx = x + (kx - x) * mix;
+                        sy = y + (ky - y) * mix;
+                    };
+                    break;
+                }
+                case 'wave':
+                default: {
+                    const k = fv * 0.001 / RS;
+                    map = (x, y) => {
+                        sx = x + Math.sin(y * k + phase) * ampPx;
+                        sy = y;
+                    };
+                }
+            }
+
+            const w1 = w - 1, h1 = h - 1;
+            for (let y = 0; y < h; y++) {
+                for (let x = 0; x < w; x++) {
+                    map(x, y);
+                    let fx = sx, fy = sy;
+                    // mirror at edges, then clamp
+                    if (fx < 0) fx = -fx; else if (fx > w1) fx = 2 * w1 - fx;
+                    if (fy < 0) fy = -fy; else if (fy > h1) fy = 2 * h1 - fy;
+                    fx = fx < 0 ? 0 : fx > w1 ? w1 : fx;
+                    fy = fy < 0 ? 0 : fy > h1 ? h1 : fy;
+
+                    const x0 = fx | 0, y0 = fy | 0;
+                    const x1 = x0 < w1 ? x0 + 1 : x0, y1 = y0 < h1 ? y0 + 1 : y0;
+                    const wx = fx - x0, wy = fy - y0;
+                    const w00 = (1 - wx) * (1 - wy), w10 = wx * (1 - wy), w01 = (1 - wx) * wy, w11 = wx * wy;
+                    const i00 = (y0 * w + x0) * 4, i10 = (y0 * w + x1) * 4;
+                    const i01 = (y1 * w + x0) * 4, i11 = (y1 * w + x1) * 4;
+                    const o = (y * w + x) * 4;
+                    dst[o]     = src[i00]     * w00 + src[i10]     * w10 + src[i01]     * w01 + src[i11]     * w11;
+                    dst[o + 1] = src[i00 + 1] * w00 + src[i10 + 1] * w10 + src[i01 + 1] * w01 + src[i11 + 1] * w11;
+                    dst[o + 2] = src[i00 + 2] * w00 + src[i10 + 2] * w10 + src[i01 + 2] * w01 + src[i11 + 2] * w11;
+                    dst[o + 3] = src[i00 + 3] * w00 + src[i10 + 3] * w10 + src[i01 + 3] * w01 + src[i11 + 3] * w11;
+                }
+            }
+            ctx.putImageData(out, 0, 0);
+        }
+
+        // ====================================================================
+        // POP ART ENGINE
+        // ====================================================================
+        function hexToRgb(hex) {
+            const n = parseInt(hex.slice(1), 16);
+            return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+        }
+        // index 0 = keep original colors; 1-4 = dark -> light gradient maps
+        const POP_PALETTES = [
+            null,
+            ['#0d0d2b', '#ff2d95', '#ff8a00', '#ffe14d', '#fffbe8'], // Hot
+            ['#0a0a23', '#2b2bff', '#00c2ff', '#7dffb3', '#f4ffd9'], // Ice
+            ['#1b0030', '#7a00ff', '#ff00a8', '#ffee00', '#ffffff'], // Acid
+            ['#10151c', '#c1121f', '#f26a1b', '#f7d14a', '#f6efdc']  // Red
+        ].map(p => p && p.map(hexToRgb));
+
+        const palTmp = [0, 0, 0];
+        function palColor(pal, t) {
+            t = t < 0 ? 0 : t > 1 ? 1 : t;
+            const p = t * (pal.length - 1);
+            const i = Math.min(pal.length - 2, p | 0);
+            const f = p - i;
+            const a = pal[i], b = pal[i + 1];
+            palTmp[0] = a[0] + (b[0] - a[0]) * f;
+            palTmp[1] = a[1] + (b[1] - a[1]) * f;
+            palTmp[2] = a[2] + (b[2] - a[2]) * f;
+            return palTmp;
+        }
+
+        // Reusable transparent layer for single-ink dot screens (avoids huge overlapping paths)
+        let dotLayer = null, dotLayerCtx = null;
+        function getDotLayer(w, h) {
+            if (!dotLayer) {
+                dotLayer = document.createElement('canvas');
+                dotLayerCtx = dotLayer.getContext('2d');
+            }
+            if (dotLayer.width !== w || dotLayer.height !== h) { dotLayer.width = w; dotLayer.height = h; }
+            else dotLayerCtx.clearRect(0, 0, w, h);
+            return dotLayerCtx;
+        }
+
+        // Rotated square lattice of cell centers covering the canvas
+        function lattice(w, h, s, theta, cb) {
+            const cx = w / 2, cy = h / 2;
+            const c = Math.cos(theta), sn = Math.sin(theta);
+            const n = Math.ceil(Math.hypot(w, h) / s / 2) + 1;
+            for (let j = -n; j <= n; j++) {
+                for (let i = -n; i <= n; i++) {
+                    const u = i * s, v = j * s;
+                    const x = cx + u * c - v * sn, y = cy + u * sn + v * c;
+                    if (x < -s || y < -s || x > w + s || y > h + s) continue;
+                    cb(x, y);
+                }
+            }
+        }
+
+        // 5-tap area average (reduces the single-pixel noise of the old sampler)
+        let sr = 0, sg = 0, sb = 0;
+        function sampleAvg(d, w, h, x, y, r) {
+            let R = 0, G = 0, B = 0;
+            for (let k = 0; k < 5; k++) {
+                let px = x + (k === 1 ? -r : k === 2 ? r : 0);
+                let py = y + (k === 3 ? -r : k === 4 ? r : 0);
+                px = px < 0 ? 0 : px > w - 1 ? w - 1 : px;
+                py = py < 0 ? 0 : py > h - 1 ? h - 1 : py;
+                const i = ((py | 0) * w + (px | 0)) * 4;
+                R += d[i]; G += d[i + 1]; B += d[i + 2];
+            }
+            sr = R / 5; sg = G / 5; sb = B / 5;
+        }
+
+        function lumArray(d, N) {
+            const l = new Float32Array(N);
+            for (let p = 0, i = 0; p < N; p++, i += 4) l[p] = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+            return l;
+        }
+
+        function boxBlur(a, w, h) {
+            const tmp = new Float32Array(w * h), out = new Float32Array(w * h);
+            for (let y = 0; y < h; y++) {
+                const r = y * w;
+                for (let x = 0; x < w; x++) {
+                    tmp[r + x] = (a[r + (x > 0 ? x - 1 : 0)] + a[r + x] + a[r + (x < w - 1 ? x + 1 : x)]) / 3;
+                }
+            }
+            for (let y = 0; y < h; y++) {
+                const r0 = (y > 0 ? y - 1 : 0) * w, r1 = y * w, r2 = (y < h - 1 ? y + 1 : y) * w;
+                for (let x = 0; x < w; x++) out[r1 + x] = (tmp[r0 + x] + tmp[r1 + x] + tmp[r2 + x]) / 3;
+            }
+            return out;
+        }
+
+        // Sobel edge mask -> thick black comic ink lines
+        function edgeMask(l, w, h, ink) {
+            const m = new Uint8Array(w * h);
+            const thr = 420 - ink * 380;
+            const thr2 = thr * thr;
+            const thick = ink > 0.5;
+            const k = Math.max(1, Math.round(RS)); // Sobel reach scales with resolution
+            const wk = w * k;
+            for (let y = k; y < h - k; y++) {
+                for (let x = k; x < w - k; x++) {
+                    const p = y * w + x;
+                    const gx = -l[p - wk - k] - 2 * l[p - k] - l[p + wk - k] + l[p - wk + k] + 2 * l[p + k] + l[p + wk + k];
+                    const gy = -l[p - wk - k] - 2 * l[p - wk] - l[p - wk + k] + l[p + wk - k] + 2 * l[p + wk] + l[p + wk + k];
+                    if (gx * gx + gy * gy > thr2) {
+                        m[p] = 1;
+                        if (thick) { m[p + 1] = 1; m[p + w] = 1; }
+                    }
+                }
+            }
+            // keep line weight proportional to image size
+            for (let n = Math.round(RS) - 1; n > 0; n--) {
+                const c = m.slice();
+                for (let y = 1; y < h - 1; y++) {
+                    for (let x = 1; x < w - 1; x++) {
+                        const p = y * w + x;
+                        if (c[p - 1] | c[p + 1] | c[p - w] | c[p + w]) m[p] = 1;
+                    }
+                }
+            }
+            return m;
+        }
+
+        // Percentile stretch so palettes always use their full range
+        function autoLevels(a) {
+            const hist = new Uint32Array(256);
+            for (let i = 0; i < a.length; i++) hist[a[i] < 0 ? 0 : a[i] > 255 ? 255 : a[i] | 0]++;
+            const lowT = a.length * 0.02, highT = a.length * 0.98;
+            let acc = 0, lo = 0, hi = 255;
+            for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= lowT) { lo = v; break; } }
+            acc = 0;
+            for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= highT) { hi = v; break; } }
+            if (hi - lo < 8) { hi = Math.min(255, lo + 8); }
+            return [lo, hi];
+        }
+
+        function down2(a, w, h) {
+            const nw = w >> 1, nh = h >> 1;
+            const o = new Float32Array(nw * nh);
+            for (let y = 0; y < nh; y++) {
+                for (let x = 0; x < nw; x++) {
+                    const i = 2 * y * w + 2 * x;
+                    o[y * nw + x] = (a[i] + a[i + 1] + a[i + w] + a[i + w + 1]) / 4;
+                }
+            }
+            return o;
+        }
+
+        function applyPop(w, h) {
+            const P = {
+                size: Math.max(3, Math.round(parseInt(controls.half.value) * RS)),
+                angle: parseFloat(controls.popangle.value) * Math.PI / 180,
+                punch: parseFloat(controls.poppunch.value) / 100,
+                levels: parseInt(controls.poplevels.value),
+                ink: parseFloat(controls.popink.value) / 100,
+                mis: parseFloat(controls.popmis.value) * RS,
+                palIdx: popPalette
+            };
+            const img = ctx.getImageData(0, 0, w, h);
+            const d = img.data;
+
+            // "Punch": saturation + contrast boost so colors really pop
+            if (P.punch > 0) {
+                const sat = 1 + P.punch * 1.2, con = 1 + P.punch * 0.5;
+                for (let i = 0; i < d.length; i += 4) {
+                    const r = d[i], g = d[i + 1], b = d[i + 2];
+                    const l = 0.299 * r + 0.587 * g + 0.114 * b;
+                    d[i]     = ((l + (r - l) * sat) - 128) * con + 128;
+                    d[i + 1] = ((l + (g - l) * sat) - 128) * con + 128;
+                    d[i + 2] = ((l + (b - l) * sat) - 128) * con + 128;
+                }
+            }
+
+            if (popMode === 'dots') popDots(d, w, h, P);
+            else if (popMode === 'cmyk') popCMYK(d, w, h, P);
+            else if (popMode === 'comic') popComic(d, w, h, P);
+            else if (popMode === 'warhol') popWarhol(d, w, h, P);
+        }
+
+        // Neon dots on black: dot area follows brightness, color kept vivid
+        function popDots(d, w, h, P) {
+            ctx.fillStyle = '#050505';
+            ctx.fillRect(0, 0, w, h);
+            lattice(w, h, P.size, P.angle, (x, y) => {
+                sampleAvg(d, w, h, x, y, P.size * 0.3);
+                const br = (0.299 * sr + 0.587 * sg + 0.114 * sb) / 255;
+                const rad = P.size * 0.74 * Math.sqrt(br);
+                if (rad < 0.4) return;
+                const m = Math.max(sr, sg, sb);
+                const k = m > 0 ? 1 + (255 / m - 1) * 0.55 : 1;
+                ctx.fillStyle = `rgb(${Math.min(255, sr * k) | 0},${Math.min(255, sg * k) | 0},${Math.min(255, sb * k) | 0})`;
+                ctx.beginPath();
+                ctx.arc(x, y, rad, 0, TAU);
+                ctx.fill();
+            });
+        }
+
+        // Real four-color print simulation: C/M/Y/K screens at classic angles, multiplied on paper
+        function popCMYK(d, w, h, P) {
+            ctx.fillStyle = '#f3eedf';
+            ctx.fillRect(0, 0, w, h);
+            ctx.globalCompositeOperation = 'multiply';
+            const planes = [
+                { a: 15, c: '#00aeef', ch: 0, ox: -0.8, oy: -0.3 },
+                { a: 75, c: '#ec008c', ch: 1, ox: 0.7, oy: 0.5 },
+                { a: 0,  c: '#fff200', ch: 2, ox: 0.1, oy: -0.7 },
+                { a: 45, c: '#14141c', ch: 3, ox: 0, oy: 0 }
+            ];
+            const lc = getDotLayer(w, h);
+            for (const pl of planes) {
+                lc.clearRect(0, 0, w, h);
+                lc.fillStyle = pl.c;
+                const th = pl.a * Math.PI / 180 + (P.angle - Math.PI / 4);
+                const dx = pl.ox * P.mis, dy = pl.oy * P.mis;
+                lattice(w, h, P.size, th, (x, y) => {
+                    sampleAvg(d, w, h, x, y, P.size * 0.35);
+                    const R = sr / 255, G = sg / 255, B = sb / 255;
+                    const kk = (1 - Math.max(R, G, B)) * 0.85;
+                    let a;
+                    if (pl.ch === 3) a = kk;
+                    else a = (1 - (pl.ch === 0 ? R : pl.ch === 1 ? G : B) - kk) / (1 - kk);
+                    if (a < 0.04) return;
+                    const r = P.size * 0.74 * Math.sqrt(a > 1 ? 1 : a);
+                    lc.beginPath();
+                    lc.arc(x + dx, y + dy, r, 0, TAU);
+                    lc.fill();
+                });
+                ctx.drawImage(dotLayer, 0, 0); // multiply-blended onto the paper
+            }
+            ctx.globalCompositeOperation = 'source-over';
+        }
+
+        // Lichtenstein comic: flat posterized color, thick ink outlines, Ben-Day shading dots
+        function popComic(d, w, h, P) {
+            const N = w * h;
+            const lum = lumArray(d, N);
+            const blur = boxBlur(lum, w, h);
+            const mask = P.ink > 0 ? edgeMask(blur, w, h, P.ink) : null;
+            const [lo, hi] = autoLevels(blur);
+            const span = hi - lo;
+            const pal = P.palIdx > 0 ? POP_PALETTES[P.palIdx] : null;
+            const steps = Math.max(1, P.levels - 1);
+            const mx = Math.round(P.mis), my = Math.round(P.mis * 0.6);
+
+            const out = ctx.createImageData(w, h);
+            const o = out.data;
+            for (let y = 0; y < h; y++) {
+                const sy = Math.min(h - 1, Math.max(0, y - my));
+                for (let x = 0; x < w; x++) {
+                    const sx = Math.min(w - 1, Math.max(0, x - mx));
+                    const sp = sy * w + sx;
+                    const oi = (y * w + x) * 4;
+                    if (pal) {
+                        const t = Math.round(Math.min(1, Math.max(0, (blur[sp] - lo) / span)) * steps) / steps;
+                        const c = palColor(pal, t);
+                        o[oi] = c[0]; o[oi + 1] = c[1]; o[oi + 2] = c[2];
+                    } else {
+                        const si = sp * 4;
+                        o[oi]     = Math.round(d[si] / 255 * steps) / steps * 255;
+                        o[oi + 1] = Math.round(d[si + 1] / 255 * steps) / steps * 255;
+                        o[oi + 2] = Math.round(d[si + 2] / 255 * steps) / steps * 255;
+                    }
+                    o[oi + 3] = 255;
+                    if (mask && mask[y * w + x]) { o[oi] = 12; o[oi + 1] = 12; o[oi + 2] = 16; }
+                }
+            }
+            ctx.putImageData(out, 0, 0);
+
+            // Ben-Day shading dots in the shadows
+            const lc = getDotLayer(w, h);
+            lc.fillStyle = '#0a0a12';
+            lattice(w, h, P.size, P.angle, (x, y) => {
+                const xi = Math.min(w - 1, Math.max(0, x | 0)), yi = Math.min(h - 1, Math.max(0, y | 0));
+                const dk = 1 - (blur[yi * w + xi] - lo) / span;
+                if (dk < 0.4) return;
+                const t = Math.min(1, (dk - 0.4) / 0.6);
+                const r = P.size * 0.72 * Math.sqrt(t);
+                if (r < 0.5) return;
+                lc.beginPath();
+                lc.arc(x, y, r, 0, TAU);
+                lc.fill();
+            });
+            ctx.globalAlpha = 0.78;
+            ctx.drawImage(dotLayer, 0, 0);
+            ctx.globalAlpha = 1;
+        }
+
+        // Warhol screenprint: tonal bands mapped to a palette, black ink, optional 2x2 panels
+        function popWarhol(d, w, h, P) {
+            const lum = boxBlur(lumArray(d, w * h), w, h);
+            const pals = POP_PALETTES.slice(1);
+            const base = (P.palIdx === 0 ? 1 : P.palIdx) - 1;
+            const steps = Math.max(1, P.levels - 1);
+
+            const out = ctx.createImageData(w, h);
+            const o = out.data;
+            for (let i = 0; i < o.length; i += 4) { o[i] = 5; o[i + 1] = 5; o[i + 2] = 5; o[i + 3] = 255; }
+
+            const paintPanel = (T, M, aw, ah, pal, ox, oy, mx, my) => {
+                const lut = [];
+                for (let b = 0; b < P.levels; b++) lut.push(palColor(pal, b / steps).slice());
+                for (let y = 0; y < ah; y++) {
+                    const sy = Math.min(ah - 1, Math.max(0, y - my));
+                    for (let x = 0; x < aw; x++) {
+                        const sx = Math.min(aw - 1, Math.max(0, x - mx));
+                        const band = Math.min(P.levels - 1, Math.floor(T[sy * aw + sx] * P.levels));
+                        const oi = ((oy + y) * w + (ox + x)) * 4;
+                        if (M && M[y * aw + x]) { o[oi] = 12; o[oi + 1] = 12; o[oi + 2] = 16; }
+                        else { const c = lut[band]; o[oi] = c[0]; o[oi + 1] = c[1]; o[oi + 2] = c[2]; }
+                    }
+                }
+            };
+
+            const layers = (L, aw, ah) => {
+                const [lo, hi] = autoLevels(L);
+                const T = new Float32Array(aw * ah);
+                for (let p = 0; p < T.length; p++) {
+                    const t = (L[p] - lo) / (hi - lo);
+                    T[p] = t < 0 ? 0 : t > 0.9999 ? 0.9999 : t;
+                }
+                return { T, M: P.ink > 0 ? edgeMask(L, aw, ah, P.ink) : null };
+            };
+
+            const mx = Math.round(P.mis), my = Math.round(P.mis * 0.6);
+            if (!popPanels) {
+                const { T, M } = layers(lum, w, h);
+                paintPanel(T, M, w, h, pals[base], 0, 0, mx, my);
+                ctx.putImageData(out, 0, 0);
+            } else {
+                const hw = w >> 1, hh = h >> 1;
+                const { T, M } = layers(down2(lum, w, h), hw, hh);
+                const hmx = Math.round(mx / 2), hmy = Math.round(my / 2);
+                for (let k = 0; k < 4; k++) {
+                    paintPanel(T, M, hw, hh, pals[(base + k) % 4], (k % 2) * hw, (k >> 1) * hh, hmx, hmy);
+                }
+                ctx.putImageData(out, 0, 0);
+                ctx.fillStyle = '#050505';
+                ctx.fillRect(hw - 1, 0, 2, h);
+                ctx.fillRect(0, hh - 1, w, 2);
+            }
+        }
+        function chaosPipeline() {
+            const w = canvas.width;
+            const h = canvas.height;
+            RS = Math.max(1, Math.max(w, h) / PREVIEW_DIM);
+
+            // 1. Base Colors via Context Filters (Fastest method)
+            const hue = controls.hue.value;
+            const sat = controls.sat.value;
+            const con = controls.con.value;
+            const inv = controls.inv.value;
+            
+            scratchCtx.clearRect(0, 0, w, h);
+            scratchCtx.filter = `hue-rotate(${hue}deg) saturate(${sat}%) contrast(${con}%) invert(${inv}%)`;
+            scratchCtx.drawImage(baseImage, 0, 0);
+            scratchCtx.filter = 'none'; // Reset
+
+            ctx.clearRect(0, 0, w, h);
+
+            // 2. Wave Warp & Pixelation Pipeline
+            const warpAmp = parseFloat(controls.warp.value);
+            const pixelSize = Math.max(1, Math.round(parseInt(controls.pixel.value) * RS));
+
+            // Apply warp by slicing and drawing from scratchCanvas to main canvas
+            if (warpAmp > 0) {
+                applyWarp(w, h, warpAmp);
+            } else {
+                ctx.drawImage(scratchCanvas, 0, 0);
+            }
+
+            // Apply Pixelation
+            if (pixelSize > 1) {
+                const scaledW = Math.max(1, Math.floor(w / pixelSize));
+                const scaledH = Math.max(1, Math.floor(h / pixelSize));
+                
+                // Draw current state down to small size on scratch, then scale up without smoothing
+                scratchCtx.clearRect(0, 0, w, h);
+                scratchCtx.drawImage(canvas, 0, 0, scaledW, scaledH);
+                
+                ctx.imageSmoothingEnabled = false;
+                ctx.clearRect(0, 0, w, h);
+                ctx.drawImage(scratchCanvas, 0, 0, scaledW, scaledH, 0, 0, w, h);
+                ctx.imageSmoothingEnabled = true;
+            }
+
+            // Pop art styles (Dots / CMYK / Comic / Warhol)
+            if (capturePrePop) prePop = { w, h, d: ctx.getImageData(0, 0, w, h).data };
+            if (popMode !== 'off') {
+                applyPop(w, h);
+            }
+
+            // 3. Pixel-level manipulation: RGB Split & Noise
+            const rgbSplit = Math.round(parseInt(controls.rgb.value) * RS);
+            const noise = parseInt(controls.noise.value);
+
+            if (rgbSplit > 0 || noise > 0 || madnessMode) {
+                const imgData = ctx.getImageData(0, 0, w, h);
+                const data = imgData.data;
+                
+                // We need a copy of the pixel data for RGB shifting
+                let copyData = null;
+                if (rgbSplit > 0) copyData = new Uint8ClampedArray(data);
+
+                const noiseIntensity = (noise / 100) * 150; // max 150 variance
+
+                for (let y = 0; y < h; y++) {
+                    for (let x = 0; x < w; x++) {
+                        const i = (y * w + x) * 4;
+
+                        // RGB Split / Chromatic Aberration
+                        if (rgbSplit > 0) {
+                            // Shift Red channel left, Blue channel right
+                            const rX = Math.max(0, x - rgbSplit);
+                            const bX = Math.min(w - 1, x + rgbSplit);
+                            
+                            const iR = (y * w + rX) * 4;
+                            const iB = (y * w + bX) * 4;
+
+                            data[i] = copyData[iR];         // R
+                            // G stays at data[i+1]
+                            data[i+2] = copyData[iB+2];     // B
+                        }
+
+                        // Digital Noise / Grain
+                        if (noiseIntensity > 0) {
+                            const n = (Math.random() - 0.5) * noiseIntensity;
+                            data[i] = data[i] + n;       // R
+                            data[i+1] = data[i+1] + n;   // G
+                            data[i+2] = data[i+2] + n;   // B
+                        }
+                    }
+                }
+                ctx.putImageData(imgData, 0, 0);
+            }
+
+            // 4. Madness Blocks (Glitch slicing)
+            if (madnessMode) {
+                const numSlices = 15;
+                for(let i = 0; i < numSlices; i++) {
+                    const sX = Math.random() * w;
+                    const sY = Math.random() * h;
+                    const sW = Math.random() * (w / 3) + 10 * RS;
+                    const sH = Math.random() * (h / 8) + 5 * RS;
+                    
+                    const dX = sX + (Math.random() - 0.5) * 100 * RS;
+                    const dY = sY; // Keep vertical alignment mostly for tracking error look
+
+                    ctx.drawImage(canvas, sX, sY, sW, sH, dX, dY, sW, sH);
+                }
+            }
+        }
+        // Expanded Glitch Palettes
+        const glitchPalettes = {
+            original: null,
+            cyberpunk: ['hsl(180, 100%, 50%)', 'hsl(300, 100%, 50%)', 'hsl(60, 100%, 50%)', 'hsl(240, 100%, 10%)'], 
+            matrix: ['hsl(120, 100%, 50%)', 'hsl(120, 100%, 20%)', 'hsl(120, 100%, 80%)', 'hsl(120, 100%, 5%)'],     
+            vaporwave: ['hsl(320, 100%, 60%)', 'hsl(180, 100%, 50%)', 'hsl(150, 100%, 60%)', 'hsl(270, 100%, 25%)'], 
+            outrun: ['hsl(280, 100%, 60%)', 'hsl(30, 100%, 50%)', 'hsl(330, 100%, 50%)', 'hsl(280, 100%, 15%)'],
+            neonTokyo: ['hsl(330, 100%, 60%)', 'hsl(60, 100%, 60%)', 'hsl(180, 100%, 50%)', 'hsl(300, 100%, 10%)'],
+            radioactive: ['hsl(90, 100%, 50%)', 'hsl(60, 100%, 50%)', 'hsl(120, 100%, 70%)', 'hsl(100, 50%, 10%)'],
+            crimson: ['hsl(0, 100%, 50%)', 'hsl(0, 100%, 25%)', 'hsl(0, 0%, 50%)', 'hsl(0, 100%, 5%)'],               
+            toxic: ['hsl(75, 100%, 50%)', 'hsl(120, 100%, 25%)', 'hsl(60, 100%, 50%)', 'hsl(120, 100%, 5%)'],
+            bloodMoon: ['hsl(0, 100%, 40%)', 'hsl(15, 100%, 40%)', 'hsl(0, 80%, 20%)', 'hsl(0, 100%, 5%)'],
+            midnight: ['hsl(240, 100%, 30%)', 'hsl(270, 100%, 30%)', 'hsl(220, 100%, 20%)', 'hsl(250, 100%, 5%)'],
+            rust: ['hsl(20, 80%, 40%)', 'hsl(10, 80%, 30%)', 'hsl(30, 80%, 20%)', 'hsl(20, 100%, 10%)'],
+            ice: ['hsl(200, 100%, 70%)', 'hsl(180, 100%, 80%)', 'hsl(220, 100%, 90%)', 'hsl(210, 80%, 20%)'],
+            ghost: ['hsl(210, 20%, 70%)', 'hsl(210, 10%, 80%)', 'hsl(210, 30%, 90%)', 'hsl(210, 20%, 15%)'],
+            ocean: ['hsl(210, 100%, 40%)', 'hsl(190, 100%, 40%)', 'hsl(230, 100%, 30%)', 'hsl(220, 100%, 10%)'],
+            forest: ['hsl(120, 60%, 30%)', 'hsl(90, 60%, 30%)', 'hsl(140, 60%, 20%)', 'hsl(120, 80%, 10%)'],
+            desert: ['hsl(35, 80%, 60%)', 'hsl(20, 70%, 50%)', 'hsl(45, 80%, 70%)', 'hsl(25, 80%, 15%)'],
+            goldenHour: ['hsl(35, 100%, 50%)', 'hsl(15, 100%, 50%)', 'hsl(50, 100%, 50%)', 'hsl(25, 100%, 15%)'],
+            amethyst: ['hsl(270, 80%, 60%)', 'hsl(290, 80%, 60%)', 'hsl(260, 80%, 70%)', 'hsl(280, 100%, 15%)'],
+            bubblegum: ['hsl(330, 100%, 70%)', 'hsl(200, 100%, 70%)', 'hsl(300, 100%, 80%)', 'hsl(315, 80%, 20%)'],
+            c64: ['hsl(230, 60%, 60%)', 'hsl(20, 40%, 50%)', 'hsl(210, 60%, 80%)', 'hsl(220, 60%, 15%)'],
+            sepia: ['hsl(35, 40%, 50%)', 'hsl(35, 30%, 30%)', 'hsl(40, 50%, 70%)', 'hsl(35, 60%, 10%)'],
+            monochrome: ['hsl(0, 0%, 80%)', 'hsl(0, 0%, 40%)', 'hsl(0, 0%, 60%)', 'hsl(0, 0%, 5%)'],
+            thermal: ['hsl(0, 100%, 50%)', 'hsl(60, 100%, 50%)', 'hsl(240, 100%, 50%)', 'hsl(280, 100%, 15%)']
+        };
+        let currentGlitchPalette = null;
+        function random(min, max) { return grnd() * (max - min) + min; }
+        function randomInt(min, max) { return Math.floor(grnd() * (max - min + 1)) + min; }
+        function hsla(hslStr, alpha) {
+            if (!hslStr || !hslStr.includes('hsl')) return hslStr; 
+            return hslStr.replace('hsl(', 'hsla(').replace(')', `, ${Math.max(0, Math.min(1, alpha))})`);
+        }
+        function generateProceduralPalette() {
+            const baseHue = random(0, 360);
+            const bgS = random(20, 60);
+            const bgL = random(10, 45);
+
+            const palette = { bg: `hsl(${baseHue}, ${bgS}%, ${bgL}%)`, blocks: [] };
+            const numBlocks = randomInt(2, 4);
+
+            for (let i = 0; i < numBlocks; i++) {
+                const strategy = grnd();
+                let h, s, l;
+
+                if (strategy < 0.6) {
+                    h = (baseHue + random(-30, 30) + 360) % 360;
+                    s = Math.min(95, bgS + random(20, 50));
+                    l = random(15, 65);
+                } else if (strategy < 0.8) {
+                    h = (baseHue + random(160, 200) + 360) % 360;
+                    s = random(40, 95);
+                    l = random(20, 75);
+                } else {
+                    h = baseHue;
+                    s = random(0, 20);
+                    l = (grnd() > 0.5) ? random(5, 20) : random(80, 95);
+                }
+
+                const strokes = [];
+                for (let j = 0; j < randomInt(45, 85); j++) {
+                    const vertical = grnd() < 0.08;
+                    const rVariant = grnd();
+                    strokes.push({
+                        x: random(-0.05, 1.05), y: random(0, 1),
+                        len: vertical ? random(0.05, 0.22) : random(0.15, 0.65),
+                        angle: vertical ? (Math.PI / 2 + random(-0.1, 0.1)) : random(-0.06, 0.06),
+                        thick: vertical ? random(0.15, 0.35) : random(0.25, 0.7),
+                        opacity: random(0.05, 0.28),
+                        colorVariant: rVariant < 0.3 ? 'bg' : rVariant < 0.55 ? 'light' : rVariant < 0.75 ? 'dark' : 'self'
+                    });
+                }
+
+                const perimeter = [];
+                for (let side = 0; side < 4; side++) {
+                    for (let i = 0; i < 6; i++) {
+                        const t = (i + random(0.15, 0.85)) / 6;
+                        const jitter = (side === 0 || side === 2) ? random(-0.02, 0.02) : random(-0.006, 0.006);
+                        perimeter.push({ side, t, jitter });
+                    }
+                }
+
+                const hueShift = random(-14, 14);
+                const lightColor = `hsl(${(h + hueShift + 360) % 360}, ${Math.max(0, s - 8)}%, ${Math.min(96, l + random(14, 26))}%)`;
+                const darkColor = `hsl(${(h - hueShift + 360) % 360}, ${Math.min(100, s + 8)}%, ${Math.max(4, l - random(14, 26))}%)`;
+                const complementColor = `hsl(${(h + 180) % 360}, ${Math.min(100, s + 5)}%, ${l}%)`;
+
+                const scratches = [];
+                for (let j = 0; j < randomInt(4, 9); j++) {
+                    const extreme = grnd() < 0.4;
+                    const vertical = grnd() < 0.06;
+                    scratches.push({
+                        x: random(0.02, 0.85), y: random(0.08, 0.92),
+                        len: vertical ? random(0.04, 0.14) : random(0.1, 0.4),
+                        angle: vertical ? (Math.PI / 2 + random(-0.12, 0.12)) : random(-0.05, 0.05),
+                        bow: random(-0.045, 0.045),
+                        thick: random(0.0009, 0.0024), opacity: random(0.2, 0.48),
+                        tone: extreme ? (grnd() > 0.5 ? 'white' : 'black') : (grnd() > 0.5 ? 'light' : 'dark')
+                    });
+                }
+
+                const speckles = [];
+                for (let j = 0; j < randomInt(1, 3); j++) {
+                    const r = grnd();
+                    speckles.push({
+                        x: random(-0.02, 1.02), y: random(-0.02, 1.02),
+                        size: random(0.003, 0.015), opacity: random(0.12, 0.5),
+                        variant: r < 0.25 ? 'bg' : r < 0.45 ? 'light' : r < 0.65 ? 'dark' : r < 0.85 ? 'complement' : 'self'
+                    });
+                }
+
+                const washPatches = [];
+                for (let j = 0; j < randomInt(1, 3); j++) {
+                    washPatches.push({
+                        x: random(0.1, 0.9), y: random(0.15, 0.85),
+                        rx: random(0.22, 0.42), ry: random(0.16, 0.3), opacity: random(0.08, 0.22)
+                    });
+                }
+
+                const brightPatches = [];
+                for (let j = 0; j < randomInt(1, 3); j++) {
+                    brightPatches.push({
+                        x: random(0.15, 0.85), y: random(0.15, 0.85),
+                        rx: random(0.14, 0.28), ry: random(0.1, 0.2), opacity: random(0.22, 0.42)
+                    });
+                }
+
+                palette.blocks.push({
+                    color: `hsl(${h}, ${s}%, ${l}%)`, lightColor, darkColor, complementColor,
+                    strokes, perimeter, scratches, speckles, washPatches, brightPatches
+                });
+            }
+            return palette;
+        }
+        function generateArtParameters() {
+            const palette = generateProceduralPalette();
+            const blocks = [];
+            
+            let currentY = random(0.08, 0.12);
+            const rawH = (0.80 - (random(0.06, 0.10) * (palette.blocks.length - 1))) / palette.blocks.length;
+
+            palette.blocks.forEach((blockData) => {
+                let hRatio = rawH * random(0.7, 1.3);
+                if (currentY + hRatio > 0.92) hRatio = 0.92 - currentY;
+                
+                blocks.push({ y: currentY, h: hRatio, ...blockData });
+                currentY += hRatio + random(0.06, 0.10);
+            });
+
+            currentArtState = { palette, blocks };
+        }
+        function getBlockPathPoints(block, bx, by, drawW, bh, scale, offsetX, offsetY) {
+            const cx = bx + drawW / 2, cy = by + bh / 2;
+            return block.perimeter.map(pt => {
+                let x, y;
+                if (pt.side === 0) { x = bx + pt.t * drawW; y = by + pt.jitter * bh; }
+                else if (pt.side === 1) { x = bx + drawW + pt.jitter * drawW; y = by + pt.t * bh; }
+                else if (pt.side === 2) { x = bx + (1 - pt.t) * drawW; y = by + bh + pt.jitter * bh; }
+                else { x = bx + pt.jitter * drawW; y = by + (1 - pt.t) * bh; }
+                return { x: cx + (x - cx) * scale + offsetX, y: cy + (y - cy) * scale + offsetY };
+            });
+        }
+
+        function tracePath(targetCtx, pts) {
+            targetCtx.beginPath();
+            const startMid = { x: (pts[0].x + pts[1].x) / 2, y: (pts[0].y + pts[1].y) / 2 };
+            targetCtx.moveTo(startMid.x, startMid.y);
+            for (let i = 1; i <= pts.length; i++) {
+                const curr = pts[i % pts.length], next = pts[(i + 1) % pts.length];
+                targetCtx.quadraticCurveTo(curr.x, curr.y, (curr.x + next.x) / 2, (curr.y + next.y) / 2);
+            }
+            targetCtx.closePath();
+        }
+
+        function paintSoftEllipse(targetCtx, cx, cy, radiusX, radiusY, angle, colorHsl, opacity, warpAmount = 0.65) {
+            if (radiusX <= 0 || radiusY <= 0 || opacity <= 0) return;
+            targetCtx.save();
+            targetCtx.translate(cx, cy); targetCtx.rotate(angle); targetCtx.scale(1, radiusY / radiusX);
+            const grad = targetCtx.createRadialGradient(0, 0, 0, 0, 0, radiusX);
+            grad.addColorStop(0, hsla(colorHsl, opacity));
+            grad.addColorStop(0.88, hsla(colorHsl, opacity));
+            grad.addColorStop(1, hsla(colorHsl, 0));
+            targetCtx.fillStyle = grad;
+
+            if (warpAmount <= 0) {
+                targetCtx.beginPath(); targetCtx.arc(0, 0, radiusX, 0, Math.PI * 2);
+            } else {
+                const pts = [];
+                const twist = random(-1, 1) * warpAmount;
+                for (let i = 0; i < randomInt(7, 11); i++) {
+                    const a = (i / 9) * Math.PI * 2 + random(-0.45, 0.45) * warpAmount + twist * (i / 9);
+                    const rMul = 1 + random(-0.6, 0.6) * warpAmount;
+                    pts.push({ x: Math.cos(a) * radiusX * rMul, y: Math.sin(a) * radiusX * rMul });
+                }
+                tracePath(targetCtx, pts);
+            }
+            targetCtx.fill(); targetCtx.restore();
+        }
+function renderArt(targetCtx, w, h, state) {
+                const { palette, blocks } = state;
+                targetCtx.fillStyle = palette.bg; targetCtx.fillRect(0, 0, w, h);
+
+                targetCtx.save();
+                targetCtx.globalAlpha = 0.05; targetCtx.globalCompositeOperation = 'multiply';
+                targetCtx.filter = `blur(${w * 0.006}px)`;
+                targetCtx.fillRect(-w * 0.1, -h * 0.1, w * 1.2, h * 1.2);
+                targetCtx.restore();
+
+                blocks.forEach((block) => {
+                    const mx = w * random(0.10, 0.15), drawW = w - (mx * 2), bx = mx;
+                    const by = h * block.y, bh = h * block.h;
+
+                    targetCtx.save();
+                    [{ blur: w * 0.012, alpha: 0.5, scale: 1.006, jx: 0.003, jy: 0.002 },
+                     { blur: w * 0.004, alpha: 0.75, scale: 1.002, jx: 0.0015, jy: 0.0015 },
+                     { blur: 0, alpha: 1, scale: 0.999, jx: 0.0006, jy: 0.0006 }
+                    ].forEach(L => {
+                        targetCtx.filter = L.blur > 0 ? `blur(${L.blur}px)` : 'none';
+                        targetCtx.globalAlpha = L.alpha; targetCtx.fillStyle = block.color;
+                        tracePath(targetCtx, getBlockPathPoints(block, bx, by, drawW, bh, L.scale, w * random(-L.jx, L.jx), h * random(-L.jy, L.jy)));
+                        targetCtx.fill();
+                    });
+
+                    targetCtx.filter = 'none'; targetCtx.globalAlpha = random(0.35, 0.6);
+                    targetCtx.strokeStyle = grnd() < 0.5 ? block.darkColor : block.lightColor;
+                    targetCtx.lineWidth = Math.max(1, h * 0.0018);
+                    tracePath(targetCtx, getBlockPathPoints(block, bx, by, drawW, bh, 1, 0, 0));
+                    targetCtx.stroke(); targetCtx.globalAlpha = 1;
+
+                    targetCtx.globalCompositeOperation = 'screen';
+                    paintSoftEllipse(targetCtx, bx + drawW * random(0.3, 0.6), by + bh * random(0.3, 0.55), drawW * random(0.28, 0.42), bh * random(0.22, 0.34), random(-0.15, 0.15), block.lightColor, random(0.14, 0.24), 0.7);
+                    targetCtx.globalCompositeOperation = 'multiply';
+                    paintSoftEllipse(targetCtx, bx + drawW * random(0.25, 0.55), by + bh * random(0.5, 0.75), drawW * random(0.3, 0.45), bh * random(0.2, 0.3), random(-0.15, 0.15), block.darkColor, random(0.12, 0.2), 0.7);
+                    targetCtx.globalCompositeOperation = 'source-over';
+
+                    block.strokes.forEach(s => {
+                        let col = s.colorVariant === 'bg' ? palette.bg : s.colorVariant === 'light' ? block.lightColor : s.colorVariant === 'dark' ? block.darkColor : block.color;
+                        paintSoftEllipse(targetCtx, bx + drawW * s.x, by + bh * s.y, (drawW * s.len) / 2, Math.max(1, ((drawW * s.len) * s.thick * (bh / drawW || 1) * 0.35) / 2), s.angle, col, s.opacity, 0.15);
+                    });
+
+                    block.washPatches.forEach(wp => paintSoftEllipse(targetCtx, bx + drawW * wp.x, by + bh * wp.y, drawW * wp.rx, bh * wp.ry, random(-0.2, 0.2), palette.bg, wp.opacity, 0.75));
+                    block.speckles.forEach(sp => {
+                        let col = sp.variant === 'bg' ? palette.bg : sp.variant === 'light' ? block.lightColor : sp.variant === 'dark' ? block.darkColor : sp.variant === 'complement' ? block.complementColor : block.color;
+                        paintSoftEllipse(targetCtx, bx + drawW * sp.x, by + bh * sp.y, Math.min(drawW, bh) * sp.size, Math.min(drawW, bh) * sp.size, 0, col, sp.opacity, 0.55);
+                    });
+
+                    targetCtx.globalCompositeOperation = 'screen';
+                    block.brightPatches.forEach(bp => paintSoftEllipse(targetCtx, bx + drawW * bp.x, by + bh * bp.y, drawW * bp.rx, bh * bp.ry, random(-0.2, 0.2), block.lightColor, bp.opacity, 0.7));
+                    targetCtx.globalCompositeOperation = 'source-over';
+
+                    block.scratches.forEach(sc => {
+                        let col = sc.tone === 'white' ? 'hsl(0, 0%, 97%)' : sc.tone === 'black' ? 'hsl(0, 0%, 3%)' : sc.tone === 'light' ? block.lightColor : block.darkColor;
+                        const runLen = drawW * sc.len, ex = (bx + drawW * sc.x) + Math.cos(sc.angle) * runLen, ey = (by + bh * sc.y) + Math.sin(sc.angle) * runLen;
+                        const midx = ((bx + drawW * sc.x) + ex) / 2 + Math.cos(sc.angle + Math.PI / 2) * (runLen * sc.bow), midy = ((by + bh * sc.y) + ey) / 2 + Math.sin(sc.angle + Math.PI / 2) * (runLen * sc.bow);
+                        
+                        const grad = targetCtx.createLinearGradient(bx + drawW * sc.x, by + bh * sc.y, ex, ey);
+                        grad.addColorStop(0, hsla(col, 0)); grad.addColorStop(0.5, hsla(col, sc.opacity)); grad.addColorStop(1, hsla(col, 0));
+                        targetCtx.save(); targetCtx.strokeStyle = grad; targetCtx.lineWidth = Math.max(1, h * sc.thick);
+                        targetCtx.lineCap = 'round'; targetCtx.beginPath(); targetCtx.moveTo(bx + drawW * sc.x, by + bh * sc.y);
+                        targetCtx.quadraticCurveTo(midx, midy, ex, ey); targetCtx.stroke(); targetCtx.restore();
+                    });
+                    targetCtx.restore();
+                });
+            // Paint Grain & Vignette
+            const ns = (w > 2000) ? 512 : 256;
+            const noiseCanvas = document.createElement('canvas'); noiseCanvas.width = ns; noiseCanvas.height = ns;
+            const nCtx = noiseCanvas.getContext('2d'), nData = nCtx.getImageData(0, 0, ns, ns), d = nData.data;
+            for (let i = 0; i < d.length; i += 4) { const v = randomInt(90, 170); d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = randomInt(8, 26); }
+            nCtx.putImageData(nData, 0, 0);
+
+            targetCtx.save(); targetCtx.globalCompositeOperation = 'soft-light'; targetCtx.globalAlpha = 0.3;
+            targetCtx.fillStyle = targetCtx.createPattern(noiseCanvas, 'repeat'); targetCtx.fillRect(0, 0, w, h); targetCtx.restore();
+
+            targetCtx.save();
+            const vGrad = targetCtx.createRadialGradient(w / 2, h / 2, h * 0.3, w / 2, h / 2, h * 0.78);
+            vGrad.addColorStop(0, 'rgba(0,0,0,0)'); vGrad.addColorStop(1, 'rgba(0,0,0,0.16)');
+            targetCtx.fillStyle = vGrad; targetCtx.fillRect(0, 0, w, h); targetCtx.restore();
+}
+        function applyGlitchPass(targetCtx, w, h, palette, level, highlightColor) {
+            const intensity = level / 10;
+            const snapshot = document.createElement('canvas'); snapshot.width = w; snapshot.height = h;
+            snapshot.getContext('2d').drawImage(targetCtx.canvas, 0, 0);
+
+            // 1. Datamosh bands
+            let y = 0;
+            while (y < h) {
+                const bandH = randomInt(Math.max(2, Math.floor(h * 0.003)), Math.max(5, Math.floor(h * 0.02)));
+                if (grnd() < (0.3 + intensity * 0.5)) {
+                    const shift = randomInt(Math.floor(-w * 0.15 * intensity), Math.floor(w * 0.15 * intensity));
+                    targetCtx.drawImage(snapshot, 0, y, w, bandH, shift, y, w, bandH);
+                    if (shift > 0) targetCtx.drawImage(snapshot, w - shift, y, shift, bandH, 0, y, shift, bandH);
+                    else if (shift < 0) targetCtx.drawImage(snapshot, 0, y, -shift, bandH, w + shift, y, -shift, bandH);
+                }
+                y += bandH;
+            }
+
+            // 2. Duplicated Blocks
+            const blockCount = Math.floor(randomInt(5, 15) * intensity * 2.5);
+            for (let i = 0; i < blockCount; i++) {
+                const bw = randomInt(Math.floor(w * 0.04), Math.floor(w * 0.24)), bh_ = randomInt(Math.floor(h * 0.008), Math.floor(h * 0.05));
+                const sx = randomInt(0, Math.max(0, w - bw)), sy = randomInt(0, Math.max(0, h - bh_));
+                targetCtx.save(); targetCtx.globalAlpha = random(0.5, 0.95);
+                targetCtx.drawImage(snapshot, sx, sy, bw, bh_, Math.min(Math.max(0, sx + randomInt(Math.floor(-w * 0.2 * intensity), Math.floor(w * 0.2 * intensity))), w - bw), sy, bw, bh_);
+                targetCtx.restore();
+            }
+
+            // FX FEATURE: Pixel Melt (Pseudo-Pixel Sorting)
+            if (fxState.melt) {
+                const meltCount = Math.floor(randomInt(30, 80) * intensity);
+                for(let i=0; i<meltCount; i++) {
+                    const mx = randomInt(0, w);
+                    const my = randomInt(0, h * 0.8);
+                    const mw = randomInt(1, Math.max(2, w * 0.008));
+                    const mh = randomInt(1, 5);
+                    const stretch = randomInt(10, h * 0.2) * (intensity + 0.5);
+                    targetCtx.drawImage(snapshot, mx, my, mw, mh, mx, my, mw, stretch);
+                }
+            }
+
+            // 3. Pixelation mosaic patches
+            const patchCount = Math.floor(randomInt(4, 12) * intensity * 2);
+            for (let i = 0; i < patchCount; i++) {
+                const pw = randomInt(Math.floor(w * 0.05), Math.floor(w * 0.2)), ph = randomInt(Math.floor(h * 0.025), Math.floor(h * 0.1));
+                const px = randomInt(0, Math.max(0, w - pw)), py = randomInt(0, Math.max(0, h - ph));
+                const cell = Math.max(4, Math.floor(30 - (intensity * 20)));
+                const tiny = document.createElement('canvas'); tiny.width = Math.max(1, Math.floor(pw / cell)); tiny.height = Math.max(1, Math.floor(ph / cell));
+                tiny.getContext('2d').drawImage(snapshot, px, py, pw, ph, 0, 0, tiny.width, tiny.height);
+                targetCtx.save(); targetCtx.imageSmoothingEnabled = false;
+                targetCtx.drawImage(tiny, 0, 0, tiny.width, tiny.height, px, py, pw, ph);
+                targetCtx.restore();
+                
+                if (grnd() > 0.4) {
+                    targetCtx.save();
+                    targetCtx.globalCompositeOperation = 'color';
+                    targetCtx.fillStyle = (palette && grnd() > 0.5) ? palette[randomInt(0, palette.length - 2)] : highlightColor;
+                    targetCtx.globalAlpha = random(0.3, 0.7) * intensity;
+                    targetCtx.fillRect(px, py, pw, ph);
+                    targetCtx.restore();
+                }
+            }
+
+            // FX FEATURE: Film Leaks
+            if (fxState.leaks) {
+                targetCtx.save();
+                targetCtx.globalCompositeOperation = 'screen';
+                for(let i=0; i<randomInt(2,4); i++) {
+                    const lx = grnd() > 0.5 ? 0 : w; // Stick mostly to edges
+                    const ly = random(0, h);
+                    const r = random(w*0.3, w*0.8);
+                    const grad = targetCtx.createRadialGradient(lx, ly, 0, lx, ly, r);
+                    const lColor = palette ? palette[randomInt(0, 2)] : highlightColor;
+                    
+                    targetCtx.globalAlpha = random(0.4, 0.8) * Math.max(0.5, intensity);
+                    // Use simple parsing technique to force opacity over the color string
+                    grad.addColorStop(0, lColor); 
+                    grad.addColorStop(1, 'transparent');
+                    targetCtx.fillStyle = grad;
+                    targetCtx.beginPath();
+                    targetCtx.arc(lx, ly, r, 0, Math.PI*2);
+                    targetCtx.fill();
+                }
+                targetCtx.restore();
+            }
+
+            // 4. Chromatic aberration
+            const abShift = Math.max(2, w * 0.015 * intensity);
+            targetCtx.save(); 
+            targetCtx.globalCompositeOperation = 'screen'; 
+            targetCtx.globalAlpha = 0.5 + (intensity * 0.3);
+            
+            targetCtx.filter = 'url(#chRedOnly)'; 
+            targetCtx.drawImage(snapshot, -abShift, random(-4, 4));
+            
+            targetCtx.filter = 'url(#chBlueOnly)'; 
+            targetCtx.drawImage(snapshot, abShift, random(-4, 4));
+            targetCtx.filter = 'none'; 
+            targetCtx.restore();
+
+            // 5. Global palette background tint overlay
+            if (palette) {
+                targetCtx.save();
+                targetCtx.globalCompositeOperation = 'color';
+                targetCtx.fillStyle = palette[0];
+                targetCtx.globalAlpha = 0.2 + (intensity * 0.25);
+                targetCtx.fillRect(0, 0, w, h);
+                targetCtx.restore();
+            }
+
+            // 6. Corrupted Stripes
+            const stripeCount = Math.floor(randomInt(3, 8) * intensity * 2);
+            for (let i = 0; i < stripeCount; i++) {
+                const cy = randomInt(0, h), chh = randomInt(Math.max(3, Math.floor(h * 0.005)), Math.max(8, Math.floor(h * 0.028)));
+                
+                targetCtx.save();
+                targetCtx.globalCompositeOperation = ['color', 'overlay', 'hard-light'][randomInt(0, 2)];
+                targetCtx.fillStyle = (palette && grnd() > 0.6) ? palette[randomInt(0, palette.length - 2)] : highlightColor;
+                targetCtx.globalAlpha = random(0.5, 0.9) * intensity;
+                targetCtx.fillRect(0, cy, w, chh);
+                targetCtx.restore();
+            }
+
+            // 7. Scan lines
+            targetCtx.save(); targetCtx.fillStyle = '#000000';
+            for (let ly = 0; ly < h; ly += Math.max(1, Math.floor(h / 600))) {
+                if (grnd() < (0.5 + intensity * 0.4)) { 
+                    targetCtx.globalAlpha = (0.05 + intensity * 0.2); 
+                    targetCtx.fillRect(0, ly, w, 1); 
+                }
+            }
+            targetCtx.restore();
+
+            // FX FEATURE: Tech HUD
+            if (fxState.hud) {
+                targetCtx.save();
+                targetCtx.strokeStyle = highlightColor;
+                targetCtx.fillStyle = highlightColor;
+                targetCtx.lineWidth = Math.max(1, w*0.002);
+                targetCtx.globalAlpha = 0.7;
+                
+                // Crosshairs
+                const cx = w/2, cy = h/2, cs = w*0.04;
+                targetCtx.beginPath();
+                targetCtx.moveTo(cx - cs, cy); targetCtx.lineTo(cx + cs, cy);
+                targetCtx.moveTo(cx, cy - cs); targetCtx.lineTo(cx, cy + cs);
+                
+                // Outer reticle circle
+                targetCtx.moveTo(cx + cs*0.6, cy);
+                targetCtx.arc(cx, cy, cs*0.6, 0, Math.PI*2);
+                targetCtx.stroke();
+
+                // Corner Brackets
+                const m = w*0.06, cl = w*0.08;
+                targetCtx.beginPath();
+                // TL
+                targetCtx.moveTo(m, m+cl); targetCtx.lineTo(m, m); targetCtx.lineTo(m+cl, m);
+                // TR
+                targetCtx.moveTo(w-m, m+cl); targetCtx.lineTo(w-m, m); targetCtx.lineTo(w-m-cl, m);
+                // BL
+                targetCtx.moveTo(m, h-m-cl); targetCtx.lineTo(m, h-m); targetCtx.lineTo(m+cl, h-m);
+                // BR
+                targetCtx.moveTo(w-m, h-m-cl); targetCtx.lineTo(w-m, h-m); targetCtx.lineTo(w-m-cl, h-m);
+                targetCtx.stroke();
+
+                // Telemetry Text
+                targetCtx.font = `${Math.floor(w*0.015)}px 'Courier New'`;
+                targetCtx.fillText("REC • " + new Date().toISOString().substring(11,19), m, m - w*0.015);
+                targetCtx.fillText("SYS_ERR." + grnd().toString(16).substr(2, 6).toUpperCase(), m, h - m + w*0.025);
+                targetCtx.fillText("INT:" + (intensity*100).toFixed(0) + "%", w - m - w*0.06, h - m + w*0.025);
+                targetCtx.restore();
+            }
+
+            // 8. Digital Static overlay
+            const sn = (w > 2000) ? 700 : 350;
+            const staticCanvas = document.createElement('canvas'); staticCanvas.width = sn; staticCanvas.height = sn;
+            const stCtx = staticCanvas.getContext('2d'), stData = stCtx.getImageData(0, 0, sn, sn), sd = stData.data;
+            for (let i = 0; i < sd.length; i += 4) {
+                const v = grnd() < 0.5 ? randomInt(0, 40) : randomInt(210, 255);
+                sd[i] = v; sd[i + 1] = v; sd[i + 2] = v; sd[i + 3] = grnd() < (0.2 + intensity * 0.2) ? randomInt(70, 180) : 0;
+            }
+            stCtx.putImageData(stData, 0, 0);
+            targetCtx.save(); targetCtx.globalCompositeOperation = 'overlay'; targetCtx.globalAlpha = intensity * 0.7;
+            targetCtx.fillStyle = targetCtx.createPattern(staticCanvas, 'repeat'); targetCtx.fillRect(0, 0, w, h); targetCtx.restore();
+
+            // 9. Grime Stains
+            targetCtx.save(); targetCtx.globalCompositeOperation = 'multiply';
+            const stainColor = palette ? palette[palette.length - 1] : 'hsl(30, 25%, 10%)';
+            for (let i = 0; i < Math.floor(intensity * 2.5); i++) {
+                paintSoftEllipse(targetCtx, random(0, 1) * w, random(0, 1) * h, random(0.05, 0.16) * Math.max(w, h), random(0.04, 0.13) * Math.max(w, h), random(0, Math.PI), stainColor, random(0.1, 0.22) * intensity, 0.8);
+            }
+            targetCtx.restore();
+
+            // 10. Final contrast crush
+            const finalSnap = document.createElement('canvas'); finalSnap.width = w; finalSnap.height = h;
+            finalSnap.getContext('2d').drawImage(targetCtx.canvas, 0, 0);
+            targetCtx.save(); targetCtx.filter = `contrast(${1.2 + intensity * 0.8}) saturate(${1.1 + intensity * 0.4}) brightness(${1.0 - intensity * 0.1})`;
+            targetCtx.clearRect(0, 0, w, h); targetCtx.drawImage(finalSnap, 0, 0); targetCtx.restore();
+        }
+    // ---------- File loading ----------
+    const imageLoader = document.getElementById('imageLoader');
+    imageLoader.addEventListener('change', (e) => {
+        handleFiles(e.target.files);
+        e.target.value = '';
+    });
+
+    ['dragenter', 'dragover'].forEach(evt => previewContainer.addEventListener(evt, (e) => {
+        e.preventDefault(); previewContainer.classList.add('drag-over');
+    }));
+    ['dragleave', 'drop'].forEach(evt => previewContainer.addEventListener(evt, (e) => {
+        e.preventDefault(); previewContainer.classList.remove('drag-over');
+    }));
+    previewContainer.addEventListener('drop', (e) => {
+        if (e.dataTransfer.files && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+    });
+
+    function handleFiles(fileList) {
+        const files = Array.from(fileList).filter(f => f.type.startsWith('image/'));
+        if (!files.length) return;
+        let loaded = 0;
+        files.forEach(file => {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                const img = new Image();
+                img.onload = () => {
+                    addLayer(img, file.name);
+                    loaded++;
+                    if (loaded === files.length) {
+                        showToast(files.length > 1 ? `${files.length} layers added` : 'Layer added');
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function addLayer(img, filename) {
+        const layer = {
+            id: nextId++,
+            name: filename ? filename.replace(/\.[^/.]+$/, '').slice(0, 24) : `Layer ${layers.length + 1}`,
+            img, thumb: null, visible: true,
+            blendMode: 'source-over',
+            opacity: 100, b: 100, c: 100, s: 100, h: 0, r: 100, g: 100, bl: 100
+        };
+        layers.push(layer);
+
+        if (layers.length === 1) initCanvasFor(img.width, img.height);
+
+        layer.thumb = makeThumb(img);
+        emptyState.classList.add('hidden');
+        zoomControls.classList.add('visible');
+        renderLayerList();
+        setActiveLayer(layer.id);
+        requestRender();
+        updateExportInfo();
+    }
+    function makeThumb(img) {
+        const size = 84;
+        const c = document.createElement('canvas');
+        c.width = size; c.height = size;
+        const tctx = c.getContext('2d');
+        const scale = Math.max(size / img.width, size / img.height);
+        const w = img.width * scale, h = img.height * scale;
+        tctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+        return c.toDataURL('image/jpeg', 0.7);
+    }
+
+    // ---------- Layer list rendering ----------
+    function renderLayerList() {
+        const list = document.getElementById('layerList');
+        document.getElementById('layerCountLabel').textContent =
+            layers.length === 0 ? 'No layers' : `${layers.length} layer${layers.length > 1 ? 's' : ''}`;
+        document.getElementById('layerCountTag').textContent = layers.length ? `(${layers.length})` : '';
+
+        if (layers.length === 0) {
+            list.innerHTML = '<div class="layer-empty">No layers yet — add an image to begin</div>';
+            return;
+        }
+
+        // Render top-most (last drawn) layer first in the list for intuitive stacking order
+        const ordered = [...layers].map((l, idx) => ({ l, idx })).reverse();
+        list.innerHTML = ordered.map(({ l, idx }) => `
+            <div class="layer-card ${l.id === activeLayerId ? 'active' : ''}" data-id="${l.id}">
+                <img class="layer-thumb" src="${l.thumb}" />
+                <div class="layer-info">
+                    <div class="layer-name">${escapeHtml(l.name)}</div>
+                    <div class="layer-meta">${l.opacity}% · ${BLEND_MODES.find(b => b.v === l.blendMode)?.label || 'Normal'}</div>
+                </div>
+                <div class="layer-actions">
+                    <button class="icon-btn move-up ${idx === layers.length - 1 ? 'dim' : ''}" data-id="${l.id}" title="Move up">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
+                    </button>
+                    <button class="icon-btn move-down ${idx === 0 ? 'dim' : ''}" data-id="${l.id}" title="Move down">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+                    </button>
+                    <button class="icon-btn toggle-vis" data-id="${l.id}" title="Toggle visibility">
+                        ${l.visible ? eyeIcon() : eyeOffIcon()}
+                    </button>
+                    <button class="icon-btn duplicate" data-id="${l.id}" title="Duplicate">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                    </button>
+                    <button class="icon-btn danger delete" data-id="${l.id}" title="Delete">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6m5 0V4a2 2 0 012-2h0a2 2 0 012 2v2"/></svg>
+                    </button>
+                </div>
+            </div>
+        `).join('');
+
+        list.querySelectorAll('.layer-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('.icon-btn')) return;
+                setActiveLayer(parseInt(card.dataset.id));
+            });
+        });
+        list.querySelectorAll('.toggle-vis').forEach(btn => btn.addEventListener('click', (e) => {
+            e.stopPropagation(); toggleVisibility(parseInt(btn.dataset.id));
+        }));
+        list.querySelectorAll('.duplicate').forEach(btn => btn.addEventListener('click', (e) => {
+            e.stopPropagation(); duplicateLayer(parseInt(btn.dataset.id));
+        }));
+        list.querySelectorAll('.delete').forEach(btn => btn.addEventListener('click', (e) => {
+            e.stopPropagation(); deleteLayer(parseInt(btn.dataset.id));
+        }));
+        list.querySelectorAll('.move-up').forEach(btn => btn.addEventListener('click', (e) => {
+            e.stopPropagation(); moveLayer(parseInt(btn.dataset.id), 1);
+        }));
+        list.querySelectorAll('.move-down').forEach(btn => btn.addEventListener('click', (e) => {
+            e.stopPropagation(); moveLayer(parseInt(btn.dataset.id), -1);
+        }));
+    }
+
+    function eyeIcon() { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`; }
+    function eyeOffIcon() { return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.94 10.94 0 0112 20c-7 0-11-8-11-8a21.62 21.62 0 015.06-6.06M9.9 4.24A10.94 10.94 0 0112 4c7 0 11 8 11 8a21.6 21.6 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`; }
+    function escapeHtml(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+    function findLayer(id) { return layers.find(l => l.id === id); }
+
+    function setActiveLayer(id) {
+        activeLayerId = id;
+        const l = findLayer(id);
+        renderLayerList();
+        if (!l) return;
+
+        ui.sliders.opacity.value = l.opacity;
+        ui.sliders.brightness.value = l.b;
+        ui.sliders.contrast.value = l.c;
+        ui.sliders.saturate.value = l.s;
+        ui.sliders.hue.value = l.h;
+        ui.sliders.r.value = l.r;
+        ui.sliders.g.value = l.g;
+        ui.sliders.b.value = l.bl;
+
+        Object.values(ui.sliders).forEach(refreshSliderFill);
+        updateLabels(l);
+        renderBlendChips(l);
+    }
+
+    function renderBlendChips(l) {
+        const row = document.getElementById('blendChips');
+        row.innerHTML = BLEND_MODES.map(m => `
+            <button class="blend-chip ${l && l.blendMode === m.v ? 'active' : ''}" data-v="${m.v}">${m.label}</button>
+        `).join('');
+        row.querySelectorAll('.blend-chip').forEach(chip => chip.addEventListener('click', () => {
+            if (activeLayerId === null) return;
+            const layer = findLayer(activeLayerId);
+            layer.blendMode = chip.dataset.v;
+            renderBlendChips(layer);
+            renderLayerList();
+            requestRender();
+            haptic();
+        }));
+    }
+
+    function updateLabels(l) {
+        ui.labels.opacity.innerText = `${l.opacity}%`;
+        ui.labels.brightness.innerText = `${l.b}%`;
+        ui.labels.contrast.innerText = `${l.c}%`;
+        ui.labels.saturate.innerText = `${l.s}%`;
+        ui.labels.hue.innerText = `${l.h}°`;
+        ui.labels.r.innerText = `${l.r}%`;
+        ui.labels.g.innerText = `${l.g}%`;
+        ui.labels.b.innerText = `${l.bl}%`;
+    }
+
+    function toggleVisibility(id) {
+        const l = findLayer(id); if (!l) return;
+        l.visible = !l.visible;
+        renderLayerList();
+        requestRender();
+        haptic();
+    }
+
+    function duplicateLayer(id) {
+        const l = findLayer(id); if (!l) return;
+        const idx = layers.indexOf(l);
+        const copy = { ...l, id: nextId++, name: l.name + ' copy' };
+        layers.splice(idx + 1, 0, copy);
+        renderLayerList();
+        setActiveLayer(copy.id);
+        requestRender();
+        updateExportInfo();
+        showToast('Layer duplicated');
+    }
+
+    function deleteLayer(id) {
+        const idx = layers.findIndex(l => l.id === id);
+        if (idx === -1) return;
+        layers.splice(idx, 1);
+        if (layers.length === 0) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            activeLayerId = null;
+            emptyState.classList.remove('hidden');
+            zoomControls.classList.remove('visible');
+        } else {
+            const newIdx = Math.max(0, idx - 1);
+            setActiveLayer(layers[newIdx].id);
+        }
+        renderLayerList();
+        requestRender();
+        updateExportInfo();
+        showToast('Layer deleted');
+    }
+
+    function moveLayer(id, dir) {
+        const idx = layers.findIndex(l => l.id === id);
+        const swapIdx = idx + dir;
+        if (idx === -1 || swapIdx < 0 || swapIdx >= layers.length) return;
+        [layers[idx], layers[swapIdx]] = [layers[swapIdx], layers[idx]];
+        renderLayerList();
+        requestRender();
+        haptic();
+    }
+
+    // ---------- Sliders ----------
+    Object.keys(ui.sliders).forEach(key => {
+        const input = ui.sliders[key];
+        input.addEventListener('input', (e) => {
+            if (activeLayerId === null) return;
+            const val = parseInt(e.target.value);
+            const l = findLayer(activeLayerId);
+            if (key === 'opacity') l.opacity = val;
+            if (key === 'brightness') l.b = val;
+            if (key === 'contrast') l.c = val;
+            if (key === 'saturate') l.s = val;
+            if (key === 'hue') l.h = val;
+            if (key === 'r') l.r = val;
+            if (key === 'g') l.g = val;
+            if (key === 'b') l.bl = val;
+
+            updateLabels(l);
+            refreshSliderFill(input);
+            requestRender();
+        });
+        input.addEventListener('change', () => renderLayerList());
+    });
+
+    document.getElementById('resetAdjustBtn').addEventListener('click', () => {
+        if (activeLayerId === null) return;
+        const l = findLayer(activeLayerId);
+        l.b = 100; l.c = 100; l.s = 100;
+        setActiveLayer(activeLayerId);
+        requestRender();
+        haptic();
+    });
+    document.getElementById('resetColorBtn').addEventListener('click', () => {
+        if (activeLayerId === null) return;
+        const l = findLayer(activeLayerId);
+        l.h = 0; l.r = 100; l.g = 100; l.bl = 100;
+        setActiveLayer(activeLayerId);
+        requestRender();
+        haptic();
+    });
+
+    // ---------- Zoom ----------
+    document.getElementById('zoomInBtn').addEventListener('click', () => setZoom(zoom + 0.25));
+    document.getElementById('zoomOutBtn').addEventListener('click', () => setZoom(zoom - 0.25));
+    document.getElementById('zoomResetBtn').addEventListener('click', () => setZoom(1));
+    function setZoom(z) {
+        zoom = Math.min(3, Math.max(0.5, z));
+        canvasWrap.style.transform = `scale(${zoom})`;
+    }
+    // Computes a "cover" rect: scales img up/down to fully fill w×h without
+    // distorting its aspect ratio, centered on both axes (overflow is cropped
+    // by the canvas edges — no letterboxing, no stretching).
+    function getContainRect(imgW, imgH, w, h) {
+        const scale = Math.max(w / imgW, h / imgH);
+        const dw = imgW * scale;
+        const dh = imgH * scale;
+        const dx = (w - dw) / 2;
+        const dy = (h - dh) / 2;
+        return { dx, dy, dw, dh };
+    }
+
+    function render(targetCtx, w, h) {
+        targetCtx.clearRect(0, 0, w, h);
+
+        layers.forEach(layer => {
+            if (!layer.visible) return;
+            targetCtx.globalCompositeOperation = layer.blendMode;
+            targetCtx.globalAlpha = layer.opacity / 100;
+
+            const rMult = layer.r / 100;
+            const gMult = layer.g / 100;
+            const bMult = layer.bl / 100;
+            const { dx, dy, dw, dh } = getContainRect(layer.img.width, layer.img.height, w, h);
+
+            if (rMult !== 1 || gMult !== 1 || bMult !== 1) {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = w;
+                tempCanvas.height = h;
+                const tCtx = tempCanvas.getContext('2d', { willReadFrequently: true });
+
+                tCtx.filter = `brightness(${layer.b}%) contrast(${layer.c}%) saturate(${layer.s}%) hue-rotate(${layer.h}deg)`;
+                tCtx.drawImage(layer.img, dx, dy, dw, dh);
+
+                const imgData = tCtx.getImageData(0, 0, w, h);
+                const data = imgData.data;
+                for (let i = 0; i < data.length; i += 4) {
+                    data[i]   = Math.min(255, data[i] * rMult);
+                    data[i+1] = Math.min(255, data[i+1] * gMult);
+                    data[i+2] = Math.min(255, data[i+2] * bMult);
+                }
+                tCtx.putImageData(imgData, 0, 0);
+
+                targetCtx.filter = 'none';
+                targetCtx.drawImage(tempCanvas, 0, 0, w, h);
+            } else {
+                targetCtx.filter = `brightness(${layer.b}%) contrast(${layer.c}%) saturate(${layer.s}%) hue-rotate(${layer.h}deg)`;
+                targetCtx.drawImage(layer.img, dx, dy, dw, dh);
+            }
+        });
+
+        targetCtx.globalAlpha = 1.0;
+        targetCtx.globalCompositeOperation = 'source-over';
+        targetCtx.filter = 'none';
+    }
+
+function renderAll(w, h) {
+    setSize(w, h);
+    render(baseCtx, w, h);
+    if (comparing) { ctx.clearRect(0, 0, w, h); ctx.drawImage(baseCanvas, 0, 0); return; }
+    chaosPipeline();
+    if (glitchOn) { seedRng(glitchSeed); applyGlitchPass(ctx, w, h, currentGlitchPalette, currentDistortion, customHighlightColor); }
+}
+function requestRender() {
+    isImageLoaded = layers.length > 0;
+    if (!isImageLoaded && typeof refreshVec === 'function') refreshVec();
+    if (renderPending || !isImageLoaded) return;
+    renderPending = true;
+    requestAnimationFrame(() => {
+        try { renderAll(canvas.width, canvas.height); } catch (e) { console.error(e); showToast('Render error: ' + e.message, true); }
+        if (typeof refreshVec === 'function') refreshVec();
+        renderPending = false;
+    });
+}
+function exportDims() {
+    if (!layers.length) return null;
+    let s = exportScale;
+    if (fullW * fullH * s * s > MAX_HI_PIXELS) s = Math.sqrt(MAX_HI_PIXELS / (fullW * fullH));
+    return [Math.floor(fullW * s), Math.floor(fullH * s)];
+}
+function updateExportInfo() {
+    $('exportLayerCount').textContent = `${layers.length} layer${layers.length !== 1 ? 's' : ''}`;
+    const d = exportDims();
+    $('exportSize').textContent = d ? `${d[0]} × ${d[1]}px` : '—';
+    $('exportThumb').src = d ? canvas.toDataURL('image/jpeg', 0.6) : '';
+    if (typeof syncVecW === 'function') syncVecW();
+}
+
+
+const WARP_LIST = ['wave','grid','ripple','swirl','bulge','pinch','liquid','glass','kaleido'];
+const SPEC = {
+  grade: [['hue','Hue Shift',0,360,0,'°'],['sat','Saturation',0,300,100,'%'],['con','Contrast',0,300,100,'%'],['inv','Invert',0,100,0,'%']],
+  warp: [['warp','Amount',0,100,0,''],['wfreq','Frequency',1,100,30,''],['wphase','Phase',0,360,0,'°'],['pixel','Pixelation',1,50,1,''],['wcx','Center X',0,100,50,'%'],['wcy','Center Y',0,100,50,'%']],
+  noise: [['rgb','RGB Split',0,50,0,'px'],['noise','Digital Noise',0,100,0,'%']],
+  pop: [['half','Dot Size',3,30,8,''],['popangle','Angle',0,89,45,'°'],['poppunch','Punch',0,100,40,'%'],['poplevels','Levels',2,8,4,''],['popink','Ink Lines',0,100,55,'%'],['popmis','Misprint',0,12,0,'px']],
+  vec: [['vdetail','Detail',400,2400,1000,'px'],['vsmooth','Smoothness',0,100,40,'%'],['vclean','Clean Specks',0,200,16,'px²'],['vwidth','Width',20,1000,200,'mm']]
+};
+const sld = ([k,n,mn,mx,v,u]) => `<div class="control-group ctl" id="row-${k}"><label><span class="icon-tag">${n}</span><span class="value" id="val-${k}">${v}${u}</span></label><input type="range" id="ctrl-${k}" min="${mn}" max="${mx}" value="${v}"></div>`;
+const grid = k => `<div class="grid2">${SPEC[k].map(sld).join('')}</div>`;
+const cap = s => s[0].toUpperCase() + s.slice(1);
+const pane = (id, inner) => `<div id="tab-${id}" class="tab-content">${inner}</div>`;
+$('fxPanes').outerHTML =
+  pane('grade', '<div class="section-label">Global Color (whole composite)</div>' + grid('grade')) +
+  pane('warp', `<div class="chips">${WARP_LIST.map((m,i)=>`<button class="chip${i?'':' on'}" data-warp="${m}">${cap(m)}</button>`).join('')}<button class="chip" id="btn-reseed">Reseed</button></div>` + grid('warp')) +
+  pane('noise', '<div class="section-label">Noise & Split</div>' + grid('noise')) +
+  pane('pop', `<div class="chips">${['off','dots','cmyk','comic','warhol'].map((m,i)=>`<button class="chip${i?'':' on'}" data-pop="${m}">${m==='cmyk'?'CMYK':cap(m)}</button>`).join('')}</div><div class="chips c6">${['Orig','Hot','Ice','Acid','Red'].map((m,i)=>`<button class="chip${i?'':' on'}" data-pal="${i}">${m}</button>`).join('')}<button class="chip" id="btn-panels">2x2</button></div>` + grid('pop') +
+    `<div class="section-label" style="margin-top:4px">Vector Output <span class="vec-stats" id="vecSizeLbl"></span></div>
+    <div class="chips c3"><button class="chip" id="btn-vecprev">Vector: Off</button><button class="chip" id="btn-vsvg">Save SVG</button><button class="chip" id="btn-vpdf">Save PDF</button></div>` +
+    grid('vec') + `<div class="vec-stats" id="vecStats"></div>
+    <div class="vec-note">Traces the composite after Grade, Warp &amp; Pixelation into smooth Bézier paths and circles. Noise, RGB Split and Glitch are raster-only and not included. CMYK PDF = four C/M/Y/K plates set to overprint.</div>`) +
+  pane('glitch', `<div class="chips c3"><button class="chip" id="btn-glitch">Glitch: Off</button><button class="chip" id="btn-gl-roll">Re-roll</button><button class="chip madness" id="btn-madness">MADNESS</button></div>
+    <div class="control-group"><label><span class="icon-tag">Distortion</span><span class="value" id="distortion-val">5</span></label><input type="range" id="distortion-level" min="1" max="10" value="5"></div>
+    <div class="control-group"><label><span class="icon-tag">Tint</span></label><select class="sel" id="glitch-palette">                <option value="original">Raw / Original</option>                                <optgroup label="Cyber & Neon">                    <option value="cyberpunk">Cyberpunk</option>                    <option value="matrix">Terminal</option>                    <option value="vaporwave">Vaporwave</option>                    <option value="outrun">Outrun</option>                    <option value="neonTokyo">Neon Tokyo</option>                    <option value="radioactive">Radioactive</option>                </optgroup>                <optgroup label="Dark & Gritty">                    <option value="crimson">Crimson</option>                    <option value="toxic">Toxic</option>                    <option value="bloodMoon">Blood Moon</option>                    <option value="midnight">Midnight</option>                    <option value="rust">Rust</option>                </optgroup>                <optgroup label="Ethereal & Elements">                    <option value="ice">Ice</option>                    <option value="ghost">Ghost</option>                    <option value="ocean">Ocean</option>                    <option value="forest">Forest</option>                    <option value="desert">Desert</option>                    <option value="goldenHour">Golden Hour</option>                </optgroup>                <optgroup label="Retro & Pop">                    <option value="amethyst">Amethyst</option>                    <option value="bubblegum">Bubblegum</option>                    <option value="c64">C-64</option>                    <option value="sepia">Sepia</option>                    <option value="monochrome">Monochrome</option>                    <option value="thermal">Thermal</option>                </optgroup></select></div>
+    <div class="control-group"><label><span class="icon-tag">Accent / Highlight</span></label><input type="color" id="highlight-color-picker" value="#ff0055"></div>
+    <div class="chips c3"><button class="chip" id="btn-fx-melt">MELT</button><button class="chip" id="btn-fx-leaks">LEAKS</button><button class="chip" id="btn-fx-hud">HUD</button></div>
+    <div class="action-buttons"><button id="btn-resetfx">Reset all FX</button></div>`);
+const controls = {};
+Object.values(SPEC).flat().forEach(([k,,,,,u]) => {
+    const el = $('ctrl-' + k); controls[k] = el; refreshSliderFill(el);
+    el.addEventListener('input', () => { $('val-' + k).textContent = el.value + u; refreshSliderFill(el); requestRender(); });
+});
+
+        // ====================================================================
+        // Warp / Pop UI wiring
+        // ====================================================================
+        const WARP_USES = {
+            wave: ['wfreq', 'wphase'],
+            grid: ['wfreq', 'wphase'],
+            ripple: ['wfreq', 'wphase', 'wcx', 'wcy'],
+            swirl: ['wfreq', 'wcx', 'wcy'],
+            bulge: ['wfreq', 'wcx', 'wcy'],
+            pinch: ['wfreq', 'wcx', 'wcy'],
+            liquid: ['wfreq', 'wphase'],
+            glass: ['wfreq'],
+            kaleido: ['wfreq', 'wphase', 'wcx', 'wcy']
+        };
+        const POP_USES = {
+            off: [],
+            dots: ['half', 'popangle', 'poppunch'],
+            cmyk: ['half', 'popangle', 'poppunch', 'popmis'],
+            comic: ['half', 'popangle', 'poppunch', 'poplevels', 'popink', 'popmis'],
+            warhol: ['poppunch', 'poplevels', 'popink', 'popmis']
+        };
+
+        function setDim(el, dim) { if (el) el.classList.toggle('dim', dim); }
+
+        function syncWarpUI() {
+            const uses = WARP_USES[warpMode];
+            ['wfreq', 'wphase', 'wcx', 'wcy'].forEach(k => setDim(document.getElementById('row-' + k), !uses.includes(k)));
+            document.querySelectorAll('[data-warp]').forEach(b => b.classList.toggle('on', b.dataset.warp === warpMode));
+            setDim(document.getElementById('btn-reseed'), warpMode !== 'liquid' && warpMode !== 'glass');
+        }
+
+        function syncPopUI() {
+            const uses = POP_USES[popMode];
+            ['half', 'popangle', 'poppunch', 'poplevels', 'popink', 'popmis'].forEach(k => setDim(document.getElementById('row-' + k), !uses.includes(k)));
+            document.querySelectorAll('[data-pop]').forEach(b => b.classList.toggle('on', b.dataset.pop === popMode));
+            const palOK = popMode === 'comic' || popMode === 'warhol';
+            document.querySelectorAll('[data-pal]').forEach(b => {
+                b.classList.toggle('on', parseInt(b.dataset.pal) === popPalette);
+                setDim(b, !palOK);
+            });
+            const pb = document.getElementById('btn-panels');
+            pb.classList.toggle('on', popPanels);
+            setDim(pb, popMode !== 'warhol');
+        }
+
+        document.querySelectorAll('[data-warp]').forEach(b => b.addEventListener('click', () => {
+            warpMode = b.dataset.warp;
+            syncWarpUI();
+            requestRender();
+        }));
+        document.getElementById('btn-reseed').addEventListener('click', () => {
+            warpSeed = 1 + Math.floor(Math.random() * 99999);
+            requestRender();
+        });
+        document.querySelectorAll('[data-pop]').forEach(b => b.addEventListener('click', () => {
+            popMode = b.dataset.pop;
+            syncPopUI();
+            requestRender();
+        }));
+        document.querySelectorAll('[data-pal]').forEach(b => b.addEventListener('click', () => {
+            popPalette = parseInt(b.dataset.pal);
+            syncPopUI();
+            requestRender();
+        }));
+        document.getElementById('btn-panels').addEventListener('click', () => {
+            popPanels = !popPanels;
+            syncPopUI();
+            requestRender();
+        });
+        syncWarpUI();
+        syncPopUI();
+
+        // The "MADNESS" Button logic
+        let madnessTimeout;
+        document.getElementById('btn-madness').addEventListener('click', () => {
+            if (!isImageLoaded) {
+                alert("Upload an image first to unleash madness.");
+                return;
+            }
+
+            // Randomize all sliders violently
+            controls.hue.value = Math.floor(Math.random() * 360);
+            controls.sat.value = 100 + Math.floor(Math.random() * 200);
+            controls.con.value = 100 + Math.floor(Math.random() * 200);
+            controls.inv.value = Math.random() > 0.7 ? 100 : 0;
+            controls.warp.value = Math.floor(Math.random() * 80);
+            controls.pixel.value = Math.floor(Math.random() * 15) + 1;
+            controls.rgb.value = Math.floor(Math.random() * 40);
+            controls.noise.value = Math.floor(Math.random() * 100);
+            controls.half.value = Math.floor(Math.random() * 12) + 4;
+            warpMode = WARP_MODES[Math.floor(Math.random() * WARP_MODES.length)];
+            warpSeed = 1 + Math.floor(Math.random() * 99999);
+            controls.wfreq.value = 10 + Math.floor(Math.random() * 70);
+            controls.wphase.value = Math.floor(Math.random() * 360);
+            controls.wcx.value = 20 + Math.floor(Math.random() * 60);
+            controls.wcy.value = 20 + Math.floor(Math.random() * 60);
+            popMode = Math.random() > 0.45 ? POP_MODES[1 + Math.floor(Math.random() * 4)] : 'off';
+            popPalette = Math.floor(Math.random() * 5);
+            popPanels = Math.random() > 0.5;
+            controls.popangle.value = Math.floor(Math.random() * 90);
+            controls.poppunch.value = 20 + Math.floor(Math.random() * 70);
+            controls.poplevels.value = 3 + Math.floor(Math.random() * 4);
+            controls.popink.value = 30 + Math.floor(Math.random() * 50);
+            controls.popmis.value = Math.floor(Math.random() * 8);
+
+            // Dispatch input events to update UI text visually
+            Object.values(controls).forEach(input => {
+                input.dispatchEvent(new Event('input'));
+            });
+
+            syncWarpUI();
+            syncPopUI();
+
+            // Activate block slicing
+            madnessMode = true;
+            
+            // Render loop for chaotic animation burst
+            let frameCount = 0;
+            const madnessLoop = setInterval(() => {
+                // Add minor random noise variations frame-by-frame
+                controls.warp.value = Math.floor(Math.random() * 100);
+                controls.wphase.value = (parseInt(controls.wphase.value) + 40) % 361;
+                requestRender();
+                frameCount++;
+                if(frameCount > 8) { // Run for 8 frames
+                    clearInterval(madnessLoop);
+                    madnessMode = false;
+                    requestRender(); // Final settlement render
+                }
+            }, 60); // 60ms between frames
+        });
+
+// ---- Glitch UI ----
+function setGlitch(on) { glitchOn = on; $('btn-glitch').classList.toggle('on', on); $('btn-glitch').textContent = on ? 'Glitch: On' : 'Glitch: Off'; }
+$('btn-glitch').onclick = () => { setGlitch(!glitchOn); requestRender(); };
+$('btn-gl-roll').onclick = () => { glitchSeed = 1 + Math.floor(Math.random() * 1e9); setGlitch(true); requestRender(); };
+$('distortion-level').oninput = e => { currentDistortion = +e.target.value; $('distortion-val').textContent = currentDistortion; refreshSliderFill(e.target); setGlitch(true); requestRender(); };
+$('glitch-palette').onchange = e => { currentGlitchPalette = glitchPalettes[e.target.value]; setGlitch(true); requestRender(); };
+$('highlight-color-picker').oninput = e => { customHighlightColor = e.target.value; setGlitch(true); requestRender(); };
+['melt','leaks','hud'].forEach(t => $('btn-fx-' + t).onclick = () => { fxState[t] = !fxState[t]; $('btn-fx-' + t).classList.toggle('on', fxState[t]); setGlitch(true); requestRender(); });
+$('btn-resetfx').onclick = () => {
+    Object.values(SPEC).flat().forEach(([k,,,,v]) => { controls[k].value = v; controls[k].dispatchEvent(new Event('input')); });
+    warpMode = 'wave'; warpSeed = 1; popMode = 'off'; popPalette = 0; popPanels = false; syncWarpUI(); syncPopUI();
+    setGlitch(false); ['melt','leaks','hud'].forEach(t => { fxState[t] = false; $('btn-fx-' + t).classList.remove('on'); });
+    requestRender(); showToast('FX reset');
+};
+refreshSliderFill($('distortion-level'));
+
+// ---- Color Field art generator ----
+function curateArt() {
+    loadingOverlay.style.display = 'flex'; $('loadingText').textContent = 'Developing film...';
+    setTimeout(() => {
+        try {
+            seedRng(1 + Math.floor(Math.random() * 1e9)); generateArtParameters();
+            const c = document.createElement('canvas'); c.width = 1080; c.height = 2150;
+            renderArt(c.getContext('2d'), 1080, 2150, currentArtState);
+            addLayer(c, 'Color Field ' + (layers.length + 1));
+        } catch (e) { console.error(e); showToast('Art failed: ' + e.message, true); }
+        loadingOverlay.style.display = 'none';
+    }, 50);
+}
+$('curateBtn').onclick = curateArt; $('emptyCurate').onclick = curateArt;
+
+// ---- Tabs ----
+document.querySelectorAll('#tabNav .tab-btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('#tabNav .tab-btn').forEach(x => x.classList.remove('active'));
+    $('tab-' + b.dataset.tab).classList.add('active'); b.classList.add('active');
+    b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
+    if (b.dataset.tab === 'export') updateExportInfo();
+    haptic();
+}));
+
+// ---- Compare (hold to see composite without FX) ----
+const cb = document.createElement('button'); cb.className = 'zoom-btn'; cb.id = 'compareBtn'; cb.title = 'Hold to see without FX'; cb.innerHTML = eyeIcon();
+zoomControls.appendChild(cb);
+cb.addEventListener('pointerdown', e => { e.preventDefault(); comparing = true; requestRender(); });
+['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => cb.addEventListener(ev, () => { if (comparing) { comparing = false; requestRender(); } }));
+
+
+// =====================================================================
+// VECTOR POP ENGINE — traces the pre-pop composite into Bézier paths
+// and circles. Marching squares → RDP → Catmull-Rom cubic Béziers.
+// =====================================================================
+const PopVec = (() => {
+    const palC = (pal, t) => { t = t < 0 ? 0 : t > 1 ? 1 : t; const p = t * (pal.length - 1), i = Math.min(pal.length - 2, p | 0), f = p - i, a = pal[i], b = pal[i + 1];
+        return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f]; };
+    const col = rgb => ({ rgb });
+    const INK = { rgb: [12, 12, 16] };
+    function bH(s, o, w, h, r) { const inv = 1 / (2 * r + 1); for (let y = 0; y < h; y++) { const b = y * w; let acc = 0;
+        for (let k = -r; k <= r; k++) acc += s[b + (k < 0 ? 0 : k >= w ? w - 1 : k)];
+        for (let x = 0; x < w; x++) { o[b + x] = acc * inv; const xa = x + r + 1, xr = x - r; acc += s[b + (xa >= w ? w - 1 : xa)] - s[b + (xr < 0 ? 0 : xr)]; } } }
+    function bV(s, o, w, h, r) { const inv = 1 / (2 * r + 1); for (let x = 0; x < w; x++) { let acc = 0;
+        for (let k = -r; k <= r; k++) acc += s[(k < 0 ? 0 : k >= h ? h - 1 : k) * w + x];
+        for (let y = 0; y < h; y++) { o[y * w + x] = acc * inv; const ya = y + r + 1, yr = y - r; acc += s[(ya >= h ? h - 1 : ya) * w + x] - s[(yr < 0 ? 0 : yr) * w + x]; } } }
+    function blurF(a, w, h, r) { const out = new Float32Array(a); const ri = Math.round(r * 0.85); if (ri < 1) return out;
+        const tmp = new Float32Array(a.length); for (let p = 0; p < 3; p++) { bH(out, tmp, w, h, ri); bV(tmp, out, w, h, ri); } return out; }
+    function normField(L, maxT) { const [lo, hi] = autoLevels(L), sp = hi - lo, T = new Float32Array(L.length);
+        for (let i = 0; i < L.length; i++) { const t = (L[i] - lo) / sp; T[i] = t < 0 ? 0 : t > maxT ? maxT : t; } return T; }
+
+    // ---- marching squares on padded field: even-odd fill of loops == region F >= t
+    let TR = null;
+    function traceIso(F, w, h, t) {
+        const W = w + 2, H = h + 2, n = W * H * 2;
+        if (!TR || TR.n !== n) TR = { n, adj: new Int32Array(n * 2).fill(-1), vis: new Uint8Array(n), touched: new Int32Array(n) };
+        const adj = TR.adj, vis = TR.vis, touched = TR.touched; let tn = 0;
+        const val = (x, y) => (x < 1 || y < 1 || x > w || y > h) ? -1e9 : F[(y - 1) * w + x - 1];
+        const link = (a, b) => { let k = a << 1; if (adj[k] === -1) { adj[k] = b; touched[tn++] = a; } else adj[k + 1] = b;
+            k = b << 1; if (adj[k] === -1) { adj[k] = a; touched[tn++] = b; } else adj[k + 1] = a; };
+        let top = new Float32Array(W), bot = new Float32Array(W);
+        for (let x = 0; x < W; x++) top[x] = val(x, 0);
+        for (let cy = 0; cy < H - 1; cy++) {
+            for (let x = 0; x < W; x++) bot[x] = val(x, cy + 1);
+            for (let cx = 0; cx < W - 1; cx++) {
+                const a = top[cx], b = top[cx + 1], c = bot[cx + 1], d = bot[cx];
+                const code = (a >= t ? 8 : 0) | (b >= t ? 4 : 0) | (c >= t ? 2 : 0) | (d >= t ? 1 : 0);
+                if (code === 0 || code === 15) continue;
+                const T_ = (cy * W + cx) << 1, B_ = ((cy + 1) * W + cx) << 1, L_ = T_ + 1, R_ = ((cy * W + cx + 1) << 1) + 1;
+                switch (code) {
+                    case 1: link(L_, B_); break; case 2: link(B_, R_); break; case 3: link(L_, R_); break; case 4: link(T_, R_); break;
+                    case 5: if ((a + b + c + d) / 4 >= t) { link(T_, L_); link(R_, B_); } else { link(T_, R_); link(L_, B_); } break;
+                    case 6: link(T_, B_); break; case 7: link(T_, L_); break; case 8: link(T_, L_); break; case 9: link(T_, B_); break;
+                    case 10: if ((a + b + c + d) / 4 >= t) { link(T_, R_); link(L_, B_); } else { link(T_, L_); link(R_, B_); } break;
+                    case 11: link(T_, R_); break; case 12: link(L_, R_); break; case 13: link(R_, B_); break; case 14: link(L_, B_); break;
+                }
+            }
+            const tmp = top; top = bot; bot = tmp;
+        }
+        const loops = [];
+        for (let i = 0; i < tn; i++) {
+            const s = touched[i]; if (vis[s]) continue;
+            const p = [], bd = []; let prev = -1, cur = s;
+            for (;;) {
+                vis[cur] = 1;
+                const k = cur >> 1, gx = k % W, gy = (k - gx) / W; let px, py, border = 0;
+                if (!(cur & 1)) { py = gy - 0.5;
+                    if (gx === 0) { px = 0; border = 1; } else if (gx + 1 === W - 1) { px = w; border = 1; }
+                    else { const va = val(gx, gy), vb = val(gx + 1, gy); px = gx + (t - va) / (vb - va) - 0.5; }
+                } else { px = gx - 0.5;
+                    if (gy === 0) { py = 0; border = 1; } else if (gy + 1 === H - 1) { py = h; border = 1; }
+                    else { const va = val(gx, gy), vb = val(gx, gy + 1); py = gy + (t - va) / (vb - va) - 0.5; }
+                }
+                p.push(px, py); bd.push(border);
+                const n0 = adj[cur << 1], n1 = adj[(cur << 1) + 1], nx = (n0 !== prev) ? n0 : n1;
+                prev = cur; cur = nx;
+                if (cur === -1 || cur === s || vis[cur]) break;
+            }
+            loops.push({ p, b: bd });
+        }
+        for (let i = 0; i < tn; i++) { const e = touched[i]; adj[e << 1] = -1; adj[(e << 1) + 1] = -1; vis[e] = 0; }
+        return loops;
+    }
+    function segDist2(px, py, ax, ay, bx, by) { const dx = bx - ax, dy = by - ay, l = dx * dx + dy * dy; let t = l ? ((px - ax) * dx + (py - ay) * dy) / l : 0;
+        t = t < 0 ? 0 : t > 1 ? 1 : t; const qx = ax + t * dx - px, qy = ay + t * dy - py; return qx * qx + qy * qy; }
+    function rdpClosed(p, b, tol) {
+        const n = p.length >> 1; if (n <= 4) return { p, b };
+        let far = 0, md = -1;
+        for (let i = 1; i < n; i++) { const dx = p[2 * i] - p[0], dy = p[2 * i + 1] - p[1], d = dx * dx + dy * dy; if (d > md) { md = d; far = i; } }
+        const keep = new Uint8Array(n); keep[0] = 1; keep[far] = 1;
+        const tol2 = tol * tol, st = [0, far, far, n];
+        while (st.length) { const e = st.pop(), s = st.pop(); if (e - s < 2) continue;
+            const ax = p[2 * s], ay = p[2 * s + 1], ei = e % n, bx = p[2 * ei], by = p[2 * ei + 1]; let mi = -1, m2 = tol2;
+            for (let i = s + 1; i < e; i++) { const d = segDist2(p[2 * i], p[2 * i + 1], ax, ay, bx, by); if (d > m2) { m2 = d; mi = i; } }
+            if (mi >= 0) { keep[mi] = 1; st.push(s, mi, mi, e); } }
+        const P = [], B = []; for (let i = 0; i < n; i++) if (keep[i]) { P.push(p[2 * i], p[2 * i + 1]); B.push(b[i]); }
+        return { p: P, b: B };
+    }
+    function area2(p) { let a = 0; const n = p.length >> 1; for (let i = 0, j = n - 1; i < n; j = i++) a += (p[2 * j] + p[2 * i]) * (p[2 * j + 1] - p[2 * i + 1]); return a / 2; }
+    function bezClosed(p, b) {
+        const m = p.length >> 1, c = new Float64Array(m * 6);
+        for (let i = 0; i < m; i++) { const i0 = (i - 1 + m) % m, i2 = (i + 1) % m, i3 = (i + 2) % m, o = i * 6;
+            const x1 = p[2 * i], y1 = p[2 * i + 1], x2 = p[2 * i2], y2 = p[2 * i2 + 1];
+            if (b[i] && b[i2]) { c[o] = x1; c[o + 1] = y1; c[o + 2] = x2; c[o + 3] = y2; }
+            else { c[o] = x1 + (x2 - p[2 * i0]) / 6; c[o + 1] = y1 + (y2 - p[2 * i0 + 1]) / 6; c[o + 2] = x2 - (p[2 * i3] - x1) / 6; c[o + 3] = y2 - (p[2 * i3 + 1] - y1) / 6; }
+            c[o + 4] = x2; c[o + 5] = y2; }
+        return { x: p[0], y: p[1], c, closed: true };
+    }
+    function bezOpen(idx, p) {
+        const n = idx.length, c = new Float64Array((n - 1) * 6), X = i => p[2 * idx[i]], Y = i => p[2 * idx[i] + 1];
+        for (let i = 0; i < n - 1; i++) { const a = Math.max(0, i - 1), d = Math.min(n - 1, i + 2), o = i * 6;
+            c[o] = X(i) + (X(i + 1) - X(a)) / 6; c[o + 1] = Y(i) + (Y(i + 1) - Y(a)) / 6;
+            c[o + 2] = X(i + 1) - (X(d) - X(i)) / 6; c[o + 3] = Y(i + 1) - (Y(d) - Y(i)) / 6; c[o + 4] = X(i + 1); c[o + 5] = Y(i + 1); }
+        return { x: X(0), y: Y(0), c, closed: false };
+    }
+    function inkChains(p, b, out) { // drop segments that run along the image edge
+        const m = p.length >> 1, cut = new Uint8Array(m); let c0 = -1;
+        for (let i = 0; i < m; i++) { if (b[i] && b[(i + 1) % m]) { cut[i] = 1; if (c0 < 0) c0 = i; } }
+        if (c0 < 0) { out.push(bezClosed(p, b)); return; }
+        let chain = [];
+        for (let k = 1; k <= m; k++) { const j = (c0 + k) % m; chain.push(j);
+            if (cut[j]) { if (chain.length >= 2) out.push(bezOpen(chain, p)); chain = []; } }
+    }
+    function traceField(F, w, h, t, cx, wantInk) {
+        const fillSubs = [], inkSubs = [];
+        for (const L of traceIso(F, w, h, t)) {
+            const s = rdpClosed(L.p, L.b, cx.tol);
+            if (s.p.length < 6 || Math.abs(area2(s.p)) < cx.minA) continue;
+            fillSubs.push(bezClosed(s.p, s.b));
+            if (wantInk) inkChains(s.p, s.b, inkSubs);
+        }
+        return { fillSubs, inkSubs };
+    }
+    function punchCopy(src, punch) {
+        const d = new Uint8ClampedArray(src), P = punch / 100;
+        if (P > 0) { const sat = 1 + P * 1.2, con = 1 + P * 0.5;
+            for (let i = 0; i < d.length; i += 4) { const r = d[i], g = d[i + 1], b = d[i + 2], l = 0.299 * r + 0.587 * g + 0.114 * b;
+                d[i] = ((l + (r - l) * sat) - 128) * con + 128; d[i + 1] = ((l + (g - l) * sat) - 128) * con + 128; d[i + 2] = ((l + (b - l) * sat) - 128) * con + 128; } }
+        return d;
+    }
+
+    // ---- modes ----
+    function mDots(cx, P) {
+        const { w, h, d, RS } = cx, size = Math.max(3 * RS, P.size * RS), a = [];
+        lattice(w, h, size, P.angle * Math.PI / 180, (x, y) => {
+            sampleAvg(d, w, h, x, y, size * 0.3);
+            const br = (0.299 * sr + 0.587 * sg + 0.114 * sb) / 255, r = size * 0.74 * Math.sqrt(br);
+            if (r < 0.4 * RS) return;
+            const m = Math.max(sr, sg, sb), k = m > 0 ? 1 + (255 / m - 1) * 0.55 : 1;
+            a.push(x, y, r, Math.min(255, sr * k), Math.min(255, sg * k), Math.min(255, sb * k));
+        });
+        return { w, h, items: [{ t: 'g', clip: [0, 0, w, h], items: [{ t: 'rect', x: 0, y: 0, w, h, col: col([5, 5, 5]) }, { t: 'dots', a }] }] };
+    }
+    function mCMYK(cx, P) {
+        const { w, h, d, RS } = cx, size = Math.max(3 * RS, P.size * RS), ang = P.angle * Math.PI / 180, mis = P.mis * RS;
+        const planes = [
+            { a: 15, rgb: [0, 174, 239], cmyk: [1, 0, 0, 0], ch: 0, ox: -0.8, oy: -0.3 },
+            { a: 75, rgb: [236, 0, 140], cmyk: [0, 1, 0, 0], ch: 1, ox: 0.7, oy: 0.5 },
+            { a: 0, rgb: [255, 242, 0], cmyk: [0, 0, 1, 0], ch: 2, ox: 0.1, oy: -0.7 },
+            { a: 45, rgb: [20, 20, 28], cmyk: [0, 0, 0, 1], ch: 3, ox: 0, oy: 0 }];
+        const inner = [{ t: 'rect', paper: true, x: 0, y: 0, w, h, col: col([243, 238, 223]) }];
+        for (const pl of planes) {
+            const a = [], th = pl.a * Math.PI / 180 + (ang - Math.PI / 4), dx = pl.ox * mis, dy = pl.oy * mis;
+            lattice(w, h, size, th, (x, y) => {
+                sampleAvg(d, w, h, x, y, size * 0.35);
+                const R = sr / 255, G = sg / 255, B = sb / 255, kk = (1 - Math.max(R, G, B)) * 0.85;
+                const v = pl.ch === 3 ? kk : (1 - (pl.ch === 0 ? R : pl.ch === 1 ? G : B) - kk) / (1 - kk);
+                if (v < 0.04) return;
+                a.push(x + dx, y + dy, size * 0.74 * Math.sqrt(v > 1 ? 1 : v));
+            });
+            inner.push({ t: 'g', blend: 'multiply', overprint: true, items: [{ t: 'circles', col: { rgb: pl.rgb, cmyk: pl.cmyk }, a }] });
+        }
+        return { w, h, cmyk: true, items: [{ t: 'g', clip: [0, 0, w, h], items: inner }] };
+    }
+    function labelFills(cx, P, wantInk) {
+        const { w, h, d } = cx, N = w * h, R = new Float32Array(N), G = new Float32Array(N), B = new Float32Array(N);
+        for (let p = 0, i = 0; p < N; p++, i += 4) { R[p] = d[i]; G[p] = d[i + 1]; B[p] = d[i + 2]; }
+        const r = Math.max(1, cx.blurR), Rb = blurF(R, w, h, r), Gb = blurF(G, w, h, r), Bb = blurF(B, w, h, r);
+        const Lv = P.levels, st = Lv - 1, q = v => { const i = Math.round(v / 255 * st); return i < 0 ? 0 : i > st ? st : i; };
+        const key = new Int32Array(N), cnt = new Uint32Array(Lv * Lv * Lv);
+        for (let p = 0; p < N; p++) { const k = (q(Rb[p]) * Lv + q(Gb[p])) * Lv + q(Bb[p]); key[p] = k; cnt[k]++; }
+        const order = []; for (let k = 0; k < cnt.length; k++) if (cnt[k]) order.push(k);
+        order.sort((a, b) => cnt[b] - cnt[a]);
+        const kept = order.filter((k, i) => i < 16 && (i === 0 || cnt[k] >= N * 0.001));
+        const comp = k => [Math.floor(k / (Lv * Lv)), Math.floor(k / Lv) % Lv, k % Lv];
+        const map = new Int32Array(cnt.length).fill(-1); kept.forEach((k, i) => map[k] = i);
+        for (const k of order) { if (map[k] >= 0) continue; const a = comp(k); let bi = 0, bd = 1e9;
+            kept.forEach((kk, i) => { const c = comp(kk), dd = (a[0] - c[0]) ** 2 + (a[1] - c[1]) ** 2 + (a[2] - c[2]) ** 2; if (dd < bd) { bd = dd; bi = i; } }); map[k] = bi; }
+        const cols = kept.map(k => comp(k).map(i => st ? i / st * 255 : 0));
+        const lab = new Uint8Array(N); for (let p = 0; p < N; p++) lab[p] = map[key[p]];
+        const fills = [], ink = [], ind = new Float32Array(N), rI = Math.max(1, cx.blurR * 0.75);
+        for (let li = 1; li < kept.length; li++) {
+            for (let p = 0; p < N; p++) ind[p] = lab[p] === li ? 1 : 0;
+            const F = blurF(ind, w, h, rI);
+            fills.push({ t: 'fill', col: col(cols[li]), subs: traceField(F, w, h, 0.38, cx, false).fillSubs }); // overlap = no seams
+            if (wantInk) ink.push(...traceField(F, w, h, 0.5, cx, true).inkSubs);
+        }
+        return { bg: cols[0], fills, ink };
+    }
+    function mComic(cx, P) {
+        const { w, h, d, RS } = cx;
+        const T = normField(blurF(lumArray(d, w * h), w, h, Math.max(1, cx.blurR)), 1);
+        const inkW = P.ink / 100 * 4 * RS, wantInk = inkW > 0.05, steps = Math.max(1, P.levels - 1);
+        let bg, fills = [], ink = [];
+        if (P.pal > 0) {
+            const pal = POP_PALETTES[P.pal]; bg = palC(pal, 0);
+            for (let k = 1; k <= steps; k++) { const r = traceField(T, w, h, (k - 0.5) / steps, cx, wantInk);
+                fills.push({ t: 'fill', col: col(palC(pal, k / steps)), subs: r.fillSubs }); ink.push(...r.inkSubs); }
+        } else ({ bg, fills, ink } = labelFills(cx, P, wantInk));
+        const mx = P.mis * RS, my = P.mis * RS * 0.6;
+        const items = [{ t: 'rect', x: 0, y: 0, w, h, col: col(bg) }, { t: 'g', tx: mx, ty: my, items: fills }];
+        if (wantInk) items.push({ t: 'stroke', col: INK, w: inkW, subs: ink });
+        const size = Math.max(3 * RS, P.size * RS), a = [];
+        lattice(w, h, size, P.angle * Math.PI / 180, (x, y) => {
+            const xi = Math.min(w - 1, Math.max(0, x | 0)), yi = Math.min(h - 1, Math.max(0, y | 0)), dk = 1 - T[yi * w + xi];
+            if (dk < 0.4) return; const r = size * 0.72 * Math.sqrt(Math.min(1, (dk - 0.4) / 0.6));
+            if (r >= 0.5 * RS) a.push(x, y, r);
+        });
+        items.push({ t: 'g', alpha: 0.78, items: [{ t: 'circles', col: col([10, 10, 18]), a }] });
+        return { w, h, items: [{ t: 'g', clip: [0, 0, w, h], items }] };
+    }
+    function mWarhol(cx, P) {
+        const { w, h, d, RS } = cx, lv = P.levels, steps = Math.max(1, lv - 1);
+        const T = normField(blurF(lumArray(d, w * h), w, h, Math.max(1, cx.blurR)), 0.9999);
+        const inkW = P.ink / 100 * 4 * RS, wantInk = inkW > 0.05;
+        const tr = []; for (let k = 1; k < lv; k++) tr.push(traceField(T, w, h, k / lv, cx, wantInk));
+        const ink = []; tr.forEach(r => ink.push(...r.inkSubs));
+        const mx = P.mis * RS, my = P.mis * RS * 0.6, base = P.pal === 0 ? 1 : P.pal;
+        const panel = (pi, ox, oy, s) => { const pal = POP_PALETTES[pi], lut = b => col(palC(pal, b / steps));
+            const items = [{ t: 'rect', x: 0, y: 0, w, h, col: lut(0) }, { t: 'g', tx: mx, ty: my, items: tr.map((r, i) => ({ t: 'fill', col: lut(i + 1), subs: r.fillSubs })) }];
+            if (wantInk) items.push({ t: 'stroke', col: INK, w: inkW, subs: ink });
+            return { t: 'g', tx: ox, ty: oy, s, clip: [0, 0, w, h], items }; };
+        if (!P.panels) return { w, h, items: [panel(base, 0, 0, 1)] };
+        const items = [{ t: 'rect', x: 0, y: 0, w, h, col: col([5, 5, 5]) }];
+        for (let k = 0; k < 4; k++) items.push(panel(((base - 1 + k) % 4) + 1, (k % 2) * w / 2, (k >> 1) * h / 2, 0.5));
+        const g = Math.max(1, 2 * RS);
+        items.push({ t: 'rect', x: w / 2 - g / 2, y: 0, w: g, h, col: col([5, 5, 5]) }, { t: 'rect', x: 0, y: h / 2 - g / 2, w, h: g, col: col([5, 5, 5]) });
+        return { w, h, items: [{ t: 'g', clip: [0, 0, w, h], items }] };
+    }
+    function build(src, P) {
+        const { w, h } = src, RS = Math.max(w, h) / 1000;
+        const cx = { w, h, d: punchCopy(src.d, P.punch), RS, tol: 0.3 + P.smooth / 100 * 0.7, minA: P.clean * RS * RS, blurR: P.smooth / 100 * 4 * RS };
+        if (P.mode === 'dots') return mDots(cx, P);
+        if (P.mode === 'cmyk') return mCMYK(cx, P);
+        if (P.mode === 'warhol') return mWarhol(cx, P);
+        return mComic(cx, P);
+    }
+
+    // ---- writers ----
+    const fm = v => Math.round(v * 100) / 100;
+    const hex = c => '#' + c.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('');
+    function pathD(subs) { const o = [];
+        for (const s of subs) { o.push('M' + fm(s.x) + ' ' + fm(s.y)); const c = s.c;
+            for (let i = 0; i < c.length; i += 6) o.push('C' + fm(c[i]) + ' ' + fm(c[i + 1]) + ' ' + fm(c[i + 2]) + ' ' + fm(c[i + 3]) + ' ' + fm(c[i + 4]) + ' ' + fm(c[i + 5]));
+            if (s.closed) o.push('Z'); }
+        return o.join(''); }
+    function toSVG(doc, opt = {}) {
+        let cid = 0; const defs = [], out = [];
+        const walk = items => { for (const it of items) { if (!it) continue; switch (it.t) {
+            case 'rect': out.push(`<rect x="${fm(it.x)}" y="${fm(it.y)}" width="${fm(it.w)}" height="${fm(it.h)}" fill="${hex(it.col.rgb)}"/>`); break;
+            case 'fill': if (it.subs.length) out.push(`<path fill="${hex(it.col.rgb)}" fill-rule="evenodd" d="${pathD(it.subs)}"/>`); break;
+            case 'stroke': if (it.subs.length) out.push(`<path fill="none" stroke="${hex(it.col.rgb)}" stroke-width="${fm(it.w)}" stroke-linecap="round" stroke-linejoin="round" d="${pathD(it.subs)}"/>`); break;
+            case 'circles': { const a = it.a; if (!a.length) break; out.push(`<g fill="${hex(it.col.rgb)}">`);
+                for (let i = 0; i < a.length; i += 3) out.push(`<circle cx="${fm(a[i])}" cy="${fm(a[i + 1])}" r="${fm(a[i + 2])}"/>`); out.push('</g>'); break; }
+            case 'dots': { const a = it.a; for (let i = 0; i < a.length; i += 6) out.push(`<circle cx="${fm(a[i])}" cy="${fm(a[i + 1])}" r="${fm(a[i + 2])}" fill="${hex([a[i + 3], a[i + 4], a[i + 5]])}"/>`); break; }
+            case 'g': { let at = ''; const s = it.s || 1;
+                if (it.tx || it.ty || s !== 1) at += ` transform="translate(${fm(it.tx || 0)} ${fm(it.ty || 0)})${s !== 1 ? ` scale(${s})` : ''}"`;
+                if (it.clip) { const id = 'pvc' + (cid++), c = it.clip; defs.push(`<clipPath id="${id}"><rect x="${fm(c[0])}" y="${fm(c[1])}" width="${fm(c[2])}" height="${fm(c[3])}"/></clipPath>`); at += ` clip-path="url(#${id})"`; }
+                if (it.blend) at += ` style="mix-blend-mode:${it.blend}"`;
+                if (it.alpha != null && it.alpha < 1) at += ` opacity="${fm(it.alpha)}"`;
+                out.push(`<g${at}>`); walk(it.items); out.push('</g>'); break; }
+        } } };
+        walk(doc.items);
+        const size = opt.mm ? ` width="${fm(opt.mm)}mm" height="${fm(opt.mm * doc.h / doc.w)}mm"` : '';
+        return (opt.mm ? '<?xml version="1.0" encoding="UTF-8"?>\n' : '') +
+            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${doc.w} ${doc.h}"${size} style="isolation:isolate">` +
+            (defs.length ? `<defs>${defs.join('')}</defs>` : '') + out.join('') + '</svg>';
+    }
+    async function deflate(u8) {
+        if (!window.CompressionStream) return null;
+        const s = new Blob([u8]).stream().pipeThrough(new CompressionStream('deflate'));
+        return new Uint8Array(await new Response(s).arrayBuffer());
+    }
+    async function toPDF(doc, mm, title) {
+        const Wpt = mm * 72 / 25.4, Hpt = Wpt * doc.h / doc.w, sc = Wpt / doc.w, c = [], gs = {};
+        const n = fm, cv = v => Math.round(v / 255 * 10000) / 10000;
+        const fillOp = k => k.cmyk ? k.cmyk.join(' ') + ' k' : k.rgb.map(cv).join(' ') + ' rg';
+        const strokeOp = k => k.cmyk ? k.cmyk.join(' ') + ' K' : k.rgb.map(cv).join(' ') + ' RG';
+        const pathOps = subs => { for (const s of subs) { c.push(n(s.x) + ' ' + n(s.y) + ' m'); const q = s.c;
+            for (let i = 0; i < q.length; i += 6) c.push(n(q[i]) + ' ' + n(q[i + 1]) + ' ' + n(q[i + 2]) + ' ' + n(q[i + 3]) + ' ' + n(q[i + 4]) + ' ' + n(q[i + 5]) + ' c');
+            if (s.closed) c.push('h'); } };
+        const circ = (x, y, r) => { const k = 0.5523 * r;
+            c.push(`${n(x + r)} ${n(y)} m ${n(x + r)} ${n(y + k)} ${n(x + k)} ${n(y + r)} ${n(x)} ${n(y + r)} c ${n(x - k)} ${n(y + r)} ${n(x - r)} ${n(y + k)} ${n(x - r)} ${n(y)} c ${n(x - r)} ${n(y - k)} ${n(x - k)} ${n(y - r)} ${n(x)} ${n(y - r)} c ${n(x + k)} ${n(y - r)} ${n(x + r)} ${n(y - k)} ${n(x + r)} ${n(y)} c`); };
+        c.push(`${sc.toFixed(6)} 0 0 ${(-sc).toFixed(6)} 0 ${Hpt.toFixed(4)} cm`);
+        const walk = items => { for (const it of items) { if (!it) continue; switch (it.t) {
+            case 'rect': if (it.paper && doc.cmyk) break; c.push(fillOp(it.col), `${n(it.x)} ${n(it.y)} ${n(it.w)} ${n(it.h)} re f`); break;
+            case 'fill': if (!it.subs.length) break; c.push(fillOp(it.col)); pathOps(it.subs); c.push('f*'); break;
+            case 'stroke': if (!it.subs.length) break; c.push(strokeOp(it.col), `${n(it.w)} w 1 J 1 j`); pathOps(it.subs); c.push('S'); break;
+            case 'circles': { const a = it.a; if (!a.length) break; c.push(fillOp(it.col)); for (let i = 0; i < a.length; i += 3) circ(a[i], a[i + 1], a[i + 2]); c.push('f'); break; }
+            case 'dots': { const a = it.a; for (let i = 0; i < a.length; i += 6) { c.push(fillOp({ rgb: [a[i + 3], a[i + 4], a[i + 5]] })); circ(a[i], a[i + 1], a[i + 2]); c.push('f'); } break; }
+            case 'g': { c.push('q'); const s = it.s || 1;
+                if (it.tx || it.ty || s !== 1) c.push(`${s} 0 0 ${s} ${n(it.tx || 0)} ${n(it.ty || 0)} cm`);
+                if (it.clip) c.push(`${n(it.clip[0])} ${n(it.clip[1])} ${n(it.clip[2])} ${n(it.clip[3])} re W n`);
+                if (it.overprint && doc.cmyk) { gs.OP = '<< /Type /ExtGState /OP true /op true /OPM 1 >>'; c.push('/OP gs'); }
+                if (it.alpha != null && it.alpha < 1) { const nm = 'A' + Math.round(it.alpha * 100); gs[nm] = `<< /Type /ExtGState /ca ${fm(it.alpha)} /CA ${fm(it.alpha)} >>`; c.push(`/${nm} gs`); }
+                walk(it.items); c.push('Q'); break; }
+        } } };
+        walk(doc.items);
+        const enc = new TextEncoder(), raw = enc.encode(c.join('\n'));
+        let body = raw, filter = '';
+        try { const z = await deflate(raw); if (z) { body = z; filter = ' /Filter /FlateDecode'; } } catch (e) {}
+        const W = Wpt.toFixed(3), H = Hpt.toFixed(3), gsStr = Object.entries(gs).map(([k, v]) => `/${k} ${v}`).join(' ');
+        const parts = [], offs = []; let pos = 0;
+        const put = x => { const u = typeof x === 'string' ? enc.encode(x) : x; parts.push(u); pos += u.length; };
+        put('%PDF-1.7\n%âãÏÓ\n');
+        const obj = (i, s) => { offs[i] = pos; put(`${i} 0 obj\n${s}\nendobj\n`); };
+        obj(1, '<< /Type /Catalog /Pages 2 0 R >>');
+        obj(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+        obj(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /TrimBox [0 0 ${W} ${H}] /Resources << /ExtGState << ${gsStr} >> >> /Contents 4 0 R >>`);
+        offs[4] = pos; put(`4 0 obj\n<< /Length ${body.length}${filter} >>\nstream\n`); put(body); put('\nendstream\nendobj\n');
+        obj(5, `<< /Producer (Chaos Studio) /Title (${(title || 'Chaos Studio Pop').replace(/[()\\]/g, '')}) >>`);
+        const xref = pos;
+        put('xref\n0 6\n0000000000 65535 f \n' + offs.slice(1).map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('') +
+            `trailer\n<< /Size 6 /Root 1 0 R /Info 5 0 R >>\nstartxref\n${xref}\n%%EOF\n`);
+        return new Blob(parts, { type: 'application/pdf' });
+    }
+    function stats(doc) { let paths = 0, nodes = 0, dots = 0;
+        const walk = items => items.forEach(it => { if (!it) return;
+            if (it.t === 'fill' || it.t === 'stroke') { paths += it.subs.length; it.subs.forEach(s => nodes += s.c.length / 6); }
+            else if (it.t === 'circles') dots += it.a.length / 3; else if (it.t === 'dots') dots += it.a.length / 6;
+            else if (it.t === 'g') walk(it.items); });
+        walk(doc.items); return { paths, nodes, dots }; }
+    return { build, toSVG, toPDF, stats };
+})();
+
+// ---- Vector Pop: preview + export wiring ----
+let vecPreview = false, vecTimer = null;
+const vecHost = document.createElement('div'); vecHost.id = 'vecHost'; canvasWrap.appendChild(vecHost);
+function vecParams() {
+    return { mode: popMode, pal: popPalette, panels: popPanels, size: +controls.half.value, angle: +controls.popangle.value,
+        punch: +controls.poppunch.value, levels: +controls.poplevels.value, ink: +controls.popink.value, mis: +controls.popmis.value,
+        smooth: +controls.vsmooth.value, clean: +controls.vclean.value };
+}
+function resampleTo(src, detail) {
+    const sc = detail / Math.max(src.w, src.h), w = Math.max(8, Math.round(src.w * sc)), h = Math.max(8, Math.round(src.h * sc));
+    if (w === src.w && h === src.h) return src;
+    const a = document.createElement('canvas'); a.width = src.w; a.height = src.h;
+    a.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(src.d), src.w, src.h), 0, 0);
+    const b = document.createElement('canvas'); b.width = w; b.height = h; const bx = b.getContext('2d', { willReadFrequently: true });
+    bx.imageSmoothingQuality = 'high'; bx.drawImage(a, 0, 0, w, h);
+    return { w, h, d: bx.getImageData(0, 0, w, h).data };
+}
+function vecStatsText(doc, ms) { const s = PopVec.stats(doc); return `${doc.w}×${doc.h} · ${s.paths} paths · ${s.nodes} nodes · ${s.dots} dots${ms != null ? ` · ${ms} ms` : ''}`; }
+function hideVec() { vecHost.style.display = 'none'; canvas.style.visibility = ''; }
+function refreshVec() {
+    clearTimeout(vecTimer);
+    if (!(vecPreview && popMode !== 'off' && prePop && !comparing && layers.length)) { hideVec(); return; }
+    vecTimer = setTimeout(() => {
+        if (!(vecPreview && popMode !== 'off' && prePop && !comparing && layers.length)) { hideVec(); return; }
+        try {
+            const t0 = performance.now();
+            const doc = PopVec.build(resampleTo(prePop, +controls.vdetail.value), vecParams());
+            vecHost.innerHTML = PopVec.toSVG(doc);
+            vecHost.style.display = 'block'; canvas.style.visibility = 'hidden';
+            $('vecStats').textContent = vecStatsText(doc, Math.round(performance.now() - t0));
+        } catch (e) { console.error(e); hideVec(); showToast('Vector trace failed: ' + e.message, true); }
+    }, 120);
+}
+function setVecPreview(on) {
+    vecPreview = on; capturePrePop = on;
+    $('btn-vecprev').classList.toggle('on', on); $('btn-vecprev').textContent = on ? 'Vector: On' : 'Vector: Off';
+    if (on) { if (popMode === 'off') showToast('Pick a Pop style to see vectors'); requestRender(); } else { hideVec(); $('vecStats').textContent = ''; }
+}
+async function exportVector(kind) {
+    if (!layers.length) { showToast('Add an image first', true); return; }
+    if (popMode === 'off') { showToast('Pick a Pop style first', true); return; }
+    loadingOverlay.style.display = 'flex'; $('loadingText').textContent = 'Tracing vectors...';
+    await new Promise(r => setTimeout(r, 60));
+    const pw = canvas.width, ph = canvas.height, keep = capturePrePop;
+    try {
+        const det = +controls.vdetail.value, s = det / Math.max(fullW, fullH);
+        const tw = Math.max(8, Math.round(fullW * s)), th = Math.max(8, Math.round(fullH * s));
+        capturePrePop = true; comparing = false;
+        renderAll(tw, th); const src = prePop;
+        renderAll(pw, ph);
+        const doc = PopVec.build(src, vecParams()), mm = +controls.vwidth.value;
+        const blob = kind === 'svg'
+            ? new Blob([PopVec.toSVG(doc, { mm })], { type: 'image/svg+xml' })
+            : await PopVec.toPDF(doc, mm, 'Chaos Studio Pop - ' + popMode);
+        const url = URL.createObjectURL(blob), a = document.createElement('a');
+        a.download = `ChaosStudio-Pop-${popMode}-${Date.now()}.${kind}`; a.href = url;
+        document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(url), 10000);
+        showToast(`Saved vector ${kind.toUpperCase()}`);
+        $('vecStats').textContent = vecStatsText(doc);
+    } catch (e) { console.error(e); showToast('Vector export failed: ' + e.message, true); }
+    finally { capturePrePop = keep; loadingOverlay.style.display = 'none'; refreshVec(); }
+}
+$('btn-vecprev').onclick = () => setVecPreview(!vecPreview);
+['btn-vsvg', 'btn-vsvg2'].forEach(id => $(id).onclick = () => exportVector('svg'));
+['btn-vpdf', 'btn-vpdf2'].forEach(id => $(id).onclick = () => exportVector('pdf'));
+const syncVecW = () => { const v = +controls.vwidth.value; $('vecSizeLbl').textContent = fullW ? `${v} × ${Math.round(v * fullH / fullW * 10) / 10} mm` : `${v} mm wide`; };
+controls.vwidth.addEventListener('input', syncVecW); syncVecW();
+
+
+// ---- Colour skins (shared with Step & Repeat) ----
+function applySkin(name, save) {
+    const root = document.documentElement, btns = [...document.querySelectorAll('#skins button')];
+    if (!btns.some(b => b.dataset.skin === name)) name = 'workbench';
+    root.dataset.skin = name;
+    btns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.skin === name)));
+    if (save) { try { localStorage.setItem('cs-skin', name); } catch (_) {} }
+}
+$('skins').addEventListener('click', e => { const b = e.target.closest('button'); if (b) applySkin(b.dataset.skin, true); });
+applySkin(document.documentElement.dataset.skin || 'workbench', false);
+
+// ---- Export ----
+const qualitySlider = $('quality');
+qualitySlider.addEventListener('input', () => { $('val-quality').textContent = qualitySlider.value + '%'; refreshSliderFill(qualitySlider); });
+document.querySelectorAll('#scaleChips .chip').forEach(c => c.onclick = () => {
+    exportScale = +c.dataset.s; document.querySelectorAll('#scaleChips .chip').forEach(x => x.classList.toggle('on', x === c)); updateExportInfo();
+});
+function exportImg(format, ext) {
+    const dims = exportDims();
+    if (!dims) { showToast('Add an image first', true); return; }
+    loadingOverlay.style.display = 'flex'; $('loadingText').textContent = `Exporting ${ext.toUpperCase()}...`;
+    setTimeout(() => {
+        const pw = canvas.width, ph = canvas.height;
+        try {
+            renderAll(dims[0], dims[1]);
+            canvas.toBlob(blob => {
+                if (!blob) { showToast('Export failed — image may be too large for this device', true); return; }
+                const url = URL.createObjectURL(blob), a = document.createElement('a');
+                a.download = `ChaosStudio-${dims[0]}x${dims[1]}-${Date.now()}.${ext}`; a.href = url;
+                document.body.appendChild(a); a.click(); document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+                showToast(`Saved as ${ext.toUpperCase()}`);
+            }, `image/${format}`, format === 'webp' ? qualitySlider.value / 100 : 1);
+        } catch (e) { console.error(e); showToast('Export failed: ' + e.message, true); }
+        finally { renderAll(pw, ph); loadingOverlay.style.display = 'none'; }
+    }, 100);
+}
+$('savePngBtn').addEventListener('click', () => exportImg('png', 'png'));
+$('saveWebpBtn').addEventListener('click', () => exportImg('webp', 'webp'));
+
+Object.values(ui.sliders).forEach(refreshSliderFill);
+refreshSliderFill(qualitySlider);
+renderBlendChips(null);
+
+</script>
+</body>
+</html>
