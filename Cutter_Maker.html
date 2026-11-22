@@ -354,6 +354,7 @@ label[style*="color:#eee"]{color:var(--tx)!important}
     <label id="pSVL">Inner R<input id="pSV" type="number" step="any" min="0" value="0"></label>
     <label id="pRotL" class="s2">Rotate °<input id="pRot" type="number" step="any" value="0"></label>
   </div>
+  <label class="ck" id="pStrL" style="display:none" title="Off: the star keeps its true proportions (set width OR height). On: the points are stretched so the finished cutter is exactly the width AND height entered."><input type="checkbox" id="pStr">Stretch to exact W × H</label>
   <div id="genInfo" class="note" style="margin-top:-4px"></div>
         </div>
         <div class="blk" id="crBlk">
@@ -3320,9 +3321,9 @@ $("side").addEventListener("focusin", e => { if (e.target.matches("input,select"
 
 /* ───────── Profile controls ───────── */
 function profUI() {
-  const t=S.profileType, g=S.profileGen, star=g&&g.k==="star";
-  $("pHL").style.display = (t==="circle"||star)?"none":"";
-  $("pWT").textContent = t==="circle"?"Diameter":star?"Outer Ø":"Width";
+  const t=S.profileType, g=S.profileGen;
+  $("pHL").style.display = t==="circle"?"none":"";
+  $("pWT").textContent = t==="circle"?"Diameter":"Width";
   $("pCorners").style.display = t==="rect"?"":"none";
   $("pW").disabled = $("pH").disabled = t==="path" && !g;
   if (g && g.tri==="eq") $("pH").disabled = true;
@@ -6437,7 +6438,7 @@ function absLocal(abs) {
   let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity, cx=0, cy=0;
   const eat=(x,y)=>{ x0=Math.min(x0,x); y0=Math.min(y0,y); x1=Math.max(x1,x); y1=Math.max(y1,y); };
   for (const g of abs) { if (g[0]==="M"||g[0]==="L") { eat(g[1],g[2]); cx=g[1]; cy=g[2]; }
-    else if (g[0]==="C") { for (let i=1;i<=64;i++) { const t=i/64,u=1-t; eat(u*u*u*cx+3*u*u*t*g[1]+3*u*t*t*g[3]+t*t*t*g[5],u*u*u*cy+3*u*u*t*g[2]+3*u*t*t*g[4]+t*t*t*g[6]); } cx=g[5]; cy=g[6]; } }
+    else if (g[0]==="C") { for (let i=1;i<=96;i++) { const t=i/96,u=1-t; eat(u*u*u*cx+3*u*u*t*g[1]+3*u*t*t*g[3]+t*t*t*g[5],u*u*u*cy+3*u*u*t*g[2]+3*u*t*t*g[4]+t*t*t*g[6]); } cx=g[5]; cy=g[6]; } }
   const segs=abs.map(g=>g[0]==="Z"?["Z"]:[g[0],...g.slice(1).map((v,i)=>Math.round((v-(i%2?y0:x0))*1e5)/1e5)]);
   return {x:Math.round(x0*1e5)/1e5, y:Math.round(y0*1e5)/1e5, w:Math.round((x1-x0)*1e5)/1e5, h:Math.round((y1-y0)*1e5)/1e5, segs};
 }
@@ -6445,7 +6446,7 @@ function absLocal(abs) {
 /* ───────── Generated profiles: triangle, rounded triangle, star (sizes are the FINISHED cutter sizes, after rounding) ───────── */
 function genPoly(g) {
   if (g.k==="star") { const n=g.n, rot=(g.rot||0)*Math.PI/180, V=[];
-    for (let i=0;i<2*n;i++) { const a=-Math.PI/2+rot+i*Math.PI/n, r=i%2?g.ri:g.ro; V.push([r*Math.cos(a),r*Math.sin(a)]); } return V; }
+    for (let i=0;i<2*n;i++) { const a=-Math.PI/2+rot+i*Math.PI/n, r=i%2?g.ri:g.ro; V.push([r*Math.cos(a)*(g.sx||1),r*Math.sin(a)*(g.sy||1)]); } return V; }
   const W=g.w, H=g.h;
   return g.tri==="down"?[[0,0],[W,0],[W/2,H]] : g.tri==="rl"?[[0,0],[W,H],[0,H]] : g.tri==="rr"?[[W,0],[W,H],[0,H]] : [[W/2,0],[W,H],[0,H]];
 }
@@ -6453,46 +6454,57 @@ function genBuild(g) {
   const V=genPoly(g), n=V.length, loop=V.map((v,i)=>({k:"L",p0:v,p1:V[(i+1)%n]})), vr=V.map((_,i)=>g.k==="star"?(i%2?g.rv:g.rt):g.r);
   return filletLoop(loop, j=>vr[(j+1)%n], 0.001);
 }
-function loopBox(lp) { let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; for (const p of lp) for (let i=0;i<=(p.k==="L"?1:32);i++) { const q=p.k==="L"?(i?p.p1:p.p0):bPt(p,i/32); x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); } return {x0,y0,x1,y1,w:x1-x0,h:y1-y0}; }
+function loopBox(lp) { let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; for (const p of lp) for (let i=0;i<=(p.k==="L"?1:96);i++) { const q=p.k==="L"?(i?p.p1:p.p0):bPt(p,i/96); x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); } return {x0,y0,x1,y1,w:x1-x0,h:y1-y0}; }
 function loopRadial(lp) { let mn=Infinity, mx=0; for (const p of lp) { if (p.k==="L") { mn=Math.min(mn,segDist(0,0,p.p0[0],p.p0[1],p.p1[0],p.p1[1])); mx=Math.max(mx,V2.len(p.p0),V2.len(p.p1)); } else for (let i=0;i<=32;i++) { const d=V2.len(bPt(p,i/32)); mn=Math.min(mn,d); mx=Math.max(mx,d); } } return {mn,mx}; }
 function genProfile(g0) {
   const g={...g0}; let res=genBuild(g);
-  if (g.k==="star") {            // outer Ø = across the finished points, inner Ø = across the finished valleys
-    for (let it=0; it<12; it++) { const m=loopRadial(res.loop), dO=g0.ro-m.mx, dI=g0.ri-m.mn; if (Math.abs(dO)<1e-6 && Math.abs(dI)<1e-6) break; g.ro+=dO; g.ri=Math.max(0.01,Math.min(g.ro-0.01,g.ri+dI)); res=genBuild(g); }
+  if (g.k==="star") {            // finished width (or height) = the size typed; inner Ø = across the finished valleys
+    for (let it=0; it<40; it++) { const b=loopBox(res.loop), cur=g0.by==="h"?b.h:b.w, m=loopRadial(res.loop), dI=g0.ri-m.mn;
+      if (Math.abs(g0.size-cur)<1e-7 && Math.abs(dI)<1e-7) break;
+      g.ro=Math.max(0.05,g.ro*g0.size/cur); g.ri=Math.max(0.01,Math.min(g.ro-0.01,g.ri+dI)); res=genBuild(g); }
+    if (g0.stretch) {            // stretch the star's points (not the roundings) so the finished outline is exactly W × H
+      g.sx=1; g.sy=1;
+      for (let it=0; it<80; it++) { const b=loopBox(res.loop); if (Math.abs(b.w-g0.W)<1e-7 && Math.abs(b.h-g0.H)<1e-7) break; g.sx*=g0.W/b.w; g.sy*=g0.H/b.h; res=genBuild(g); }
+    }
   } else {                       // width × height = the finished bounding box
     const eq=g.tri==="eq", k=Math.sqrt(3)/2; if (eq) g.h=g.w*k;
     for (let it=0; it<12; it++) { const b=loopBox(res.loop), dw=g0.w-b.w, dh=eq?0:g0.h-b.h; if (Math.abs(dw)<1e-6 && Math.abs(dh)<1e-6) break; g.w+=dw; if (eq) g.h=g.w*k; else g.h+=dh; res=genBuild(g); }
   }
   const loc=absLocal(loopsToAbs([res.loop])), rset=new Set(res.radii.filter(v=>v>0));
-  return {...loc, radii:[...rset], done:res.done, reduced:res.reduced};
+  return {...loc, ro:g.k==="star"?loopRadial(res.loop).mx:0, radii:[...rset], done:res.done, reduced:res.reduced};
 }
 var GEN_UI = {tri:1, rtri:1, star:1};
 function readGen(t) {
   const g={ui:t, k:t==="star"?"star":"tri"};
-  if (t==="star") { const D=Math.max(1,num("pW",100)); g.ro=D/2; g.ri=Math.max(0.05,Math.min(D/2-0.05,num("pIn",D/2)/2)); g.n=Math.max(3,Math.min(100,Math.round(num("pN",5)))); g.rt=Math.max(0,num("pSR",0)); g.rv=Math.max(0,num("pSV",0)); g.rot=num("pRot",0); }
+  if (t==="star") { const ae=document.activeElement, prev=S.profileGen&&S.profileGen.k==="star"?S.profileGen.by:"w";
+    g.stretch=$("pStr").checked; g.W=Math.max(1,num("pW",100)); g.H=Math.max(1,num("pH",100));
+    g.by = g.stretch ? "w" : ae&&ae.id==="pH" ? "h" : ae&&ae.id==="pW" ? "w" : prev; g.size=g.stretch ? g.W : Math.max(1,num(g.by==="h"?"pH":"pW",100));
+    g.ro=g.size/2; g.ri=Math.max(0.05,Math.min(g.size/2-0.05,num("pIn",g.size/2)/2)); g.n=Math.max(3,Math.min(100,Math.round(num("pN",5)))); g.rt=Math.max(0,num("pSR",0)); g.rv=Math.max(0,num("pSV",0)); g.rot=num("pRot",0); }
   else { g.tri=$("pTri").value; g.w=Math.max(1,num("pW",100)); g.h=Math.max(1,num("pH",100)); g.r=t==="rtri"?Math.max(0,num("pGR",0)):0; }
   const res=genProfile(g);
   S.profileGen=g; S.profileType="path"; S.profilePath=res.segs; S.profileRadii=res.radii; S.mw=res.w; S.mh=res.h; S.profileEdges=null;
   if (g.tri==="eq") $("pH").value=R(res.h);
-  $("genInfo").textContent = (t==="star" ? `${g.n}-point star · ${fmG(res.w)} × ${fmG(res.h)} mm` : `Triangle · ${fmG(res.w)} × ${fmG(res.h)} mm`)
+  if (g.k==="star" && !g.stretch) { if (g.by==="h") $("pW").value=R(res.w); else $("pH").value=R(res.h); }
+  $("genInfo").textContent = (t==="star" ? (g.stretch ? `${g.n}-point star · stretched to exactly ${fmG(res.w)} × ${fmG(res.h)} mm` : `${g.n}-point star · finished ${fmG(res.w)} × ${fmG(res.h)} mm (sized by ${g.by==="h"?"height":"width"}) · points on Ø${fmG(2*res.ro)}`) : `Triangle · ${fmG(res.w)} × ${fmG(res.h)} mm`)
     + (res.reduced ? ` · ⚠ ${res.reduced} corner radius${res.reduced>1?"es":""} too big for the sides — reduced to fit` : "");
 }
 const fmG = v => String(Math.round(v*100)/100);
 function setGenUI(g) {
   if (!g) return; $("pShape").value=g.ui;
-  if (g.k==="star") { $("pW").value=R(g.ro*2); $("pIn").value=R(g.ri*2); $("pN").value=g.n; $("pSR").value=g.rt; $("pSV").value=g.rv; $("pRot").value=g.rot; }
+  if (g.k==="star") { $("pW").value=R(S.mw); $("pH").value=R(S.mh); $("pIn").value=R(g.ri*2); $("pN").value=g.n; $("pSR").value=g.rt; $("pSV").value=g.rv; $("pRot").value=g.rot; $("pStr").checked=!!g.stretch; }
   else { $("pTri").value=g.tri; $("pW").value=g.w; $("pH").value=g.h; if (g.ui==="rtri") $("pGR").value=g.r; }
 }
 function genUI() {
   const g=S.profileGen, ui=g?g.ui:"";
   $("pGen").style.display = g?"":"none";
   $("pTriL").style.display = $("pGRL").style.display = "none";
-  ["pNL","pInL","pSRL","pSVL","pRotL"].forEach(k=>$(k).style.display = ui==="star"?"":"none");
+  ["pNL","pInL","pSRL","pSVL","pRotL","pStrL"].forEach(k=>$(k).style.display = ui==="star"?"":"none");
   if (ui==="tri"||ui==="rtri") $("pTriL").style.display="";
   if (ui==="rtri") $("pGRL").style.display="";
   if (!g) $("genInfo").textContent="";
 }
 ["pTri","pN","pIn","pGR","pSR","pSV","pRot"].forEach(id => $(id).oninput = readProfile);
+$("pStr").onchange = () => { pushUndo(); readProfile(); };
 
 /* ───────── Round sharp corners on a loaded cutter (outer profile + optionally inner shapes) ───────── */
 var CR = {on:false, list:[], pick:new Set()};
