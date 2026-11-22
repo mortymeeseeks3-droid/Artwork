@@ -295,7 +295,7 @@ label[style*="color:#eee"]{color:var(--tx)!important}
 <header id="appTop">
   <div class="brand">
     <svg width="30" height="30" viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="3" width="26" height="26" rx="6" fill="none" stroke="#e6007e" stroke-width="2.4"/><rect x="9" y="9" width="14" height="14" rx="2" fill="none" stroke="#22cbe9" stroke-width="2" stroke-dasharray="4 2.5"/></svg>
-    <b>CutterMaker</b><small>V44</small>
+    <b>CutterMaker</b><small>V45</small>
   </div>
   <div id="bar">
     <button id="undo" class="tb" title="Undo (Ctrl+Z)" aria-label="Undo"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></svg></button>
@@ -334,7 +334,7 @@ label[style*="color:#eee"]{color:var(--tx)!important}
         <div class="blk">
           <h3>Outer profile</h3>
   <div class="g">
-    <label class="s2">Shape<select id="pShape"><option value="rect">Rectangle</option><option value="circle">Circle</option><option value="oval">Oval</option><option value="path" hidden>Imported outline</option></select></label>
+    <label class="s2">Shape<select id="pShape"><option value="rect">Rectangle</option><option value="circle">Circle</option><option value="oval">Oval</option><option value="tri">Triangle</option><option value="rtri">Rounded triangle</option><option value="star">Star</option><option value="path" hidden>Custom outline</option></select></label>
     <label id="pWL"><span id="pWT">Width</span><input id="pW" type="number" step="any" value="100"></label>
     <label id="pHL">Height<input id="pH" type="number" step="any" value="100"></label>
   </div>
@@ -345,6 +345,27 @@ label[style*="color:#eee"]{color:var(--tx)!important}
     <label>↘ BR<input id="pBR" type="number" step="any" value="2"></label>
     <label>↙ BL<input id="pBL" type="number" step="any" value="2"></label>
   </div>
+  <div class="g" id="pGen" style="display:none">
+    <label id="pTriL" class="s2">Triangle<select id="pTri"><option value="up">▲ Point up</option><option value="down">▼ Point down</option><option value="eq">▲ Equilateral</option><option value="rl">◣ Right-angled, left</option><option value="rr">◢ Right-angled, right</option></select></label>
+    <label id="pGRL" class="s2">Corner R<input id="pGR" type="number" step="any" min="0" value="5"></label>
+    <label id="pNL">Points<input id="pN" type="number" step="1" min="3" max="100" value="5"></label>
+    <label id="pInL">Inner Ø<input id="pIn" type="number" step="any" min="0" value="50"></label>
+    <label id="pSRL">Point R<input id="pSR" type="number" step="any" min="0" value="0"></label>
+    <label id="pSVL">Inner R<input id="pSV" type="number" step="any" min="0" value="0"></label>
+    <label id="pRotL" class="s2">Rotate °<input id="pRot" type="number" step="any" value="0"></label>
+  </div>
+  <div id="genInfo" class="note" style="margin-top:-4px"></div>
+        </div>
+        <div class="blk" id="crBlk">
+          <h3>Round sharp corners<small>loaded cutters</small></h3>
+          <p class="note" style="margin-top:0">Import a cutter PDF (or use any profile), press <b>Find corners</b>, click the markers on the canvas to pick corners — or <b>All</b> — then <b>Apply</b>.</p>
+          <div class="g">
+            <label class="s2">Radius (mm)<input id="crR" type="number" step="any" min="0" value="0.5"></label>
+            <div class="s2" id="crPre" style="display:flex;gap:4px;align-items:flex-end"><button type="button" class="eb" data-r="0.5">0.5</button><button type="button" class="eb" data-r="1">1</button><button type="button" class="eb" data-r="2">2</button><button type="button" class="eb" data-r="3">3</button></div>
+          </div>
+          <label class="ck"><input type="checkbox" id="crIn" checked>Include inner shapes</label>
+          <div class="btns"><button id="crFind" type="button">Find corners</button><button id="crAll" type="button">All</button><button id="crNone" type="button">None</button><button id="crApply" type="button">Apply radius</button></div>
+          <div id="crInfo" class="note"></div>
         </div>
         <div class="blk">
           <h3>Dimensions on canvas<small>press D</small></h3>
@@ -2893,7 +2914,7 @@ var qrcode = function() {
 "use strict";
 const $ = id => document.getElementById(id);
 const c = $("c"), x = c.getContext("2d");
-const S = { profileType:"rect", mw:100, mh:100, profileR:{tl:2,tr:2,br:2,bl:2}, profilePath:null, profileRadii:null, profileDash:null, profileEdges:null, placed:[], art:[], spots:[], scale:1, ox:0, oy:0 };
+const S = { profileType:"rect", mw:100, mh:100, profileR:{tl:2,tr:2,br:2,bl:2}, profilePath:null, profileRadii:null, profileGen:null, profileDash:null, profileEdges:null, placed:[], art:[], spots:[], scale:1, ox:0, oy:0 };
 let sel = -1, drag = null, guides = [], issues = [], undoStack = [];
 const num = (id, d=0) => { const v = parseFloat($(id).value); return isFinite(v) ? v : d; };
 const R = v => Math.round(v*1e4)/1e4;
@@ -3264,6 +3285,7 @@ function dr() {
   x.lineWidth = px; x.strokeStyle = SK.guide; x.setLineDash([4*px,4*px]);
   for (const g of guides) { x.beginPath(); if ("x" in g){x.moveTo(g.x,-6);x.lineTo(g.x,S.mh+6);} else {x.moveTo(-6,g.y);x.lineTo(S.mw+6,g.y);} x.stroke(); }
   x.setLineDash([]); x.restore();
+  crDraw();
   if (dim.on) drawDims();
   { const dk=$("dimKey");
     if (!dim.on) dk.hidden=true;
@@ -3282,14 +3304,14 @@ function dr() {
 }
 
 /* ───────── Undo ───────── */
-const stateStr = () => JSON.stringify({t:S.profileType,w:S.mw,h:S.mh,r:S.profileR,p:S.placed,a:S.art,pp:S.profilePath,pd:S.profileDash,pe:S.profileEdges,pr:S.profileRadii});
+const stateStr = () => JSON.stringify({t:S.profileType,w:S.mw,h:S.mh,r:S.profileR,p:S.placed,a:S.art,pp:S.profilePath,pd:S.profileDash,pe:S.profileEdges,pr:S.profileRadii,g:S.profileGen});
 function pushUndo() { const s=stateStr(); if (undoStack[undoStack.length-1]!==s) { undoStack.push(s); if (undoStack.length>100) undoStack.shift(); } }
 function undo() {
   let s; do { s = undoStack.pop(); } while (s!==undefined && s===stateStr());
   if (s===undefined) return;
   const o=JSON.parse(s);
-  S.profileType=o.t; S.mw=o.w; S.mh=o.h; S.profileR=o.r; S.placed=o.p; S.art=o.a||[]; if (artSel>=S.art.length) artSel=-1; artUI(); S.profilePath=o.pp||null; S.profileDash=o.pd||null; S.profileEdges=o.pe||null; S.profileRadii=o.pr||null; syncDashUI();
-  $("pShape").value=o.t; $("pW").value=o.w; $("pH").value=o.h;
+  S.profileType=o.t; S.mw=o.w; S.mh=o.h; S.profileR=o.r; S.placed=o.p; S.art=o.a||[]; if (artSel>=S.art.length) artSel=-1; artUI(); S.profilePath=o.pp||null; S.profileDash=o.pd||null; S.profileEdges=o.pe||null; S.profileRadii=o.pr||null; S.profileGen=o.g||null; syncDashUI();
+  $("pShape").value=o.t; $("pW").value=o.w; $("pH").value=o.h; setGenUI(S.profileGen);
   $("pTL").value=o.r.tl; $("pTR").value=o.r.tr; $("pBR").value=o.r.br; $("pBL").value=o.r.bl;
   profUI(); select(-1); rs();
 }
@@ -3298,16 +3320,25 @@ $("side").addEventListener("focusin", e => { if (e.target.matches("input,select"
 
 /* ───────── Profile controls ───────── */
 function profUI() {
-  const t=S.profileType;
-  $("pHL").style.display = t==="circle"?"none":"";
-  $("pWT").textContent = t==="circle"?"Diameter":"Width";
+  const t=S.profileType, g=S.profileGen, star=g&&g.k==="star";
+  $("pHL").style.display = (t==="circle"||star)?"none":"";
+  $("pWT").textContent = t==="circle"?"Diameter":star?"Outer Ø":"Width";
   $("pCorners").style.display = t==="rect"?"":"none";
-  $("pW").disabled = $("pH").disabled = t==="path";
+  $("pW").disabled = $("pH").disabled = t==="path" && !g;
+  if (g && g.tri==="eq") $("pH").disabled = true;
+  genUI();
   if (t!=="rect") S.profileEdges=null;
   fillLinePanel();
 }
 function readProfile() {
-  const t=$("pShape").value; S.profileType=t;
+  const t=$("pShape").value;
+  if (t==="tri"||t==="rtri"||t==="star") {
+    if (t==="star" && !(S.profileGen&&S.profileGen.k==="star") && !(num("pIn",0)>0 && num("pIn",0)<num("pW",100))) $("pIn").value=R(num("pW",100)/2);
+    readGen(t);
+    if ($("auto").checked && S.placed.length) { const {out,rest}=packInto([],S.placed); S.placed=out.concat(rest); sel=-1; $("selP").hidden=true; }
+    profUI(); rs(); return;
+  }
+  S.profileGen=null; S.profileType=t;
   if (t!=="path") { S.mw=Math.max(1,num("pW",100)); S.mh=t==="circle"?S.mw:Math.max(1,num("pH",100)); }
   S.profileR={tl:Math.max(0,num("pTL")),tr:Math.max(0,num("pTR")),br:Math.max(0,num("pBR")),bl:Math.max(0,num("pBL"))};
   if ($("auto").checked && S.placed.length) { const {out,rest}=packInto([],S.placed); S.placed=out.concat(rest); sel=-1; $("selP").hidden=true; }
@@ -3702,7 +3733,7 @@ function pfRun(op) {
       pushUndo();
       for (let j=idx.length-1;j>=1;j--) S.placed.splice(idx[j],1);
       const dx=-res.x, dy=-res.y; S.placed.forEach(s=>{ s.x=R(s.x+dx); s.y=R(s.y+dy); });
-      S.profileType="path"; S.profilePath=res.segs; S.profileRadii=res.radii; S.mw=res.w; S.mh=res.h; S.profileDash=null; S.profileEdges=null;
+      S.profileGen=null; S.profileType="path"; S.profilePath=res.segs; S.profileRadii=res.radii; S.mw=res.w; S.mh=res.h; S.profileDash=null; S.profileEdges=null;
       $("pShape").value="path"; $("pW").value=res.w; $("pH").value=res.h; $("auto").checked=false; profUI(); select(-1); rs();
       $("status").textContent=`${op==="merge"?"Merged into":"Trimmed"} the outer profile${res.loops>1?` (${res.loops} outlines)`:""} — Ctrl+Z to undo`;
       return;
@@ -3760,6 +3791,7 @@ function snapPos(s, nx, ny) {
   return [nx,ny];
 }
 c.onpointerdown = e => {
+  if (CR && CR.on && !e.shiftKey && crClick(e)) return;
   if (artDown(e)) return;
   const [gx,gy]=toMM(e), tol=8/S.scale; let best=null, i=-1, k=null, pe=null;
   S.placed.forEach((s,j) => { if (s.type!=="rect" || Math.min(s.w,s.h)*S.scale<24) return; const ed=edgeNear(s,gx,gy,tol);
@@ -4179,7 +4211,7 @@ function applyImport(res, pn, pages) {
       sharedRadius=vals[0];
     }
   }
-  S.profileType = P.type==="path" ? "path" : P.type;
+  S.profileGen = null; S.profileType = P.type==="path" ? "path" : P.type;
   if (P.type==="rect") S.profileR={...pr};
   if (P.type==="path") S.profilePath=P.segs;
   S.profileDash=P.dash||null; S.profileEdges=null; S.profileRadii=null; syncDashUI();
@@ -6342,6 +6374,201 @@ async function safeSheet(cutOps, safeOps, CB, margin, k, showAllLayers = false, 
 }
 artUI(); palList();
 profUI(); addUI(); readProfile();
+
+/* ───────── Corner fillets (shared by the triangle / star profiles and the "Round sharp corners" tool) ───────── */
+const V2={sub:(a,b)=>[a[0]-b[0],a[1]-b[1]], add:(a,b)=>[a[0]+b[0],a[1]+b[1]], mul:(a,k)=>[a[0]*k,a[1]*k], len:a=>Math.hypot(a[0],a[1]),
+  nrm:a=>{ const l=Math.hypot(a[0],a[1])||1; return [a[0]/l,a[1]/l]; }, dot:(a,b)=>a[0]*b[0]+a[1]*b[1], crs:(a,b)=>a[0]*b[1]-a[1]*b[0]};
+function fTanEnd(p) { if (p.k==="L") return V2.nrm(V2.sub(p.p1,p.p0)); for (const q of [p.c2,p.c1,p.p0]) { const d=V2.sub(p.p1,q); if (V2.len(d)>1e-9) return V2.nrm(d); } return [1,0]; }
+function fTanStart(p) { if (p.k==="L") return V2.nrm(V2.sub(p.p1,p.p0)); for (const q of [p.c1,p.c2,p.p1]) { const d=V2.sub(q,p.p0); if (V2.len(d)>1e-9) return V2.nrm(d); } return [1,0]; }
+function fLen(p) { if (p.k==="L") return V2.len(V2.sub(p.p1,p.p0)); let L=0, prev=p.p0; for (let i=1;i<=48;i++) { const q=bPt(p,i/48); L+=V2.len(V2.sub(q,prev)); prev=q; } return L; }
+const fClean = lp => lp.filter(p=>fLen(p)>1e-5);
+function fSplitC(p,t) {
+  const lp=(a,b)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+  const a=lp(p.p0,p.c1), b=lp(p.c1,p.c2), c=lp(p.c2,p.p1), d=lp(a,b), e=lp(b,c), m=lp(d,e);
+  return [{k:"C",p0:p.p0,c1:a,c2:d,p1:m},{k:"C",p0:m,c1:e,c2:c,p1:p.p1}];
+}
+/* cut a straight distance t off the start or the end of a segment (exact for lines, exact point-on-curve for béziers) */
+function fTrim(p,t,atStart) {
+  if (!(t>0)) return p;
+  if (p.k==="L") { const d=V2.nrm(V2.sub(p.p1,p.p0)); return atStart ? {k:"L",p0:V2.add(p.p0,V2.mul(d,t)),p1:p.p1} : {k:"L",p0:p.p0,p1:V2.sub(p.p1,V2.mul(d,t))}; }
+  const ref=atStart?p.p0:p.p1; let lo=0, hi=1;
+  for (let i=0;i<60;i++) { const m=(lo+hi)/2, q=bPt(p,atStart?m:1-m); if (V2.len(V2.sub(q,ref))<t) lo=m; else hi=m; }
+  const u=(lo+hi)/2; return atStart ? fSplitC(p,u)[1] : fSplitC(p,1-u)[0];
+}
+/* sharp corners of a closed loop: junction j sits at the end of segment j */
+function fCorners(loop, minDeg) {
+  const out=[], n=loop.length, lim=(minDeg==null?3:minDeg)*Math.PI/180;
+  for (let j=0;j<n;j++) { const a=loop[j], b=loop[(j+1)%n], turn=Math.acos(Math.max(-1,Math.min(1,V2.dot(fTanEnd(a),fTanStart(b)))));
+    if (turn>lim && turn<Math.PI-1e-3) out.push({j,pt:a.p1,turn}); }
+  return out;
+}
+/* true circular arc P1→P2 (tangent T1 in, T2 out), split into ≤90° cubic pieces */
+function fArc(P1,T1,P2,T2) {
+  const al=Math.acos(Math.max(-1,Math.min(1,V2.dot(T1,T2)))), sg=V2.crs(T1,T2)>=0?1:-1, ch=V2.len(V2.sub(P2,P1));
+  if (al<1e-7 || ch<1e-9) return [{k:"L",p0:P1,p1:P2}];
+  const r=ch/(2*Math.sin(al/2)), C=V2.add(P1,V2.mul([-T1[1]*sg,T1[0]*sg],r)), k=Math.max(1,Math.ceil(al/(Math.PI/2)-1e-9)), d=al/k, h=4/3*Math.tan(d/4)*r, out=[];
+  const a0=Math.atan2(P1[1]-C[1],P1[0]-C[0]); let prev=P1, pt=T1;
+  for (let i=1;i<=k;i++) { const a=a0+sg*d*i, q=i===k?P2:[C[0]+r*Math.cos(a),C[1]+r*Math.sin(a)], qt=i===k?T2:[-Math.sin(a)*sg,Math.cos(a)*sg];
+    out.push({k:"C",p0:prev,c1:V2.add(prev,V2.mul(pt,h)),c2:V2.sub(q,V2.mul(qt,h)),p1:q}); prev=q; pt=qt; }
+  return out;
+}
+/* round the chosen corners of one closed loop; rOf(j) = wanted radius at junction j (0 = leave sharp).
+   If two fillets would overlap on a short side, both are reduced just enough to meet. */
+function filletLoop(loop, rOf, minDeg) {
+  const n=loop.length, want=new Array(n).fill(0), turn=new Array(n).fill(0);
+  for (const c of fCorners(loop,minDeg)) { const r=rOf(c.j); if (r>0) { want[c.j]=r*Math.tan(c.turn/2); turn[c.j]=c.turn; } }
+  const lens=loop.map(fLen), fac=new Array(n).fill(1);
+  for (let j=0;j<n;j++) { const jp=(j-1+n)%n, s=want[jp], e=want[j], L=lens[j]*0.999;
+    if (s+e>L && s+e>0) { const f=L/(s+e); if (s>0) fac[jp]=Math.min(fac[jp],f); if (e>0) fac[j]=Math.min(fac[j],f); } }
+  const t=want.map((w,j)=>w*fac[j]); let done=0, reduced=0; const radii=[];
+  t.forEach((v,j)=>{ if (want[j]>0) { done++; if (fac[j]<0.9999) reduced++; radii.push(Math.round(v/Math.tan(turn[j]/2)*1e5)/1e5); } });
+  const segs=loop.map((p,j)=>{ let q=p; if (t[j]>0) q=fTrim(q,t[j],false); const ts=t[(j-1+n)%n]; if (ts>0) q=fTrim(q,ts,true); return q; });
+  const out=[];
+  for (let j=0;j<n;j++) { out.push(segs[j]); if (t[j]>0) { const a=segs[j], b=segs[(j+1)%n]; out.push(...fArc(a.p1,fTanEnd(a),b.p0,fTanStart(b))); } }
+  return {loop:out, done, reduced, radii};
+}
+function loopsToAbs(loops) {
+  const abs=[];
+  for (const lp of loops) { if (!lp.length) continue; abs.push(["M",lp[0].p0[0],lp[0].p0[1]]);
+    for (const p of lp) abs.push(p.k==="L"?["L",p.p1[0],p.p1[1]]:["C",p.c1[0],p.c1[1],p.c2[0],p.c2[1],p.p1[0],p.p1[1]]); abs.push(["Z"]); }
+  return abs;
+}
+function absLocal(abs) {
+  let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity, cx=0, cy=0;
+  const eat=(x,y)=>{ x0=Math.min(x0,x); y0=Math.min(y0,y); x1=Math.max(x1,x); y1=Math.max(y1,y); };
+  for (const g of abs) { if (g[0]==="M"||g[0]==="L") { eat(g[1],g[2]); cx=g[1]; cy=g[2]; }
+    else if (g[0]==="C") { for (let i=1;i<=64;i++) { const t=i/64,u=1-t; eat(u*u*u*cx+3*u*u*t*g[1]+3*u*t*t*g[3]+t*t*t*g[5],u*u*u*cy+3*u*u*t*g[2]+3*u*t*t*g[4]+t*t*t*g[6]); } cx=g[5]; cy=g[6]; } }
+  const segs=abs.map(g=>g[0]==="Z"?["Z"]:[g[0],...g.slice(1).map((v,i)=>Math.round((v-(i%2?y0:x0))*1e5)/1e5)]);
+  return {x:Math.round(x0*1e5)/1e5, y:Math.round(y0*1e5)/1e5, w:Math.round((x1-x0)*1e5)/1e5, h:Math.round((y1-y0)*1e5)/1e5, segs};
+}
+
+/* ───────── Generated profiles: triangle, rounded triangle, star (sizes are the FINISHED cutter sizes, after rounding) ───────── */
+function genPoly(g) {
+  if (g.k==="star") { const n=g.n, rot=(g.rot||0)*Math.PI/180, V=[];
+    for (let i=0;i<2*n;i++) { const a=-Math.PI/2+rot+i*Math.PI/n, r=i%2?g.ri:g.ro; V.push([r*Math.cos(a),r*Math.sin(a)]); } return V; }
+  const W=g.w, H=g.h;
+  return g.tri==="down"?[[0,0],[W,0],[W/2,H]] : g.tri==="rl"?[[0,0],[W,H],[0,H]] : g.tri==="rr"?[[W,0],[W,H],[0,H]] : [[W/2,0],[W,H],[0,H]];
+}
+function genBuild(g) {
+  const V=genPoly(g), n=V.length, loop=V.map((v,i)=>({k:"L",p0:v,p1:V[(i+1)%n]})), vr=V.map((_,i)=>g.k==="star"?(i%2?g.rv:g.rt):g.r);
+  return filletLoop(loop, j=>vr[(j+1)%n], 0.001);
+}
+function loopBox(lp) { let x0=Infinity,y0=Infinity,x1=-Infinity,y1=-Infinity; for (const p of lp) for (let i=0;i<=(p.k==="L"?1:32);i++) { const q=p.k==="L"?(i?p.p1:p.p0):bPt(p,i/32); x0=Math.min(x0,q[0]); y0=Math.min(y0,q[1]); x1=Math.max(x1,q[0]); y1=Math.max(y1,q[1]); } return {x0,y0,x1,y1,w:x1-x0,h:y1-y0}; }
+function loopRadial(lp) { let mn=Infinity, mx=0; for (const p of lp) { if (p.k==="L") { mn=Math.min(mn,segDist(0,0,p.p0[0],p.p0[1],p.p1[0],p.p1[1])); mx=Math.max(mx,V2.len(p.p0),V2.len(p.p1)); } else for (let i=0;i<=32;i++) { const d=V2.len(bPt(p,i/32)); mn=Math.min(mn,d); mx=Math.max(mx,d); } } return {mn,mx}; }
+function genProfile(g0) {
+  const g={...g0}; let res=genBuild(g);
+  if (g.k==="star") {            // outer Ø = across the finished points, inner Ø = across the finished valleys
+    for (let it=0; it<12; it++) { const m=loopRadial(res.loop), dO=g0.ro-m.mx, dI=g0.ri-m.mn; if (Math.abs(dO)<1e-6 && Math.abs(dI)<1e-6) break; g.ro+=dO; g.ri=Math.max(0.01,Math.min(g.ro-0.01,g.ri+dI)); res=genBuild(g); }
+  } else {                       // width × height = the finished bounding box
+    const eq=g.tri==="eq", k=Math.sqrt(3)/2; if (eq) g.h=g.w*k;
+    for (let it=0; it<12; it++) { const b=loopBox(res.loop), dw=g0.w-b.w, dh=eq?0:g0.h-b.h; if (Math.abs(dw)<1e-6 && Math.abs(dh)<1e-6) break; g.w+=dw; if (eq) g.h=g.w*k; else g.h+=dh; res=genBuild(g); }
+  }
+  const loc=absLocal(loopsToAbs([res.loop])), rset=new Set(res.radii.filter(v=>v>0));
+  return {...loc, radii:[...rset], done:res.done, reduced:res.reduced};
+}
+var GEN_UI = {tri:1, rtri:1, star:1};
+function readGen(t) {
+  const g={ui:t, k:t==="star"?"star":"tri"};
+  if (t==="star") { const D=Math.max(1,num("pW",100)); g.ro=D/2; g.ri=Math.max(0.05,Math.min(D/2-0.05,num("pIn",D/2)/2)); g.n=Math.max(3,Math.min(100,Math.round(num("pN",5)))); g.rt=Math.max(0,num("pSR",0)); g.rv=Math.max(0,num("pSV",0)); g.rot=num("pRot",0); }
+  else { g.tri=$("pTri").value; g.w=Math.max(1,num("pW",100)); g.h=Math.max(1,num("pH",100)); g.r=t==="rtri"?Math.max(0,num("pGR",0)):0; }
+  const res=genProfile(g);
+  S.profileGen=g; S.profileType="path"; S.profilePath=res.segs; S.profileRadii=res.radii; S.mw=res.w; S.mh=res.h; S.profileEdges=null;
+  if (g.tri==="eq") $("pH").value=R(res.h);
+  $("genInfo").textContent = (t==="star" ? `${g.n}-point star · ${fmG(res.w)} × ${fmG(res.h)} mm` : `Triangle · ${fmG(res.w)} × ${fmG(res.h)} mm`)
+    + (res.reduced ? ` · ⚠ ${res.reduced} corner radius${res.reduced>1?"es":""} too big for the sides — reduced to fit` : "");
+}
+const fmG = v => String(Math.round(v*100)/100);
+function setGenUI(g) {
+  if (!g) return; $("pShape").value=g.ui;
+  if (g.k==="star") { $("pW").value=R(g.ro*2); $("pIn").value=R(g.ri*2); $("pN").value=g.n; $("pSR").value=g.rt; $("pSV").value=g.rv; $("pRot").value=g.rot; }
+  else { $("pTri").value=g.tri; $("pW").value=g.w; $("pH").value=g.h; if (g.ui==="rtri") $("pGR").value=g.r; }
+}
+function genUI() {
+  const g=S.profileGen, ui=g?g.ui:"";
+  $("pGen").style.display = g?"":"none";
+  $("pTriL").style.display = $("pGRL").style.display = "none";
+  ["pNL","pInL","pSRL","pSVL","pRotL"].forEach(k=>$(k).style.display = ui==="star"?"":"none");
+  if (ui==="tri"||ui==="rtri") $("pTriL").style.display="";
+  if (ui==="rtri") $("pGRL").style.display="";
+  if (!g) $("genInfo").textContent="";
+}
+["pTri","pN","pIn","pGR","pSR","pSV","pRot"].forEach(id => $(id).oninput = readProfile);
+
+/* ───────── Round sharp corners on a loaded cutter (outer profile + optionally inner shapes) ───────── */
+var CR = {on:false, list:[], pick:new Set()};
+function crScan() {
+  const L=[];
+  const addPath=(owner,s)=>{ bPathLoops(s).map(fClean).forEach((lp,li)=>{ if (lp.length) fCorners(lp,3).forEach(c=>L.push({owner,kind:"path",li,j:c.j,pt:c.pt,id:`${owner}:${li}.${c.j}`})); }); };
+  const addRect=(owner,s,r)=>{ const P={tl:[s.x,s.y],tr:[s.x+s.w,s.y],br:[s.x+s.w,s.y+s.h],bl:[s.x,s.y+s.h]};
+    for (const k in P) if (!((r&&r[k])>1e-6)) L.push({owner,kind:"rect",key:k,pt:P[k],id:`${owner}:${k}`}); };
+  if (S.profileType==="path" && S.profilePath) addPath(-1,prof()); else if (S.profileType==="rect") addRect(-1,prof(),S.profileR);
+  if ($("crIn").checked) S.placed.forEach((s,i)=>{ if (s.type==="path"&&s.closed) addPath(i,s); else if (s.type==="rect") addRect(i,s,s.r); });
+  CR.list=L; const ids=new Set(L.map(c=>c.id)); for (const id of [...CR.pick]) if (!ids.has(id)) CR.pick.delete(id);
+  const nP=L.filter(c=>c.owner<0).length;
+  $("crInfo").textContent = !CR.on ? "" : L.length ? `${L.length} sharp corner${L.length>1?"s":""} found (${nP} on the outer profile) · ${CR.pick.size} selected — click markers on the canvas to pick` : "No sharp corners found — every corner is already rounded.";
+}
+function crDraw() {
+  if (!CR || !CR.on) return;
+  crScan();
+  x.save(); x.setLineDash([]);
+  for (const c of CR.list) { const sx=S.ox+c.pt[0]*S.scale, sy=S.oy+c.pt[1]*S.scale, on=CR.pick.has(c.id);
+    x.beginPath(); x.arc(sx,sy,on?8:5,0,Math.PI*2); x.fillStyle=on?SK.amb:"rgba(0,0,0,.45)"; x.fill(); x.lineWidth=on?2:1.6; x.strokeStyle=on?"#000":SK.amb; x.stroke();
+    if (on) { x.beginPath(); x.arc(sx,sy,2.2,0,Math.PI*2); x.fillStyle="#000"; x.fill(); } }
+  x.restore();
+}
+function crClick(e) {
+  const r=c.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top; let best=null, bd=14;
+  for (const k of CR.list) { const d=Math.hypot(S.ox+k.pt[0]*S.scale-mx, S.oy+k.pt[1]*S.scale-my); if (d<bd) { bd=d; best=k; } }
+  if (!best) return false;
+  if (CR.pick.has(best.id)) CR.pick.delete(best.id); else CR.pick.add(best.id);
+  dr(); return true;
+}
+function crSetMode(on) {
+  CR.on=on; if (!on) CR.pick.clear();
+  $("crFind").textContent = on ? "Done" : "Find corners"; $("crFind").classList.toggle("pri",on);
+  $("crAll").disabled=$("crNone").disabled=$("crApply").disabled=!on;
+  if (on) crScan(); else $("crInfo").textContent="";
+  dr();
+}
+function crApply() {
+  const r=num("crR",0.5); if (!(r>0)) { $("crInfo").textContent="Enter a radius above 0 mm."; return; }
+  if (!CR.on) crSetMode(true);
+  crScan(); const picks=CR.list.filter(k=>CR.pick.has(k.id));
+  if (!picks.length) { $("crInfo").textContent="Pick corners first — click the markers on the canvas, or press All."; return; }
+  pushUndo();
+  const by=new Map(); picks.forEach(k=>{ if (!by.has(k.owner)) by.set(k.owner,[]); by.get(k.owner).push(k); });
+  let done=0, reduced=0;
+  for (const owner of [...by.keys()].sort((a,b)=>b-a)) {          // inner shapes first, the outer profile last (it may shift everything)
+    const ks=by.get(owner), s=owner<0?prof():S.placed[owner];
+    if (ks[0].kind==="rect") {
+      const tgt=owner<0?S.profileR:(s.r=Object.assign({tl:0,tr:0,br:0,bl:0},s.r||{}));
+      ks.forEach(k=>{ tgt[k.key]=r; done++; }); const f=fitR(s.w,s.h,tgt); ks.forEach(k=>{ if (f[k.key]<r-1e-6) reduced++; });
+      if (owner<0) { $("pTL").value=S.profileR.tl; $("pTR").value=S.profileR.tr; $("pBR").value=S.profileR.br; $("pBL").value=S.profileR.bl; $("pR").value=""; }
+      continue;
+    }
+    const rset=new Set(s.radii||[]), out=[];
+    bPathLoops(s).map(fClean).forEach((lp,li)=>{ if (!lp.length) return; const want=new Set(ks.filter(k=>k.li===li).map(k=>k.j));
+      if (!want.size) { out.push(lp); return; } const res=filletLoop(lp, j=>want.has(j)?r:0, 3); done+=res.done; reduced+=res.reduced; res.radii.forEach(v=>rset.add(v)); out.push(res.loop); });
+    const loc=absLocal(loopsToAbs(out));
+    if (owner<0) {
+      const dx=-loc.x, dy=-loc.y;
+      if (Math.abs(dx)>1e-6 || Math.abs(dy)>1e-6) { S.placed.forEach(q=>{ q.x=R(q.x+dx); q.y=R(q.y+dy); }); S.art.forEach(a=>{ if (typeof a.x==="number") a.x=R(a.x+dx); if (typeof a.y==="number") a.y=R(a.y+dy); }); }
+      S.profileGen=null; S.profileType="path"; S.profilePath=loc.segs; S.profileRadii=[...rset]; S.mw=loc.w; S.mh=loc.h; S.profileEdges=null;
+      $("pShape").value="path"; $("pW").value=loc.w; $("pH").value=loc.h;
+    } else Object.assign(s,{x:loc.x,y:loc.y,w:loc.w,h:loc.h,segs:loc.segs,radii:[...rset]});
+  }
+  CR.pick.clear(); $("auto").checked=false; profUI(); select(-1); rs();
+  const msg=`Rounded ${done} corner${done>1?"s":""} to R${fmG(r)} mm`+(reduced?` · ⚠ ${reduced} reduced to fit a short side`:"")+" — Ctrl+Z to undo";
+  crScan(); $("crInfo").textContent=msg; $("status").textContent=msg;
+}
+$("crFind").onclick = () => crSetMode(!CR.on);
+$("crAll").onclick = () => { crScan(); CR.list.forEach(k=>CR.pick.add(k.id)); dr(); };
+$("crNone").onclick = () => { CR.pick.clear(); dr(); };
+$("crApply").onclick = crApply;
+$("crIn").onchange = () => { if (CR.on) dr(); };
+document.querySelectorAll("#crPre button").forEach(b => b.onclick = () => { $("crR").value=b.dataset.r; });
+crSetMode(false); genUI();
+
 </script>
 <script>
 /* Workbench tabs — layout only; the app logic above is untouched. */
