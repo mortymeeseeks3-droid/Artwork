@@ -266,15 +266,15 @@ function microSvg(mm){const m=S.micro;
   return `<path id="mp${k}" d="M${num(l[0])} ${num(l[1])}L${num(l[2])} ${num(l[3])}" fill="none"/><text id="mtx${k}" ${fa(q.font||m.font, q.weight||m.weight, q.style||m.style)} fill="${m.color}" font-size="${num((+q.size||m.size)*PT)}" letter-spacing="${it?it.ls:(q.ls!==undefined?q.ls:m.ls||0)}" text-anchor="${an}" dominant-baseline="central"><textPath id="mt${k}" href="#mp${k}" startOffset="${an=='middle'?'50%':an=='end'?'100%':'0'}">${esc(it?it.txt:q.t||'')}</textPath></text>`}).join('')}
 function build(ex){const W=S.w,H=S.h,d0=shapeD(0),m=S.micro,V=S.void,eo=S.shape=='custom'?' fill-rule="evenodd" clip-rule="evenodd"':'';
  const L=(id,n,on,x)=>{const k=KM[id],vis=on&&(ex||!S.solo||S.solo==k);return `<g id="${id}" inkscape:label="${n}" inkscape:groupmode="layer"${vis?'':' display="none"'}${S[k].ovp?' style="mix-blend-mode:multiply"':''}>${x}</g>`};
- const di=shapeD(m.on?m.safe+m.band:0),ww=W-10,wh=H-10,mm=M.key==mkey()?M:null;
+ const di=shapeD(m.on?m.safe+m.band:0),ww=W-10,wh=H-10,RD=shapeD(5),mm=M.key==mkey()?M:null;
  let o=`<svg id="sv" xmlns="http://www.w3.org/2000/svg" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" `+(ex?`width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}"`:`viewBox="${-vpad()} ${-vpad()} ${W+2*vpad()} ${H+2*vpad()}"`)+`><defs><clipPath id="cl"><path d="${di}"${eo}/></clipPath></defs>`;
  if(!ex)o+=`<path d="${d0}"${eo} fill="${S.sub||'#b9bcc2'}"/>`;
  o+=L('Micro_Security_Text','Micro Security Text',m.on,microSvg(mm));
  o+=L('Void_Message','Void Message',V.on,`<g clip-path="url(#cl)" fill="${V.color}">${voidT()}${(V.items||[]).map(itm).join('')}</g>`);
- o+=L('Release_Layer','Release Layer',S.rel.on,(ww>0&&wh>0?`<mask id="mr" maskUnits="userSpaceOnUse" x="5" y="5" width="${ww}" height="${wh}"><rect x="5" y="5" width="${ww}" height="${wh}" fill="#fff"/><g fill="#000">${voidT()}${[...(V.items||[]),...(S.rel.items||[])].map(itm).join('')}</g></mask><rect x="5" y="5" width="${ww}" height="${wh}" fill="${S.rel.color}" mask="url(#mr)"/>`:''));
- o+=L('White_Layer','White Layer',S.white.on,(ww>0&&wh>0?`<mask id="mw" maskUnits="userSpaceOnUse" x="5" y="5" width="${ww}" height="${wh}"><rect x="5" y="5" width="${ww}" height="${wh}" fill="#fff"/><g fill="#000">${S.white.items.map(itm).join('')}</g></mask><rect x="5" y="5" width="${ww}" height="${wh}" fill="#fff" fill-opacity="${S.white.op}" mask="url(#mw)"/>`:''));
+ o+=L('Release_Layer','Release Layer',S.rel.on,(ww>0&&wh>0?`<mask id="mr" maskUnits="userSpaceOnUse" x="5" y="5" width="${ww}" height="${wh}"><rect x="5" y="5" width="${ww}" height="${wh}" fill="#fff"/><g fill="#000">${voidT()}${[...(V.items||[]),...(S.rel.items||[])].map(itm).join('')}</g></mask><path d="${RD}"${eo} fill="${S.rel.color}" mask="url(#mr)"/>`:''));
+ o+=L('White_Layer','White Layer',S.white.on,(ww>0&&wh>0?`<mask id="mw" maskUnits="userSpaceOnUse" x="5" y="5" width="${ww}" height="${wh}"><rect x="5" y="5" width="${ww}" height="${wh}" fill="#fff"/><g fill="#000">${S.white.items.map(itm).join('')}</g></mask><path d="${RD}"${eo} fill="#fff" fill-opacity="${S.white.op}" mask="url(#mw)"/>`:''));
  o+=L('Data','Data',S.data.on,`<g fill="${S.data.color}">${S.data.items.map(dat).join('')}</g>`);
- if(!ex&&S.guides)o+=`<g fill="none" stroke-width=".2" pointer-events="none"><path d="${d0}" stroke="#888"/><path d="${shapeD(m.safe)}" stroke="#e0457b" stroke-dasharray="1 1"/><path d="${shapeD(m.safe+m.band)}" stroke="#e0457b" stroke-dasharray="1 1"/>${ww>0&&wh>0?`<rect x="5" y="5" width="${ww}" height="${wh}" stroke="#2a9d8f" stroke-dasharray="1 1"/>`:''}</g>`;
+ if(!ex&&S.guides)o+=`<g fill="none" stroke-width=".2" pointer-events="none"><path d="${d0}" stroke="#888"/><path d="${shapeD(m.safe)}" stroke="#e0457b" stroke-dasharray="1 1"/><path d="${shapeD(m.safe+m.band)}" stroke="#e0457b" stroke-dasharray="1 1"/>${ww>0&&wh>0?`<path d="${RD}" stroke="#2a9d8f" stroke-dasharray="1 1"/>`:''}</g>`;
  return o+'</svg>'}
 const mkey=()=>[S.micro.text,S.micro.size,S.micro.safe,S.micro.band,S.micro.ls,S.micro.reps,S.micro.off,S.micro.mode,JSON.stringify(S.micro.sides),S.shape,S.w,S.h,S.r,S.custom&&S.custom.bw].join('|');
 
@@ -358,8 +358,8 @@ const tabVoid=()=>onT('void')
    return card(`vl:${i}`,'Line '+(i+1),`${l.t} ×${l.rep} · ${l.size} pt${(+l.dx||+l.dy)?` · shift ${+l.dx||0}, ${+l.dy||0}`:''}`,xbtn('delv',i),inp(P('t'),'Word','text','','w2')+inp(P('rep'),'Repeats')+inp(P('size'),'Size pt')+inp(P('dx'),'Shift X mm')+inp(P('dy'),'Shift Y mm')+fsel(P('font'),'w2')+inp(P('ls'),'Letter sp.')+wsel(P('weight'))+stsel(P('style')))}).join('')+`<div class="adds"><button data-a="addv">+ Add line</button></div></div>`)
  +grp('Block',inp('void.gap','Line spacing')+inp('void.ls','Letter sp.')+asel('void.align')+inp('void.x','X mm')+inp('void.y','Y mm')+inp('void.angle','Angle °'))
  +grp('Default font',fontRow('void.'))+colG('void')+itemsG('void','Shapes & logos');
-const tabRel=()=>onT('rel')+`<small class="note">Label minus 10 mm each way, with the Void Message and Void items knocked out. Items added here are knocked out too.</small>`+colG('rel')+itemsG('rel','Extra knock-outs');
-const tabWhite=()=>onT('white')+`<small class="note">Rectangle = label minus 10 mm width and height. Text and graphics are cut out of it.</small>`+colG('white',inp('white.op','Opacity 0–1','number','min=0 max=1'))+grp('Default font',fontRow('white.'))+itemsG('white','Cut-outs','<button data-a="addt">+ Text</button>');
+const tabRel=()=>onT('rel')+`<small class="note">Follows the label shape, inset 5 mm all round, with the Void Message and Void items knocked out. Items added here are knocked out too.</small>`+colG('rel')+itemsG('rel','Extra knock-outs');
+const tabWhite=()=>onT('white')+`<small class="note">Follows the label shape, inset 5 mm all round. Text and graphics are cut out of it.</small>`+colG('white',inp('white.op','Opacity 0–1','number','min=0 max=1'))+grp('Default font',fontRow('white.'))+itemsG('white','Cut-outs','<button data-a="addt">+ Text</button>');
 const tabData=()=>onT('data')+colG('data')+grp('Default font',fontRow('data.'))+itemsG('data','Items','<button data-a="addb">+ Barcode</button><button data-a="addn">+ Number</button>');
 const TABF={label:tabLabel,layers:tabLayers,micro:tabMicro,void:tabVoid,rel:tabRel,white:tabWhite,data:tabData};
 
@@ -564,7 +564,7 @@ function outlinePreviewText(){
 }
 const cd=c=>c.map(q=>q.type=='Z'?'Z':q.type=='M'||q.type=='L'?`${q.type}${n3(q.x)} ${n3(q.y)}`:q.type=='Q'?`Q${n3(q.x1)} ${n3(q.y1)} ${n3(q.x)} ${n3(q.y)}`:`C${n3(q.x1)} ${n3(q.y1)} ${n3(q.x2)} ${n3(q.y2)} ${n3(q.x)} ${n3(q.y)}`).join('');
 const relOL=(di,eo)=>`<path d="${di}${cd(voidCmds())}" fill-rule="evenodd" fill="${S.rel.color}" clip-path="url(#cl)"/>`;
-const whiteOL=(ww,wh)=>`<clipPath id="cw"><rect x="5" y="5" width="${ww}" height="${wh}"/></clipPath><path d="M5 5H${5+ww}V${5+wh}H5Z${cd(whiteCmds())}" fill-rule="evenodd" fill="${S.white.color||'#ffffff'}" fill-opacity="${S.white.op}" clip-path="url(#cw)"/>`;
+const whiteOL=(ww,wh)=>`<clipPath id="cw"><path d="${shapeD(5)}"/></clipPath><path d="${shapeD(5)}${cd(whiteCmds())}" fill-rule="evenodd" fill="${S.white.color||'#ffffff'}" fill-opacity="${S.white.op}" clip-path="url(#cw)"/>`;
 function pdfLayers(){
  const W=S.w,H=S.h,cx=W/2,cy=H/2,m=S.micro,V=S.void,Wh=S.white,D=S.data,ww=W-10,wh=H-10;
  const inner=pc(flat(shapeD(m.on?m.safe+m.band:0))),vc=voidCmds(),wc=whiteCmds(),vi=(V.items||[]).flatMap(it=>itemCmds(it,V.font)),ri=(S.rel.items||[]).flatMap(it=>itemCmds(it,V.font));
@@ -573,11 +573,11 @@ function pdfLayers(){
   else if(it.type=='code128'){const hw=it.w/2,hh=it.h/2;c128b(it.v,it.w).forEach(([a,b])=>dc.push(...tx([{type:'M',x:a-hw,y:-hh},{type:'L',x:a+b-hw,y:-hh},{type:'L',x:a+b-hw,y:hh},{type:'L',x:a-hw,y:hh},{type:'Z'}],f)));
    if(it.txt)dc.push(...tx(tcmds(fn,it.v,2.2,it.ls||0,'middle'),(x,y)=>f(x,y+hh+2)))}
   else di.push(...itemCmds(it,D.font))});
- const wr=`5 5 ${ww} ${wh} re `,fl=c=>`/CS${c} cs 1 scn `;
+ const wr=ww>0&&wh>0?ps(pc(flat(shapeD(5)))):'',wcl=S.shape=='custom'?'W* n ':'W n ',fl=c=>`/CS${c} cs 1 scn `;
  const LY=[['Micro Security Text',m,m.spot||'Micro Text',m.color,`${fl(1)}${ps(mcmds())}f`],
   ['Void Message',V,V.spot||'Void',V.color,`${ps(inner)}W n ${fl(2)}${ps(vc)}f ${ps(vi)}f*`],
-  ['Release Layer',S.rel,S.rel.spot||'Release',S.rel.color,`${wr}W n ${fl(3)}${wr}${ps(vc)}${ps(vi)}${ps(ri)}f*`],
-  ['White Layer',Wh,Wh.spot||'White',Wh.color||'#ffffff',`${wr}W n ${fl(4)}${wr}${ps(wc)}f*`],
+  ['Release Layer',S.rel,S.rel.spot||'Release',S.rel.color,`${wr}${wcl}${fl(3)}${wr}${ps(vc)}${ps(vi)}${ps(ri)}f*`],
+  ['White Layer',Wh,Wh.spot||'White',Wh.color||'#ffffff',`${wr}${wcl}${fl(4)}${wr}${ps(wc)}f*`],
   ['Data',D,D.spot||'Data Black',D.color,`${fl(5)}${ps(dc)}f ${ps(di)}f*`]];
  const nm=x=>x.replace(/[^A-Za-z0-9_-]/g,c=>'#'+c.charCodeAt(0).toString(16).padStart(2,'0'));
  const cs=LY.map((l,i)=>`/CS${i+1} [/Separation /${nm(l[2])} /DeviceCMYK << /FunctionType 2 /Domain [0 1] /C0 [0 0 0 0] /C1 [${(l[1].cmyk||cmyk(l[3])).join(' ')}] /N 1 >>]`).join(' ');
@@ -615,7 +615,7 @@ function specElements(){const o=[];[['Void',S.void,1],['Release',S.rel,2],['Whit
   else if(it.type=='circle')o.push([n,`Circle Ø ${num(it.w)}${it.h&&it.h!=it.w?' × '+num(it.h):''} mm${ol}`,li]);
   else if(it.type=='svg')o.push([n,`Logo ${it.name||'graphic'}, ${num(it.w)} × ${num(it.w*it.vh/it.vw)} mm`,li]);
   else if(it.type=='code128')o.push([n,`Code 128 "${it.v}", ${num(it.w)} × ${num(it.h)} mm`,li])})});return o}
-const LDESC=['Text running round the inner perimeter of the label.','Void message repeated over the label, clipped inside the micro text band.','Label minus 10 mm each way, with the void message and shapes knocked out.','Semi-transparent white area; text and graphics are knocked out of it.','Barcodes, numbers and graphics.'];
+const LDESC=['Text running round the inner perimeter of the label.','Void message repeated over the label, clipped inside the micro text band.','Label shape inset 5 mm, with the void message and shapes knocked out.','Semi-transparent white area; text and graphics are knocked out of it.','Barcodes, numbers and graphics.'];
 /* 6-page A4 landscape spec PDF: page 1 full design, pages 2-6 one layer each */
 async function exportSpec(){
  if(!fkeys().length){msg('Default fonts are still loading. Please try again.');return}
@@ -651,7 +651,7 @@ async function exportSpec(){
  c.push(`${hx(S.sub)} rg ${ps(pc(flat(shapeD(0))))}${eo?'f*':'f'}`);
  LY.forEach((l,i)=>{if(lay?i==pi:l[1].on)c.push(`q /GS${i+1} gs ${l[4]} Q`)});
  if(S.guides){const lw=f(.2/s);(m.on?[m.safe,m.safe+m.band]:[]).forEach(i=>{const d=shapeD(i);if(d)c.push(`q 0.878 0.271 0.482 RG ${lw} w [1 1] 0 d ${ps(pc(flat(d)))}S Q`)});
-  if(ww>0&&wh>0)c.push(`q 0.165 0.616 0.561 RG ${lw} w [1 1] 0 d 5 5 ${f(ww)} ${f(wh)} re S Q`)}
+  if(ww>0&&wh>0)c.push(`q 0.165 0.616 0.561 RG ${lw} w [1 1] 0 d ${ps(pc(flat(shapeD(5))))}S Q`)}
  c.push(`q 0.25 G ${f(.25/s)} w ${ps(pc(flat(shapeD(0))))}S Q`);c.push('Q');
  const yd=by+7,xd=ox-7,dim=(S.shape=='circle'?'Ø ':'')+num(W)+' mm',dimh=(S.shape=='circle'?'Ø ':'')+num(H)+' mm';
  Ln(ox,by+1,ox,yd+1.5,.15,'0.3 G');Ln(bx,by+1,bx,yd+1.5,.15,'0.3 G');Ln(ox,yd,bx,yd,.2);Ar(ox,yd,-1,0);Ar(bx,yd,1,0);T(dim,(ox+bx)/2,yd-1.2,8,{al:'c',b:1});
