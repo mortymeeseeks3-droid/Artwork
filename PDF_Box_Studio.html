@@ -306,8 +306,31 @@ body:not(.side-open) #sideTab{transform:translate(0,-50%)}
 
   <div class="divider"></div>
 
+  <div class="sec" id="cMarks">
+    <div class="sec-label">06 — Printer Marks</div>
+    <div class="row">
+      <label class="chk"><input type="checkbox" id="mkCrop" checked>Crop marks</label>
+      <label class="chk" style="margin-left:12px"><input type="checkbox" id="mkReg" checked>Registration marks</label>
+    </div>
+    <div class="row">
+      <span class="kbd">Outside the</span>
+      <select id="mkZone"><option value="trim">trim box</option><option value="bleed">bleed box</option></select>
+      <label class="chk" style="margin-left:auto"><input type="checkbox" id="mkShow" checked>Highlight</label>
+    </div>
+    <div class="w" id="mkInfo" style="margin-top:8px">Open a PDF to find printer marks.</div>
+    <div class="row" style="margin-top:10px"><label class="chk"><input type="checkbox" id="mkOn">Remove these marks when saving, on pages</label></div>
+    <div class="row">
+      <input class="inl" style="flex:1;width:auto;text-align:left" id="mkRange" value="all" placeholder="all  or  1-4, 7">
+      <button class="btn sm" id="mkScan">Scan pages</button>
+    </div>
+    <div class="sub" id="mkSum"></div>
+    <div class="sub">Found by shape, position and colour: thin straight lines and small circle-and-crosshair targets lying fully outside the chosen box, including registration-colour (All) marks, marks inside placed graphics, layers named “Crop marks” / “Registration marks”, and printer’s-mark annotations. Only those objects are deleted. Everything else is copied unchanged, and images and fonts are never re-encoded.</div>
+  </div>
+
+  <div class="divider"></div>
+
   <div class="sec">
-    <div class="sec-label">06 — Output</div>
+    <div class="sec-label">07 — Output</div>
     <label class="chk"><input type="checkbox" id="phys" checked>Physically crop pages when the crop box is changed</label>
     <div class="sub" id="physNote">Cropped pages become the crop size and everything outside the crop area is deleted from the file: text, vector paths, images, graphics and annotations. Objects crossing the edge are clipped. Images and fonts are never re-encoded.</div>
     <div class="sub">Pages with only bleed/trim changes are saved as an <b>incremental update</b>: original bytes kept exactly, only the edited page settings appended. No compression, no rasterising.</div>
@@ -721,6 +744,189 @@ function pbsGarbageCollect(doc){
   return n;
 }
 
+/* ===== Printer marks: crop marks + registration marks =====
+   Scans the page content (and any form XObjects it draws) and classifies painted paths:
+   - crop marks: thin, straight, axis-aligned lines (stroked or outlined) lying fully outside the zone box
+   - registration marks: small curved targets (circles) outside the zone, in registration colour or a thin
+     stroke, plus the crosshair lines centred on them
+   - optional-content layers named "Crop marks" / "Registration marks", and /PrinterMark annotations
+   Removal drops only those operators; everything else is copied byte-for-byte. */
+const PBS_MK={tol:0.25, thin:2, lineMax:100, regMax:85};
+function pbsMarkScan(doc,pageIndex){
+  const {PDFName,PDFDict,PDFArray,PDFNumber,PDFRef}=PDFLib; const ctx=doc.context;
+  const L=o=>o instanceof PDFRef?ctx.lookup(o):o;
+  const node=doc.getPages()[pageIndex].node;
+  const streams=[], recs=[], layers=[], refUse=new Map();
+  const STROKE=new Set(['S','s','B','B*','b','b*']), FILL=new Set(['f','F','f*','B','B*','b','b*']);
+  const PATH=new Set(['m','l','c','v','y','h','re']), PAINT=new Set([...STROKE,...FILL,'n']);
+  const txt=o=>{ o=L(o); if(!o) return ''; try{ return o.decodeText?o.decodeText():String(o); }catch(_){ return String(o); } };
+  const sub=(res,k)=>{ const d=res instanceof PDFDict?L(res.get(PDFName.of(k))):null; return d instanceof PDFDict?d:null; };
+  const layerKind=s=>/reg(istration)?[\s_-]*(marks?|targets?)\b/i.test(s)?'reg':/(crop|trim|cut)[\s_-]*marks?\b/i.test(s)?'crop':null;
+  function csOf(res,a){ if(!a||a.t!=='name') return {t:'other'}; const n=a.v;
+    if(n==='DeviceCMYK'||n==='CMYK') return {t:'cmyk'};
+    const d=sub(res,'ColorSpace'); const c=d?L(d.get(PDFName.of(n))):null;
+    if(c instanceof PDFArray&&c.size()>=2){ const f=String(L(c.get(0)));
+      if(f==='/Separation') return {t:String(L(c.get(1)))==='/All'?'all':'other'};
+      if(f==='/ICCBased'){ const s=L(c.get(1)); const N=s&&s.dict?L(s.dict.get(PDFName.of('N'))):null; return {t:N instanceof PDFNumber&&N.asNumber()===4?'cmyk':'other'}; } }
+    else if(c&&String(c)==='/DeviceCMYK') return {t:'cmyk'};
+    return {t:'other'}; }
+  const regV=(cs,v)=>cs.t==='all'?(v.length?v[0]>0.01:true):cs.t==='cmyk'?(v.length>=4&&v.slice(0,4).every(x=>x>=0.99)):false;
+  function scan(raw,res,ctm0,parent,name,ref,depth,chain){
+    const si=streams.length; let tk; try{ tk=pbsTokenize(raw); }catch(e){ tk={ops:[],tail:-1,bad:true}; }
+    const S={raw,ops:tk.ops,tail:tk.tail,res,parent,name,ref,dos:[],paints:0,bad:!!tk.bad,doK:-1};
+    streams.push(S);
+    if(ref) refUse.set(ref.tag,(refUse.get(ref.tag)||0)+1);
+    const xo=sub(res,'XObject'), props=sub(res,'Properties'), gsd=sub(res,'ExtGState');
+    let g={ctm:ctm0,lw:1,sc:{t:'other'},fc:{t:'other'},sR:false,fR:false}; const stack=[], mc=[];
+    let path=null, sp=null, cur=null;
+    const N=(a,k)=>a[k]&&a[k].t==='num'?a[k].v:0;
+    const nums=a=>a.filter(x=>x.t==='num').map(x=>x.v);
+    const pt=(x,y)=>pbsM.ap(g.ctm,x,y);
+    const newSub=()=>{ sp={bb:[Infinity,Infinity,-Infinity,-Infinity],curve:false,axis:true,start:null}; if(path.subs.length<256) path.subs.push(sp); else path.many=true; };
+    const add=p=>{ const b=sp.bb; if(p[0]<b[0])b[0]=p[0]; if(p[1]<b[1])b[1]=p[1]; if(p[0]>b[2])b[2]=p[0]; if(p[1]>b[3])b[3]=p[1]; };
+    const seg=(p0,p1)=>{ if(Math.abs(p1[0]-p0[0])>0.2&&Math.abs(p1[1]-p0[1])>0.2) sp.axis=false; };
+    const ops=S.ops;
+    for(let k=0;k<ops.length;k++){ const o=ops[k], a=o.args, op=o.op;
+      if(path&&!PATH.has(op)&&op!=='W'&&op!=='W*'&&!PAINT.has(op)){ path=null; sp=null; }
+      if(PATH.has(op)){
+        if(!path){ path={start:k,subs:[],clip:false,many:false}; sp=null; }
+        if(op==='m'){ newSub(); cur=pt(N(a,0),N(a,1)); sp.start=cur; add(cur); }
+        else if(op==='re'){ newSub(); const x=N(a,0),y=N(a,1),w=N(a,2),h=N(a,3); const q=[pt(x,y),pt(x+w,y),pt(x+w,y+h),pt(x,y+h)]; q.forEach(add); for(let j=0;j<4;j++) seg(q[j],q[(j+1)%4]); cur=q[0]; sp.start=q[0]; }
+        else{ if(!sp){ newSub(); cur=cur||pt(0,0); sp.start=cur; add(cur); }
+          if(op==='l'){ const p=pt(N(a,0),N(a,1)); seg(cur,p); add(p); cur=p; }
+          else if(op==='h'){ if(sp.start){ seg(cur,sp.start); cur=sp.start; } }
+          else{ sp.curve=true; const v=nums(a); for(let j=0;j+1<v.length;j+=2) add(pt(v[j],v[j+1])); if(v.length>=2) cur=pt(v[v.length-2],v[v.length-1]); } }
+        continue; }
+      if(op==='W'||op==='W*'){ if(path) path.clip=true; continue; }
+      if(PAINT.has(op)){
+        if(path&&op!=='n'){ S.paints++;
+          if(!path.clip&&!path.many&&path.subs.length) recs.push({si,start:path.start,end:k,subs:path.subs,stroke:STROKE.has(op),fill:FILL.has(op),lw:g.lw*pbsM.scale(g.ctm),reg:(STROKE.has(op)&&g.sR)||(FILL.has(op)&&g.fR)}); }
+        path=null; sp=null; continue; }
+      switch(op){
+        case 'q': stack.push({...g}); break;
+        case 'Q': if(stack.length) g=stack.pop(); break;
+        case 'cm': if(a.length>=6) g.ctm=pbsM.mul([N(a,0),N(a,1),N(a,2),N(a,3),N(a,4),N(a,5)],g.ctm); break;
+        case 'w': g.lw=N(a,0); break;
+        case 'gs': if(gsd&&a[0]&&a[0].t==='name'){ const e=L(gsd.get(PDFName.of(a[0].v))); if(e instanceof PDFDict){ const v=L(e.get(PDFName.of('LW'))); if(v instanceof PDFNumber) g.lw=v.asNumber(); } } break;
+        case 'K': g.sc={t:'cmyk'}; g.sR=regV(g.sc,nums(a)); break;
+        case 'k': g.fc={t:'cmyk'}; g.fR=regV(g.fc,nums(a)); break;
+        case 'G': case 'RG': g.sc={t:'other'}; g.sR=false; break;
+        case 'g': case 'rg': g.fc={t:'other'}; g.fR=false; break;
+        case 'CS': g.sc=csOf(res,a[0]); g.sR=g.sc.t==='all'; break;
+        case 'cs': g.fc=csOf(res,a[0]); g.fR=g.fc.t==='all'; break;
+        case 'SC': case 'SCN': g.sR=regV(g.sc,nums(a)); break;
+        case 'sc': case 'scn': g.fR=regV(g.fc,nums(a)); break;
+        case 'Tj': case 'TJ': case "'": case '"': case 'sh': case 'BI': S.paints++; break;
+        case 'BMC': mc.push(null); break;
+        case 'BDC': { let kind=null;
+          if(props&&a[0]&&a[0].t==='name'&&a[0].v==='OC'&&a[1]&&a[1].t==='name'){ const oc=L(props.get(PDFName.of(a[1].v))); if(oc instanceof PDFDict) kind=layerKind(txt(oc.get(PDFName.of('Name')))); }
+          mc.push(kind?{kind,start:k,rec:recs.length}:null); break; }
+        case 'EMC': { const m=mc.pop(); if(m){ let q=0,t=0,okb=true; for(let j=m.start;j<=k;j++){ const p=ops[j].op; if(p==='q')q++; else if(p==='Q'){ if(--q<0) okb=false; } else if(p==='BT')t++; else if(p==='ET'){ if(--t<0) okb=false; } }
+            if(okb&&!q&&!t) layers.push({si,start:m.start,end:k,kind:m.kind,r0:m.rec,r1:recs.length}); } break; }
+        case 'Do': if(xo&&a[0]&&a[0].t==='name'){ const r=xo.get(PDFName.of(a[0].v)), x=L(r);
+          if(x&&x.dict){ const stp=String(L(x.dict.get(PDFName.of('Subtype')))||'');
+            if(stp==='/Form'&&depth<8&&r instanceof PDFRef&&!chain.includes(r.tag)){
+              let m=g.ctm; const Mx=L(x.dict.get(PDFName.of('Matrix')));
+              if(Mx instanceof PDFArray&&Mx.size()>=6) m=pbsM.mul([0,1,2,3,4,5].map(i=>{ const v=L(Mx.get(i)); return v instanceof PDFNumber?v.asNumber():0; }),g.ctm);
+              let fr=L(x.dict.get(PDFName.of('Resources'))); if(!(fr instanceof PDFDict)) fr=res;
+              let fraw=null; try{ fraw=x instanceof PDFLib.PDFRawStream?PDFLib.decodePDFRawStream(x).decode():x.getContents(); }catch(_){}
+              if(fraw){ const ci=scan(fraw,fr,m,si,a[0].v,r,depth+1,chain.concat(r.tag)); streams[ci].doK=k; S.dos.push({k,child:ci}); }
+              else S.paints++;
+            } else S.paints++; } } break;
+      }
+    }
+    return si;
+  }
+  const res=node.Resources();
+  scan(pbsContentBytes(node,ctx),res instanceof PDFDict?res:null,[1,0,0,1,0,0],-1,null,null,0,[]);
+  const annots=[]; const an=L(node.get(PDFName.of('Annots')));
+  if(an instanceof PDFArray) an.asArray().forEach((r,ix)=>{ const d=L(r); if(!(d instanceof PDFDict)) return;
+    if(String(L(d.get(PDFName.of('Subtype'))))!=='/PrinterMark') return;
+    const mn=String(L(d.get(PDFName.of('MN')))||''); const kind=/reg/i.test(mn)?'reg':/(crop|cut|trim)/i.test(mn)?'crop':null; if(!kind) return;
+    const R=L(d.get(PDFName.of('Rect'))); let bb=null;
+    if(R instanceof PDFArray&&R.size()>=4){ const v=[0,1,2,3].map(i=>{ const x=L(R.get(i)); return x instanceof PDFNumber?x.asNumber():0; }); bb=[Math.min(v[0],v[2]),Math.min(v[1],v[3]),Math.max(v[0],v[2]),Math.max(v[1],v[3])]; }
+    annots.push({ix,kind,bb}); });
+  return {streams,recs,layers,annots,refUse};
+}
+
+/* Z = zone box [x0,y0,x1,y1] marks must lie outside; opt = {crop:bool, reg:bool} */
+function pbsMarkClassify(sc,Z,opt){
+  const {tol,thin,lineMax,regMax}=PBS_MK;
+  const out=b=>b[2]<=Z[0]+tol||b[0]>=Z[2]-tol||b[3]<=Z[1]+tol||b[1]>=Z[3]-tol;
+  const kind=new Array(sc.recs.length).fill(null);
+  const info=sc.recs.map(r=>{ let u=[Infinity,Infinity,-Infinity,-Infinity], curve=false, axis=true, allOut=true, subMax=0, thinAll=true, n=0;
+    for(const s of r.subs){ const b=s.bb; if(!isFinite(b[0])) continue; n++;
+      u=[Math.min(u[0],b[0]),Math.min(u[1],b[1]),Math.max(u[2],b[2]),Math.max(u[3],b[3])];
+      if(s.curve) curve=true; if(!s.axis) axis=false; if(!out(b)) allOut=false;
+      const w=b[2]-b[0], h=b[3]-b[1]; subMax=Math.max(subMax,w,h); if(Math.min(w,h)>thin) thinAll=false; }
+    if(!n) allOut=false;
+    return {u,curve,axis,allOut,subMax,um:Math.max(u[2]-u[0],u[3]-u[1]),thinAll,c:[(u[0]+u[2])/2,(u[1]+u[3])/2]}; });
+  const circles=[];
+  sc.recs.forEach((r,i)=>{ const f=info[i]; if(!f.allOut||!f.curve) return;
+    if(f.um<=regMax&&(r.reg||(r.stroke&&!r.fill&&r.lw<=1.5))){ kind[i]='reg'; circles.push(f); } });
+  sc.recs.forEach((r,i)=>{ const f=info[i]; if(kind[i]||!f.allOut||f.curve) return;
+    const line=f.axis&&f.thinAll&&f.subMax<=lineMax&&(!r.stroke||r.lw<=thin);
+    const near=circles.some(c=>Math.hypot(f.c[0]-c.c[0],f.c[1]-c.c[1])<=Math.max(2,c.um*.5)&&f.um<=c.um*2.5);
+    if(near&&(line||r.reg)) kind[i]='reg'; else if(line) kind[i]='crop'; });
+  const layers=sc.layers.filter(l=>opt[l.kind]);
+  for(const l of layers) for(let i=l.r0;i<l.r1;i++) kind[i]=l.kind;
+  const sel=[]; kind.forEach((k,i)=>{ if(k&&opt[k]) sel.push(i); });
+  return {kind,info,sel,layers,annots:sc.annots.filter(a=>opt[a.kind])};
+}
+
+function pbsMarkCount(sc,cl,recIdx,annots){
+  const crop=[], reg=[], items=[];
+  const addReg=c=>{ if(!reg.some(q=>Math.hypot(q[0]-c[0],q[1]-c[1])<6)) reg.push(c); };
+  for(const i of recIdx){ const k=cl.kind[i], r=sc.recs[i];
+    if(k==='crop'){ for(const s of r.subs){ const b=s.bb; if(!isFinite(b[0])) continue; items.push({k,bb:b}); if(!crop.some(c=>c.every((v,j)=>Math.abs(v-b[j])<0.75))) crop.push(b); } }
+    else if(k==='reg'){ const f=cl.info[i]; items.push({k,bb:f.u}); addReg(f.c); } }
+  for(const a of annots||[]){ if(a.bb) items.push({k:a.kind,bb:a.bb});
+    if(a.kind==='crop') crop.push(a.bb||[]); else addReg(a.bb?[(a.bb[0]+a.bb[2])/2,(a.bb[1]+a.bb[3])/2]:[Math.random()*1e6,0]); }
+  return {crop:crop.length,reg:reg.length,total:crop.length+reg.length,items};
+}
+
+function pbsRebuild(s){
+  const NL=pbsEnc('\n'), ch=[];
+  s.ops.forEach((o,k)=>{ if(s.drop[k]) return; ch.push(s.raw.subarray(o.s,o.e)); ch.push(NL); });
+  if(s.tail>=0) ch.push(s.raw.subarray(s.tail));
+  let n=0; ch.forEach(x=>n+=x.length); const b=new Uint8Array(n); let p=0; ch.forEach(x=>{ b.set(x,p); p+=x.length; }); return b;
+}
+
+/* removes the classified marks from one page of doc (mutates doc). Returns counts removed / left. */
+function pbsMarkRemove(doc,pageIndex,Z,opt){
+  const {PDFName,PDFDict,PDFArray,PDFRef}=PDFLib; const ctx=doc.context; const L=o=>o instanceof PDFRef?ctx.lookup(o):o;
+  const node=doc.getPages()[pageIndex].node;
+  const sc=pbsMarkScan(doc,pageIndex), cl=pbsMarkClassify(sc,Z,opt), ST=sc.streams;
+  ST.forEach(s=>{ s.drop=new Uint8Array(s.ops.length); s.rep={}; });
+  for(const i of cl.sel){ const r=sc.recs[i], d=ST[r.si].drop; for(let j=r.start;j<=r.end;j++) d[j]=1; }
+  for(const l of cl.layers){ const d=ST[l.si].drop; for(let j=l.start;j<=l.end;j++) d[j]=1; }
+  const recsBy=ST.map(()=>[]); sc.recs.forEach((r,i)=>recsBy[r.si].push(i));
+  // bottom-up: a form that paints nothing but marks is dropped where it is drawn
+  for(let si=ST.length-1;si>=0;si--){ const s=ST[si]; let T=s.paints, M=0;
+    for(const i of recsBy[si]) if(s.drop[sc.recs[i].start]) M++;
+    for(const d of s.dos){ const c=ST[d.child]; T+=c.T; if(s.drop[d.k]||c.full){ s.drop[d.k]=1; M+=c.T; } else M+=c.M; }
+    s.T=T; s.M=M; s.full=si>0&&T>0&&M===T; }
+  // top-down: which streams are gone (drawn by a dropped Do) and which can be safely rewritten
+  ST.forEach((s,si)=>{ if(!si){ s.gone=false; s.ok=!s.bad; return; } const p=ST[s.parent];
+    s.gone=p.gone||!!p.drop[s.doK]; s.ok=!s.bad&&p.ok&&sc.refUse.get(s.ref.tag)===1; });
+  for(let si=ST.length-1;si>=0;si--){ const s=ST[si]; if(s.gone||!s.ok) continue;
+    const anyDrop=s.drop.some(v=>v), anyRep=Object.keys(s.rep).length>0; if(!anyDrop&&!anyRep) continue;
+    let res=s.res;
+    if(anyRep&&res instanceof PDFDict){ res=res.clone(ctx); const xo=L(res.get(PDFName.of('XObject')));
+      if(xo instanceof PDFDict){ const nx=xo.clone(ctx); for(const [n,ref] of Object.entries(s.rep)) nx.set(PDFName.of(n),ref); res.set(PDFName.of('XObject'),nx); } }
+    const bytes=anyDrop?pbsRebuild(s):null;
+    if(!si){ if(bytes) node.set(PDFName.of('Contents'),ctx.register(ctx.flateStream(bytes))); if(anyRep) node.set(PDFName.of('Resources'),res); }
+    else{ const old=L(s.ref), ns=ctx.flateStream(bytes||s.raw);
+      for(const [k,v] of old.dict.entries()){ if(['/Length','/Filter','/DecodeParms','/DL'].includes(String(k))) continue; ns.dict.set(k,v); }
+      if(anyRep) ns.dict.set(PDFName.of('Resources'),res);
+      ST[s.parent].rep[s.name]=ctx.register(ns); } }
+  if(cl.annots.length){ const an=L(node.get(PDFName.of('Annots'))); const rm=new Set(cl.annots.map(a=>a.ix));
+    if(an instanceof PDFArray) node.set(PDFName.of('Annots'),ctx.obj(an.asArray().filter((_,i)=>!rm.has(i)))); }
+  const done=cl.sel.filter(i=>{ const s=ST[sc.recs[i].si]; return s.gone||s.ok; }), doneSet=new Set(done);
+  const r=pbsMarkCount(sc,cl,done,cl.annots), left=pbsMarkCount(sc,cl,cl.sel.filter(i=>!doneSet.has(i)),[]);
+  return {crop:r.crop,reg:r.reg,left:left.total};
+}
+
 </script>
 
 <script>
@@ -786,7 +992,7 @@ async function loadFile(file){
     $('#drop').classList.add('hide'); $('#holder').classList.remove('hide');
     ['bSave','bSave2','bPrev','bNext','pgGo','zOut','zFit','zIn'].forEach(id=>$('#'+id).disabled=false);
     $('#pgGo').max=pages.length;
-    $('#saveInfo').textContent='';
+    $('#saveInfo').textContent=''; $('#mkSum').textContent='';
     buildThumbs(); renderMeta(); await go(0);
     if(S.encrypted) toast('This PDF is encrypted. Boxes can still be set (incremental save), but check the result in your RIP.',true);
   }catch(err){ console.error(err); toast('Could not open PDF: '+(err&&err.message||err),true); }
@@ -877,6 +1083,8 @@ function drawOverlay(){
   let h=''; const m=rS(p.media);
   if(S.shade){ const t=rS(p.cur.trim); h+=`<path d="M${m.x} ${m.y}h${m.w}v${m.h}h${-m.w}zM${t.x} ${t.y}h${t.w}v${t.h}h${-t.w}z" fill="rgba(12,14,22,.38)" fill-rule="evenodd" pointer-events="none"/>`; }
   h+=`<rect x="${m.x+.5}" y="${m.y+.5}" width="${Math.max(0,m.w-1)}" height="${Math.max(0,m.h-1)}" fill="none" stroke="${COL.media}" stroke-dasharray="4 4" stroke-width="1" pointer-events="none"/>`;
+  if(MK.show.checked&&!S.encrypted){ const r=marksFor(p); for(const it of r.items){ const q=rS(it.bb), d=3;
+    h+=`<rect x="${q.x-d}" y="${q.y-d}" width="${q.w+2*d}" height="${q.h+2*d}" rx="2" fill="${MK.on.checked?'rgba(255,59,59,.28)':'rgba(255,59,59,.12)'}" stroke="#ff3b3b" stroke-width="1" ${it.k==='crop'?'stroke-dasharray="3 2"':''} pointer-events="none"/>`; } }
   const order=BOXES.filter(b=>b!==S.active).concat(S.active);
   for(const b of order){
     const r=rS(p.cur[b]), on=b===S.active;
@@ -947,7 +1155,7 @@ function updatePanel(live){
   if(document.activeElement!==$('#bleedAmt')) $('#bleedAmt').value=fmt(S.bleedAmt);
   const t=p.cur.trim, bl=p.cur.bleed;
   $('#bleedPer').textContent=`Bleed per side  L ${fmt(t[0]-bl[0])}  R ${fmt(bl[2]-t[2])}  T ${fmt(bl[3]-t[3])}  B ${fmt(t[1]-bl[1])} ${S.unit}`;
-  warnings();
+  warnings(); mkUpdate();
   $('#bUndo').disabled=!S.undo.length;
 }
 $('#eqRow').addEventListener('click',e=>{ const o=e.target.dataset.eq; if(!o) return; const p=P(); pushUndo([S.cur]); setActive(cp(o==='media'?p.media:p.cur[o])); });
@@ -1020,21 +1228,63 @@ window.addEventListener('keydown',e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){ e.preventDefault(); save(); }
 });
 
+/* ---------- printer marks ---------- */
+const MK={crop:$('#mkCrop'),reg:$('#mkReg'),zone:$('#mkZone'),show:$('#mkShow'),on:$('#mkOn'),range:$('#mkRange')};
+const mkOpt=()=>({crop:MK.crop.checked,reg:MK.reg.checked});
+const plural=(n,w)=>n+' '+w+(n===1?'':'s');
+const mkList=(c,r)=>{ const o=mkOpt(); return [o.crop&&plural(c,'crop mark'),o.reg&&plural(r,'registration mark')].filter(Boolean).join(' and '); };
+function marksFor(p){
+  const none={crop:0,reg:0,total:0,items:[]};
+  if(S.encrypted) return {...none,err:'encrypted'};
+  if(!p.scan){ try{ p.scan=pbsMarkScan(S.lib,p.i); }catch(e){ console.warn('mark scan',p.i,e); p.scan={err:e&&e.message||String(e)}; } }
+  if(p.scan.err) return {...none,err:p.scan.err};
+  const o=mkOpt(), Z=norm(p.cur[MK.zone.value]), key=Z.join(',')+'|'+o.crop+'|'+o.reg;
+  if(p.mkKey!==key){ const cl=pbsMarkClassify(p.scan,Z,o); p.mk=pbsMarkCount(p.scan,cl,cl.sel,cl.annots); p.mkKey=key; }
+  return p.mk;
+}
+function mkUpdate(){
+  const p=P(), el=$('#mkInfo');
+  if(!p){ el.className='w'; el.textContent='Open a PDF to find printer marks.'; return; }
+  if(S.encrypted){ el.className='w e'; el.textContent='This PDF is encrypted, so marks cannot be removed.'; return; }
+  const o=mkOpt(); if(!o.crop&&!o.reg){ el.className='w'; el.textContent='Tick crop and/or registration marks.'; return; }
+  const r=marksFor(p), zone=MK.zone.value;
+  if(r.err){ el.className='w e'; el.textContent='Could not read this page’s content: '+r.err; return; }
+  if(!r.total){ el.className='w'; el.innerHTML=`No marks found outside the ${zone} box on this page.`+(eqBox(norm(p.cur[zone]),p.media)?` The ${zone} box equals the artboard, so <b>set it to the finished size first</b>.`:''); return; }
+  el.className='w ok'; el.textContent='This page: '+mkList(r.crop,r.reg)+(MK.on.checked?'. Removed on save.':' found.');
+}
+[MK.crop,MK.reg,MK.zone,MK.show,MK.on].forEach(el=>el.addEventListener('change',()=>{ $('#mkSum').textContent=''; mkUpdate(); drawOverlay(); }));
+MK.range.addEventListener('keydown',e=>{ if(e.key==='Enter') $('#mkScan').click(); });
+$('#mkScan').onclick=async()=>{
+  if(!S.pages.length) return; let idx;
+  try{ idx=parseRange(MK.range.value,S.pages.length); }catch(e){ toast(e.message,true); return; }
+  if(!idx.length){ toast('No pages in that range.'); return; }
+  busy(true,'Scanning '+plural(idx.length,'page')+' for marks…'); await new Promise(r=>setTimeout(r,30));
+  let c=0,g=0,pg=0,err=0; for(const i of idx){ const r=marksFor(S.pages[i]); if(r.err){ err++; continue; } if(r.total){ pg++; c+=r.crop; g+=r.reg; } }
+  busy(false);
+  const msg=(pg?`Found ${mkList(c,g)} on ${plural(pg,'page')} of ${idx.length}.`:`No marks found outside the ${MK.zone.value} box on ${plural(idx.length,'page')}.`)+(err?` ${plural(err,'page')} could not be read.`:'');
+  $('#mkSum').textContent=msg; toast(msg);
+};
+
 /* ---------- save ---------- */
 $('#bSave').onclick=save; $('#bSave2').onclick=save;
 async function save(){
   if(!S.bytes) return;
   const edits=[];
   S.pages.forEach((p,i)=>{ const boxes={}; BOXES.forEach(b=>{ if(!eqBox(p.cur[b],p.orig[b])) boxes[KEY[b]]=p.cur[b]; }); if(Object.keys(boxes).length) edits.push({pageIndex:i,boxes}); });
-  if(!edits.length){ toast('No box changes to save.'); return; }
-  busy(true,'Writing '+edits.length+' page'+(edits.length>1?'s':'')+'…');
+  const mkOn=MK.on.checked&&(MK.crop.checked||MK.reg.checked); let markIdx=[];
+  if(mkOn){ let r; try{ r=parseRange(MK.range.value,S.pages.length); }catch(e){ toast(e.message,true); return; }
+    if(S.encrypted){ toast('This PDF is encrypted, so printer marks cannot be removed. Untick "Remove these marks" to just save the boxes.',true); return; }
+    busy(true,'Finding printer marks…'); await new Promise(res=>setTimeout(res,30));
+    markIdx=r.filter(i=>marksFor(S.pages[i]).total>0); busy(false); }
+  if(!edits.length&&!markIdx.length){ toast(mkOn?'No box changes, and no printer marks found to remove.':'No box changes to save.'); return; }
+  busy(true,'Writing '+plural(new Set([...edits.map(e=>e.pageIndex),...markIdx]).size,'page')+'…');
   try{
     let res, mode='incremental';
     const physIdx=$('#phys').checked?edits.filter(e=>e.boxes.CropBox).map(e=>e.pageIndex):[];
-    if(physIdx.length){
+    if(physIdx.length||markIdx.length){
       if(S.encrypted) throw new Error('This PDF is encrypted, so pages cannot be physically cropped. Untick "Physically crop" to just set the boxes.');
-      busy(true,'Cropping '+physIdx.length+' page'+(physIdx.length>1?'s':'')+'…');
-      res=await physicalSave(edits,physIdx); mode='crop';
+      busy(true,physIdx.length?'Cropping '+plural(physIdx.length,'page')+'…':'Removing printer marks from '+plural(markIdx.length,'page')+'…');
+      res=await physicalSave(edits,physIdx,markIdx); mode=physIdx.length?'crop':'marks';
     } else
     try{ res=pbsBuildIncremental(S.bytes,S.lib,edits); }
     catch(err){
@@ -1050,6 +1300,9 @@ async function save(){
     for(const e of edits){ const pg=cps[e.pageIndex]; const exp=res.expect&&res.expect[e.pageIndex];
       const want=exp||Object.fromEntries(Object.entries(e.boxes).map(([k,v])=>[k,norm(v).map(pbsNum)]));
       for(const [k,v] of Object.entries(want)){ if(!eqBox(getB(pg,k),v)) bad.push((e.pageIndex+1)+':'+k); } }
+    if(res.marks){ const ps=new Set(physIdx); for(const i of markIdx){ if(ps.has(i)) continue;
+      const sc=pbsMarkScan(chk,i), cl=pbsMarkClassify(sc,res.marks.zones[i],res.marks.opt);
+      if(pbsMarkCount(sc,cl,cl.sel,cl.annots).total>res.marks.leftBy[i]) bad.push((i+1)+':marks'); } }
     if(bad.length) throw new Error('Verification failed for '+bad.slice(0,6).join(', '));
     // also check original bytes are byte-identical at the head of the new file (incremental mode)
     if(mode==='incremental'){ for(let i=0;i<S.bytes.length;i+=4093) if(res.bytes[i]!==S.bytes[i]) throw new Error('Original byte check failed'); }
@@ -1057,8 +1310,11 @@ async function save(){
     const url=URL.createObjectURL(new Blob([res.bytes],{type:'application/pdf'}));
     const a=document.createElement('a'); a.href=url; a.download=name; document.body.append(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),60000);
     const cs=res.stats; const removed=cs?[[cs.text,'text block'],[cs.paths,'path'],[cs.images,'image'],[cs.forms,'graphic'],[cs.inline,'inline image'],[cs.annots,'annotation']].filter(x=>x[0]).map(x=>x[0]+' '+x[1]+(x[0]>1?'s':'')).join(', '):'';
+    const mk=res.marks, mkMsg=mk?(mk.crop||mk.reg?` Removed ${[mk.crop&&plural(mk.crop,'crop mark'),mk.reg&&plural(mk.reg,'registration mark')].filter(Boolean).join(' and ')} from ${plural(mk.pages,'page')}.`:'')+(mk.left?` ${plural(mk.left,'mark')} inside graphics shared within a page could not be removed.`:''):'';
     const msg=mode==='crop'
-      ? `Saved ${name}: ${res.cropped} page${res.cropped>1?'s':''} physically cropped. Removed outside the crop: ${removed||'nothing (no objects lay fully outside)'}. ${fmtBytes(S.bytes.length)} → ${fmtBytes(res.bytes.length)}.`
+      ? `Saved ${name}: ${res.cropped} page${res.cropped>1?'s':''} physically cropped. Removed outside the crop: ${removed||'nothing (no objects lay fully outside)'}.${mkMsg} ${fmtBytes(S.bytes.length)} → ${fmtBytes(res.bytes.length)}.`
+      : mode==='marks'
+      ? `Saved ${name}.${mkMsg}${edits.length?' Boxes updated on '+plural(edits.length,'page')+'.':''} Only the marks were deleted; images and fonts untouched. ${fmtBytes(S.bytes.length)} → ${fmtBytes(res.bytes.length)}.`
       : mode==='incremental'
       ? `Saved ${name}: ${edits.length} page${edits.length>1?'s':''} updated. Original ${fmtBytes(S.bytes.length)} kept byte-for-byte, +${fmtBytes(res.appended)} appended (${res.kind==='table'?'xref table':'xref stream'}).`
       : `Saved ${name} by structural rewrite (original xref was damaged). Streams copied raw, no recompression. ${fmtBytes(res.bytes.length)}.`;
@@ -1066,15 +1322,21 @@ async function save(){
   }catch(err){ console.error(err); toast('Save failed: '+(err&&err.message||err),true); }
   finally{ busy(false); }
 }
-async function physicalSave(edits,physIdx){
+async function physicalSave(edits,physIdx,markIdx=[]){
   const doc=await PDFLib.PDFDocument.load(S.bytes.slice(),{updateMetadata:false,throwOnInvalidObject:false});
   const pages=doc.getPages(), {PDFName}=PDFLib, set=new Set(physIdx);
   // pages that are not cropped: just set their edited boxes
   for(const e of edits) if(!set.has(e.pageIndex)) for(const [k,v] of Object.entries(e.boxes)) pages[e.pageIndex].node.set(PDFName.of(k),doc.context.obj(norm(v).map(pbsNum)));
+  // printer marks first, in the original page coordinates
+  let marks=null;
+  if(markIdx.length){ const opt=mkOpt(); marks={crop:0,reg:0,left:0,pages:0,leftBy:{},zones:{},opt};
+    for(const i of markIdx){ const Z=norm(S.pages[i].cur[MK.zone.value]); const r=pbsMarkRemove(doc,i,Z,opt);
+      marks.crop+=r.crop; marks.reg+=r.reg; marks.left+=r.left; marks.leftBy[i]=r.left; marks.zones[i]=Z; if(r.crop||r.reg) marks.pages++; } }
   const crops=edits.filter(e=>set.has(e.pageIndex)).map(e=>{ const p=S.pages[e.pageIndex]; return {pageIndex:e.pageIndex,crop:norm(p.cur.crop),boxes:{BleedBox:p.cur.bleed,TrimBox:p.cur.trim}}; });
-  const r=pbsPhysicalCrop(doc,crops);
+  let r={stats:null,expect:null};
+  if(crops.length) r=pbsPhysicalCrop(doc,crops); else pbsGarbageCollect(doc);
   const bytes=await doc.save({useObjectStreams:false,addDefaultPage:false,updateFieldAppearances:false});
-  return {bytes,stats:r.stats,expect:r.expect,cropped:crops.length};
+  return {bytes,stats:r.stats,expect:r.expect,cropped:crops.length,marks};
 }
 async function fullRewrite(edits){
   const doc=await PDFLib.PDFDocument.load(S.bytes.slice(),{ignoreEncryption:false,updateMetadata:false,throwOnInvalidObject:false});
