@@ -144,6 +144,12 @@ button.dng:hover:not(:disabled){background:#e03030}
 .lay{display:flex;align-items:center;gap:9px;min-height:34px;padding:0 9px;margin-bottom:4px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;font-size:13px}
 .lay:hover{border-color:var(--line2)}
 .lay label{display:flex;gap:9px;align-items:center;cursor:pointer;flex:1}
+#lAddRow{flex:0 0 auto;padding:0 10px 10px}
+#lAddRow button{width:100%}
+.lay.cut{flex-wrap:wrap;padding:5px 9px;gap:6px 9px}
+.lay.cut .tag{font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--dim);border:1px solid var(--line2);border-radius:3px;padding:0 4px}
+.lay.cut .lbtn{display:flex;gap:6px;width:100%;padding-left:24px}
+.lay.cut .lbtn button.on{border-color:var(--acc,#e6007e)}
 .lay.hdr{background:transparent;border:0;color:var(--mut);font-style:italic;min-height:26px}
 
 /* ── tools pane sections ── */
@@ -367,6 +373,7 @@ button.dng:hover:not(:disabled){background:#e03030}
       <button data-cmd="delpages" data-need="doc">Delete pages…</button>
       <button data-cmd="resize" data-need="doc">Resize / scale pages…</button>
       <button data-cmd="crop" data-need="doc">Crop pages…</button>
+      <button data-cmd="addlayer" data-need="doc">Add cutter / vector layer…</button>
       <button data-cmd="img">Create PDF from images…</button>
       <hr><button data-cmd="export" data-need="doc">Export as image…</button>
     </div></div>
@@ -378,6 +385,7 @@ button.dng:hover:not(:disabled){background:#e03030}
       <button data-cmd="edit" data-need="doc">Edit text<kbd>E</kbd></button>
       <button data-cmd="resize" data-need="doc">Resize / scale pages…</button>
       <button data-cmd="crop" data-need="doc">Crop pages…</button>
+      <button data-cmd="addlayer" data-need="doc">Add cutter / vector layer…</button>
       <button data-cmd="repl" data-need="doc">Replace colour…</button>
       <hr><button data-cmd="strip" data-need="op">Remove all overprint</button>
     </div></div>
@@ -405,6 +413,7 @@ button.dng:hover:not(:disabled){background:#e03030}
       <button data-cmd="delpages" data-need="doc">Delete pages…</button>
       <button data-cmd="resize" data-need="doc">Resize / scale…</button>
       <button data-cmd="crop" data-need="doc">Crop pages…</button>
+      <button data-cmd="addlayer" data-need="doc">Add cutter / vector layer…</button>
       <button data-cmd="repl" data-need="doc">Replace colour…</button>
       <hr><button data-cmd="ase">Load .ase colour palette…</button>
       <button data-cmd="fontdir">Load font folder…</button>
@@ -457,6 +466,7 @@ button.dng:hover:not(:disabled){background:#e03030}
     <div id="thumbs" class="pbody"></div>
     <div class="phead bt">Layers <span><button id="lAll" class="sm">All on</button> <button id="lNone" class="sm">All off</button></span></div>
     <div id="layers" class="pbody"><span class="hint">No layers</span></div>
+    <div id="lAddRow"><button id="lAdd" disabled title="Add a vector PDF (e.g. a cutter guide) as a new top layer">Add cutter / vector layer…</button></div>
     </div>
   </aside>
   <section id="stage">
@@ -549,6 +559,18 @@ button.dng:hover:not(:disabled){background:#e03030}
 <footer id="status"><span id="stSize">—</span><span id="stPos"></span><span class="grow"></span><span id="stMode">Select</span><span id="stZoom"></span></footer>
 </div>
 <div id="tip"></div>
+
+<div class="modal" id="mCut"><div class="box">
+  <h2>Add cutter / vector layer</h2>
+  <div class="row"><label>Vector PDF</label><button id="ctPick">Choose PDF…</button><input type="file" id="fCut" accept="application/pdf,.pdf" hidden><span class="hint" id="ctFile" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">No file chosen</span></div>
+  <div class="row"><label>Layer name</label><input type="text" id="ctName" value="Cutter guide" style="flex:1"></div>
+  <div class="row"><label>Add to</label><select id="ctPages"><option value="cur">Current page</option><option value="all">All pages</option><option value="sel">Selected pages</option></select></div>
+  <div class="row"><label>Source page</label><select id="ctSrc"><option value="match">Match page numbers</option></select></div>
+  <div class="row"><label>Position</label><select id="ctPos"><option value="trim">Centre on trim box</option><option value="media">Centre on media box</option><option value="origin">Align bottom-left of media boxes</option></select></div>
+  <div class="row"><label>Options</label><label style="min-width:0"><input type="checkbox" id="ctOP" checked> Overprint</label><label style="min-width:0"><input type="checkbox" id="ctVis" checked> Visible</label></div>
+  <div class="hint" id="ctInfo" style="margin-bottom:6px">Placed at 100% as vector artwork on a new top layer. Spot colours are kept. Overprint and visibility can be changed later in the Layers panel.</div>
+  <div class="foot"><button data-close>Cancel</button><button class="pri" id="ctGo" disabled>Add layer</button></div>
+</div></div>
 
 <div class="modal" id="mDel"><div class="box">
   <h2>Delete pages</h2>
@@ -1882,7 +1904,7 @@ async function openBytes(bytes, keep) {
 }
 function updateUI() {
   const has = !!S.jsDoc;
-  ['#bSave', '#bSave2', '#bExport', '#bSplit', '#bDelPg', '#bResize', '#bCrop', '#bOP', '#cbOP', '#bPrev', '#bNext', '#tEdit'].forEach(s => $(s).disabled = !has);
+  ['#bSave', '#bSave2', '#bExport', '#bSplit', '#bDelPg', '#bResize', '#bCrop', '#bOP', '#cbOP', '#bPrev', '#bNext', '#tEdit', '#lAdd'].forEach(s => $(s).disabled = !has);
   $('#bOPStrip').disabled = !has || !S.opCount;
   $('#bUndo').disabled = !S.undo.length; $('#bRedo').disabled = !S.redo.length;
   $('#drop').classList.toggle('hide', has); $('#pagewrap').classList.toggle('empty', !has);
@@ -1994,7 +2016,10 @@ function renderLayers() {
   if (!ids.length) { el.innerHTML = '<span class="hint">This PDF has no layers (optional content).</span>'; return; }
   let order = null; try { order = S.cfg.getOrder && S.cfg.getOrder(); } catch (e) {}
   const shown = new Set(); let h = '';
-  const row = (id, depth) => { shown.add(id); return `<div class="lay" style="padding-left:${depth * 14}px"><label><input type="checkbox" data-oc="${esc(id)}" ${S.ocVis[id] !== false ? 'checked' : ''}> ${esc(S.ocNames[id])}</label></div>`; };
+  S.cutLayers = listCutLayers();
+  const row = (id, depth) => { shown.add(id); const cut = S.cutLayers.get(id);
+    if (cut) return `<div class="lay cut" style="padding-left:${depth * 14 + 9}px"><label><input type="checkbox" data-oc="${esc(id)}" ${S.ocVis[id] !== false ? 'checked' : ''}> ${esc(S.ocNames[id])}</label><span class="tag">Added</span><div class="lbtn"><button class="sm${cut.op ? ' on' : ''}" data-cop="${esc(id)}" title="Toggle overprint for everything on this layer">Overprint: ${cut.op ? 'On' : 'Off'}</button><button class="sm dng" data-crm="${esc(id)}">Remove</button></div></div>`;
+    return `<div class="lay" style="padding-left:${depth * 14}px"><label><input type="checkbox" data-oc="${esc(id)}" ${S.ocVis[id] !== false ? 'checked' : ''}> ${esc(S.ocNames[id])}</label></div>`; };
   const walk = (items, depth) => { for (const it of items) {
     if (typeof it === 'string') { if (S.ocNames[it] !== undefined) h += row(it, depth); }
     else if (Array.isArray(it)) walk(it, depth + 1);
@@ -2004,6 +2029,8 @@ function renderLayers() {
   for (const id of ids) if (!shown.has(id)) h += row(id, 0);
   el.innerHTML = h;
   el.querySelectorAll('input[data-oc]').forEach(cb => cb.onchange = () => setLayer(cb.dataset.oc, cb.checked));
+  el.querySelectorAll('button[data-cop]').forEach(b => b.onclick = () => setCutOverprint(b.dataset.cop));
+  el.querySelectorAll('button[data-crm]').forEach(b => b.onclick = () => removeCutLayer(b.dataset.crm));
 }
 async function setLayer(id, v) { S.ocVis[id] = v; applyVis(S.cfg); applyVis(S.opCfg); await render(); renderThumbs(); }
 async function setAllLayers(v) { for (const id of Object.keys(S.ocVis)) S.ocVis[id] = v; renderLayers(); applyVis(S.cfg); applyVis(S.opCfg); await render(); renderThumbs(); }
@@ -2017,6 +2044,156 @@ function ocVisible(list) {
     }
   }
   return true;
+}
+
+
+/* ---------- added vector layers (cutter guides) ---------- */
+const PS_KEY = 'PDFStudioLayer';
+const refKey = r => r.objectNumber + 'R' + (r.generationNumber ? r.generationNumber : '');
+function ocProps(create) {
+  const ctx = E.lib.context, cat = E.lib.catalog;
+  let oc = cat.lookup(PDFName.of('OCProperties'));
+  if (!(oc instanceof PDFDict)) { if (!create) return null; oc = ctx.obj({}); cat.set(PDFName.of('OCProperties'), oc); }
+  let ocgs = oc.lookup(PDFName.of('OCGs'));
+  if (!(ocgs instanceof PDFArray)) { if (!create) return null; ocgs = ctx.obj([]); oc.set(PDFName.of('OCGs'), ocgs); }
+  let d = oc.lookup(PDFName.of('D'));
+  if (!(d instanceof PDFDict)) { if (!create) return null; d = ctx.obj({ Name: PDFString.of('Default') }); oc.set(PDFName.of('D'), d); }
+  return { oc, ocgs, d };
+}
+function arrOf(d, key, create) {
+  let a = d.lookup(PDFName.of(key));
+  if (!(a instanceof PDFArray) && create) { a = E.lib.context.obj([]); d.set(PDFName.of(key), a); }
+  return a instanceof PDFArray ? a : null;
+}
+function arrRemove(a, ref) { if (!a) return; for (let i = a.size() - 1; i >= 0; i--) { const v = a.get(i); if (v instanceof PDFRef && v === ref) a.remove(i); else if (v instanceof PDFArray) arrRemove(v, ref); } }
+function listCutLayers() {
+  const m = new Map(); if (!E.lib) return m;
+  const p = ocProps(false); if (!p) return m;
+  for (const r of p.ocgs.asArray()) {
+    if (!(r instanceof PDFRef)) continue;
+    const g = E.lib.context.lookup(r); if (!(g instanceof PDFDict)) continue;
+    const info = g.lookup(PDFName.of(PS_KEY)); if (!(info instanceof PDFDict)) continue;
+    const gs = info.lookup(PDFName.of('GS'));
+    const op = gs instanceof PDFDict ? opTrue(gs, 'OP') === true : false;
+    const off = arrOf(p.d, 'OFF', false);
+    const vis = !(off && off.asArray().some(v => v === r));
+    m.set(refKey(r), { ref: r, dict: g, info, gs, op, vis });
+  }
+  return m;
+}
+/* force overprint state on every graphics state inside the placed artwork */
+function setFormOP(ref, on, seen = new Set()) {
+  const ctx = E.lib.context; if (seen.has(ref)) return; seen.add(ref);
+  const st = ctx.lookup(ref); const dict = st && st.dict; if (!dict) return;
+  const res = dict.lookup(PDFName.of('Resources')); if (!(res instanceof PDFDict)) return;
+  const eg = res.lookup(PDFName.of('ExtGState'));
+  if (eg instanceof PDFDict) for (const [, v] of eg.entries()) { const g = v instanceof PDFRef ? ctx.lookup(v) : v; if (g instanceof PDFDict) { g.set(PDFName.of('OP'), on ? PDFBool.True : PDFBool.False); g.set(PDFName.of('op'), on ? PDFBool.True : PDFBool.False); if (on) g.set(PDFName.of('OPM'), PDFNumber.of(1)); } }
+  const xo = res.lookup(PDFName.of('XObject'));
+  if (xo instanceof PDFDict) for (const [, v] of xo.entries()) if (v instanceof PDFRef) { const x = ctx.lookup(v); const sub = x && x.dict && x.dict.lookup(PDFName.of('Subtype')); if (sub instanceof PDFName && sub.decodeText() === 'Form') setFormOP(v, on, seen); }
+}
+function setLayerDefault(p, ref, on) {
+  arrRemove(arrOf(p.d, 'ON', false), ref); arrRemove(arrOf(p.d, 'OFF', false), ref);
+  arrOf(p.d, on ? 'ON' : 'OFF', true).push(ref);
+}
+let cutFile = null, cutCount = 0;
+function openCutLayer() {
+  if (!S.jsDoc) return;
+  $('#ctPages').value = S.n === 1 ? 'cur' : (S.sel && S.sel.size > 1 ? 'sel' : 'all');
+  $('#ctPages').querySelector('[value=sel]').disabled = !(S.sel && S.sel.size);
+  const used = new Set(Object.values(S.ocNames)); let nm = 'Cutter guide', i = 2; while (used.has(nm)) nm = 'Cutter guide ' + i++;
+  $('#ctName').value = nm;
+  showModal('#mCut');
+}
+$('#lAdd').onclick = openCutLayer;
+$('#ctPick').onclick = () => $('#fCut').click();
+$('#fCut').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const bytes = new Uint8Array(await f.arrayBuffer());
+    const d = await PDFDocument.load(bytes, { ignoreEncryption: true, updateMetadata: false });
+    cutFile = { name: f.name, bytes }; cutCount = d.getPageCount();
+    const pg = d.getPage(0), t = pg.getTrimBox(), mm = v => (v * 25.4 / 72).toFixed(1);
+    $('#ctFile').textContent = `${f.name} – ${cutCount} page${cutCount > 1 ? 's' : ''}, ${mm(t.width)} × ${mm(t.height)} mm`;
+    $('#ctSrc').innerHTML = '<option value="match">Match page numbers</option>' + Array.from({ length: cutCount }, (_, k) => `<option value="${k}">Page ${k + 1} on every page</option>`).join('');
+    $('#ctSrc').value = cutCount > 1 ? 'match' : '0';
+    $('#ctGo').disabled = false;
+  } catch (err) { console.error(err); cutFile = null; $('#ctGo').disabled = true; $('#ctFile').textContent = 'Could not read that PDF'; toast('Could not read PDF: ' + err.message, true); }
+};
+$('#ctGo').onclick = async () => {
+  if (!cutFile || !S.jsDoc) return;
+  const name = $('#ctName').value.trim() || 'Cutter guide';
+  const mode = $('#ctPages').value, src = $('#ctSrc').value, pos = $('#ctPos').value, op = $('#ctOP').checked, vis = $('#ctVis').checked;
+  let pages = mode === 'all' ? Array.from({ length: S.n }, (_, k) => k) : mode === 'sel' && S.sel && S.sel.size ? [...S.sel].sort((a, b) => a - b).map(p => p - 1) : [S.page - 1];
+  showModal('#mCut', false); busy(true, 'Adding layer…');
+  try {
+    const ctx = E.lib.context;
+    const srcFor = pi => src === 'match' ? Math.min(pi, cutCount - 1) : +src;
+    const need = [...new Set(pages.map(srcFor))];
+    const srcDoc = await PDFDocument.load(cutFile.bytes, { ignoreEncryption: true, updateMetadata: false });
+    const emb = await E.lib.embedPdf(srcDoc, need);
+    const forms = new Map();
+    for (let k = 0; k < need.length; k++) {
+      await emb[k].embed();
+      const sp = srcDoc.getPage(need[k]);
+      forms.set(need[k], { ref: emb[k].ref, trim: sp.getTrimBox(), media: sp.getMediaBox() });
+      setFormOP(emb[k].ref, op);
+    }
+    const gsRef = ctx.register(ctx.obj({ Type: 'ExtGState', OP: op, op: op, OPM: 1 }));
+    const info = ctx.obj({ GS: gsRef, Forms: [...forms.values()].map(f => f.ref), Streams: [] });
+    const ocgRef = ctx.register(ctx.obj({ Type: 'OCG', Name: PDFHexString.fromText(name), Intent: 'View' }));
+    ctx.lookup(ocgRef).set(PDFName.of(PS_KEY), info);
+    const p = ocProps(true);
+    const hadOrder = !!arrOf(p.d, 'Order', false);
+    const existing = p.ocgs.asArray().slice();
+    p.ocgs.push(ocgRef);
+    const order = arrOf(p.d, 'Order', true);
+    if (!hadOrder) existing.forEach(r => order.push(r));
+    order.push(ocgRef);
+    setLayerDefault(p, ocgRef, vis);
+    const streams = info.lookup(PDFName.of('Streams'));
+    const c = n => fmtN(n);
+    for (const pi of pages) {
+      const f = forms.get(srcFor(pi)); const page = E.lib.getPage(pi);
+      page.node.normalize();
+      const res = resDictFor({ kind: 'page', pi });
+      const xo = subDict(res, 'XObject'), eg = subDict(res, 'ExtGState'), pr = subDict(res, 'Properties');
+      const xn = uniqueName(xo, 'PSCut'), gn = uniqueName(eg, 'PSCutGS'), on = uniqueName(pr, 'PSOC');
+      xo.set(PDFName.of(xn), f.ref); eg.set(PDFName.of(gn), gsRef); pr.set(PDFName.of(on), ocgRef);
+      let tx, ty;
+      if (pos === 'origin') { const m = page.getMediaBox(); tx = m.x - f.media.x; ty = m.y - f.media.y; }
+      else { const b = pos === 'trim' ? page.getTrimBox() : page.getMediaBox(), sb = pos === 'trim' ? f.trim : f.media; tx = (b.x + b.width / 2) - (sb.x + sb.width / 2); ty = (b.y + b.height / 2) - (sb.y + sb.height / 2); }
+      const sref = ctx.register(ctx.flateStream(`q\n/OC /${on} BDC\n/${gn} gs\n1 0 0 1 ${c(tx)} ${c(ty)} cm\n/${xn} Do\nEMC\nQ\n`));
+      page.node.addContentStream(sref); streams.push(sref);
+    }
+    S.ocVis[refKey(ocgRef)] = vis;
+    await commit(`Layer "${name}" added to ${pages.length} page${pages.length > 1 ? 's' : ''}`);
+  } catch (err) { console.error(err); toast('Could not add layer: ' + err.message, true); await openBytes(S.bytes, true); }
+  finally { busy(false); }
+};
+async function setCutOverprint(id) {
+  const L = (S.cutLayers || listCutLayers()).get(id); if (!L) return;
+  const on = !L.op;
+  if (L.gs instanceof PDFDict) { L.gs.set(PDFName.of('OP'), on ? PDFBool.True : PDFBool.False); L.gs.set(PDFName.of('op'), on ? PDFBool.True : PDFBool.False); L.gs.set(PDFName.of('OPM'), PDFNumber.of(1)); }
+  const forms = L.info.lookup(PDFName.of('Forms'));
+  if (forms instanceof PDFArray) for (const r of forms.asArray()) if (r instanceof PDFRef) setFormOP(r, on);
+  await commit(`Overprint ${on ? 'ON' : 'OFF'} for layer "${S.ocNames[id] || ''}"`);
+}
+async function removeCutLayer(id) {
+  const L = (S.cutLayers || listCutLayers()).get(id); if (!L) return;
+  if (!confirm(`Remove layer "${S.ocNames[id] || ''}" and its artwork from every page? (Undo is available.)`)) return;
+  const streams = L.info.lookup(PDFName.of('Streams')); const set = new Set(streams instanceof PDFArray ? streams.asArray() : []);
+  for (const page of E.lib.getPages()) { const cs = page.node.Contents(); if (cs instanceof PDFArray) for (let i = cs.size() - 1; i >= 0; i--) if (set.has(cs.get(i))) cs.remove(i); }
+  const p = ocProps(false);
+  if (p) { arrRemove(p.ocgs, L.ref); for (const k of ['Order', 'ON', 'OFF', 'Locked']) arrRemove(arrOf(p.d, k, false), L.ref); }
+  delete S.ocVis[id];
+  await commit('Layer removed');
+}
+/* write preview on/off of added layers into the file's default state; returns true if changed */
+function syncCutDefaults() {
+  if (!E.lib) return false; const p = ocProps(false); if (!p) return false;
+  let changed = false;
+  for (const [id, L] of listCutLayers()) { const want = S.ocVis[id] !== false; if (want !== L.vis) { setLayerDefault(p, L.ref, want); changed = true; } }
+  return changed;
 }
 
 /* ---------- rendering ---------- */
@@ -2603,7 +2780,7 @@ $('#exGo').onclick = async () => {
 /* ---------- toolbar & keys ---------- */
 $('#bOpen').onclick = () => $('#fOpen').click();
 $('#fOpen').onchange = e => { if (e.target.files[0]) openFile(e.target.files[0]); e.target.value = ''; };
-$('#bSave').onclick = () => { if (S.bytes) download(S.bytes, S.edited ? baseName() + '_edited.pdf' : S.name, 'application/pdf'); };
+$('#bSave').onclick = async () => { if (S.bytes && syncCutDefaults()) await commit('Layer visibility written to file'); if (S.bytes) download(S.bytes, S.edited ? baseName() + '_edited.pdf' : S.name, 'application/pdf'); };
 $('#bUndo').onclick = undo; $('#bRedo').onclick = redo;
 $('#bOP').onclick = toggleOverprint; $('#cbOP').onchange = () => { if ($('#cbOP').checked !== S.overprint) toggleOverprint(); }; $('#bOPStrip').onclick = stripOverprint;
 $('#mInspect').onclick = () => setMode('inspect'); $('#mEdit').onclick = () => setMode('edit');
@@ -2656,7 +2833,7 @@ document.querySelectorAll('.menu .mbtn').forEach(b => {
 });
 document.addEventListener('click', e => { if (!e.target.closest('.menu')) closeMenus(); });
 const CMDS = {
-  open: () => $('#fOpen').click(), save: () => $('#bSave').click(), combine: () => $('#bCombine').click(), split: () => $('#bSplit').click(), delpages: openDelete, resize: () => $('#bResize').click(), crop: () => $('#bCrop').click(), repl: () => openReplace(), ase: () => $('#fAse').click(), fontdir: () => $('#fFontDir').click(), export: () => $('#bExport').click(),
+  open: () => $('#fOpen').click(), save: () => $('#bSave').click(), combine: () => $('#bCombine').click(), split: () => $('#bSplit').click(), delpages: openDelete, resize: () => $('#bResize').click(), crop: () => $('#bCrop').click(), addlayer: openCutLayer, repl: () => openReplace(), ase: () => $('#fAse').click(), fontdir: () => $('#fFontDir').click(), export: () => $('#bExport').click(),
   undo, redo, inspect: () => setMode('inspect'), edit: () => setMode('edit'), strip: stripOverprint,
   zin: () => zoom(1.25), zout: () => zoom(0.8), z100: () => { S.fit = null; S.scale = 1; closeEditor(); render(); },
   fitp: () => { S.fit = 'page'; closeEditor(); render(); }, fitw: () => { S.fit = 'width'; closeEditor(); render(); }, op: toggleOverprint,
