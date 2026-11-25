@@ -530,7 +530,7 @@ main.zoomed #preview-wrap{width:max-content;min-width:100%}
         <label>Bar colour</label>
         <div class="pills seg" id="bar-mode"><div class="pill active" data-mode="reg">REGISTRATION</div><div class="pill" data-mode="spot">Each spot colour</div></div>
       </div>
-      <p class="tile-note" id="bar-reg-note">Colour: spot <b style="color:var(--tx)">REGISTRATION</b> (100% of all inks)</p>
+      <p class="tile-note" id="bar-reg-note">Colour: <b style="color:var(--tx)">REGISTRATION</b> = C100 M100 Y100 K100</p>
       <div id="spot-opts" style="display:none;flex-direction:column;gap:10px">
         <div class="field">
           <label>Spot colours in artwork <span id="spot-count"></span></label>
@@ -586,7 +586,7 @@ main.zoomed #preview-wrap{width:max-content;min-width:100%}
       </div>
       <div class="field">
         <label>Colour</label>
-        <select id="eye-col"><option value="k">Black — 100% K</option><option value="reg">REGISTRATION (all inks)</option></select>
+        <select id="eye-col"><option value="k">Black — 100% K</option><option value="reg">REGISTRATION — C100 M100 Y100 K100</option></select>
       </div>
       <p class="tile-note">Inside sits between the bar and the artwork (the layout widens if needed); Outside sits on the sheet edge side of the bar. Stroke is drawn inside the size, so the outer dimensions stay exact.</p>
     </div>
@@ -1749,7 +1749,7 @@ function readEye(){
     place:act('eye-place')?.dataset.place||'in',
     style:act('eye-style')?.dataset.style||'solid',
     sw:num('eye-sw',0.25,0.05), off:num('eye-off',2,0), inset:num('eye-inset',5,0),
-    col:g('eye-col').value};
+    col:g('eye-col').value, spot:eyeSpot()};
 }
 function barLayout(p,layoutMmW){
   const b=p.bars, e0=p.eye||{on:false}, e={...e0,on:e0.on&&(e0.slots||[]).length>0};
@@ -1764,16 +1764,16 @@ function barLayout(p,layoutMmW){
     mode:spot?'spot':'reg',wantSpot:b.mode==='spot',spots:spot?b.spots:[],label:b.label});
 }
 function barTxt(){
-  let t=lastBars.on?`  ·  bearer bars ${lastBars.bw}mm (${lastBars.mode==='spot'?lastBars.spots.length+' spot colour'+(lastBars.spots.length>1?'s':''):'REGISTRATION'}), gap ${lastBars.gap.toFixed(1)}mm`:'';
+  let t=lastBars.on?`  ·  bearer bars ${lastBars.bw}mm (${lastBars.mode==='spot'?lastBars.spots.length+' spot colour'+(lastBars.spots.length>1?'s':''):'REGISTRATION CMYK'}), gap ${lastBars.gap.toFixed(1)}mm`:'';
   const e=lastBars.eye; if(e&&e.on&&e.slots.length) t+=`  ·  ${e.slots.length} eye mark${e.slots.length>1?'s':''} ${e.w}×${e.h}mm ${e.style} (${e.slots.join(', ')})`;
   return t;
 }
 function exportMarksMsg(){
   const e=lastBars.eye;
-  const eye=e&&e.on&&e.slots.length?` · ${e.slots.length} eye mark(s) ${e.w}×${e.h}mm ${e.style==='stroke'?'stroke':'solid'} in ${e.col==='reg'?'REGISTRATION':'100% K'}`:'';
+  const eye=e&&e.on&&e.slots.length?` · ${e.slots.length} eye mark(s) ${e.w}×${e.h}mm ${e.style==='stroke'?'stroke':'solid'} in ${e.spot?e.spot.name:e.col==='reg'?'REGISTRATION (CMYK 100×4)':'100% K'}`:'';
   const bm=!lastBars.on?' · no bearer bars (switch is off in section 06)'
     :lastBars.mode==='spot'?` · ${lastBars.spots.length} bearer bar set${lastBars.spots.length>1?'s':''} (${lastBars.bw}mm, overprint) in ${lastBars.spots.map(x=>x.name).join(', ')}`
-    :` · bearer bars ${lastBars.bw}mm added in spot colour REGISTRATION`+(lastBars.wantSpot?' (no spot colours ticked/found)':'');
+    :` · bearer bars ${lastBars.bw}mm added in REGISTRATION (C100 M100 Y100 K100)`+(lastBars.wantSpot?' (no spot colours ticked/found)':'');
   return bm+eye;
 }
 // Geometry in mm, y measured from the TOP of the sheet. Bars are full height ± adj, centred vertically.
@@ -1814,7 +1814,8 @@ function drawBarsPreview(ctx,bars,Wpx,Hpx){
   }
   const eyes=eyeGeom(bars,lastContent.w,lastContent.h);
   if(eyes.length){
-    const e=bars.eye; ctx.save(); ctx.fillStyle='#000'; ctx.strokeStyle='#000'; ctx.setLineDash([]);
+    const e=bars.eye, ec=e.spot?`rgb(${e.spot.rgb.join(',')})`:'#000';
+    ctx.save(); ctx.fillStyle=ec; ctx.strokeStyle=ec; ctx.setLineDash([]);
     for(const g of eyes){
       if(e.style==='stroke'){
         const s=Math.min(e.sw,g.w/2,g.h/2); ctx.lineWidth=Math.max(0.75*_pr,s*k); ctx.lineJoin='miter';
@@ -1835,14 +1836,15 @@ function regCS(page){
   }
   return L.PDFName.of(CS);
 }
-function setMarkColour(ops,page,col){
+// 'reg' = registration built from process inks C100 M100 Y100 K100; 'k' = 100% K; {spot} = file's own spot
+function setMarkColour(ops,page,col,spot){
   const L=PDFLib;
-  if(col==='reg'){
-    const nm=regCS(page),one=L.PDFNumber.of(1);
+  if(spot){
+    const nm=spotCS(page,spot,'_EYE'),one=L.PDFNumber.of(1);
     ops.push(L.PDFOperator.of('cs',[nm]),L.PDFOperator.of('scn',[one]),L.PDFOperator.of('CS',[nm]),L.PDFOperator.of('SCN',[one]));
   } else {
-    const n=[0,0,0,1].map(v=>L.PDFNumber.of(v));
-    ops.push(L.PDFOperator.of('k',n),L.PDFOperator.of('K',n));   // DeviceCMYK 0/0/0/100
+    const n=(col==='reg'?[1,1,1,1]:[0,0,0,1]).map(v=>L.PDFNumber.of(v));
+    ops.push(L.PDFOperator.of('k',n),L.PDFOperator.of('K',n));
   }
 }
 function barPathOps(g,H,ops){
@@ -1894,7 +1896,7 @@ async function drawBarsPdf(page,bars,sheetPtW,sheetPtH){
     }
   }
   if(eyes.length){
-    const e=bars.eye; setMarkColour(ops,page,e.col);
+    const e=bars.eye; setMarkColour(ops,page,e.col,e.spot);
     for(const g of eyes){
       const x=g.x*M,y=(H-g.y-g.h)*M,w=g.w*M,h=g.h*M;
       if(e.style==='stroke'){
@@ -2061,12 +2063,25 @@ function altToRGB(ctx,alt,v){
   return [c((1-C)*(1-K)),c((1-Mg)*(1-K)),c((1-Y)*(1-K))];
 }
 
+function eyeSpot(){
+  const v=document.getElementById('eye-col').value;
+  if(!v.startsWith('spot:')) return null;
+  return getSpots().find(sp=>sp.name===v.slice(5))||null;
+}
+// Eye mark colour list: black, registration, then every spot found in the artwork
+function refreshEyeColours(){
+  const sel=document.getElementById('eye-col'), cur=sel.value, sp=getSpots();
+  sel.innerHTML='<option value="k">Black — 100% K</option><option value="reg">REGISTRATION — C100 M100 Y100 K100</option>'+
+    (sp.length?'<optgroup label="Spot colours in artwork">'+sp.map((s,i)=>`<option value="spot:${esc(s.name)}">${i+1}  ${esc(s.name)}</option>`).join('')+'</optgroup>':'');
+  sel.value=[...sel.options].some(o=>o.value===cur)?cur:'k';
+}
 function getSpots(){
   if(mode==='single') return singleSpots;
   const m=new Map(); columns.forEach(c=>{if(c.rawBytes)(c.spots||[]).forEach(sp=>{if(!m.has(sp.name))m.set(sp.name,sp)})});
   return [...m.values()];
 }
 function refreshSpotList(){
+  refreshEyeColours();
   const list=document.getElementById('spot-list'), sp=getSpots();
   document.getElementById('spot-count').textContent=sp.length?`${sp.length} found`:'';
   if(!sp.length){list.innerHTML=`<div class="spot-empty">${(mode==='single'?singleRawBytes:columns.some(c=>c.rawBytes))?'No spot colours found on this page':'Load a PDF to detect spot colours'}</div>`;return}
