@@ -341,6 +341,24 @@ main{min-height:0;padding:32px;background-color:var(--well);background-image:lin
 #bar-w .pill{flex:1;text-align:center;padding:7px 0;cursor:pointer;user-select:none}
 .tile-note{font:12px var(--num);color:var(--mut);margin-top:6px;line-height:1.5}
 #single-wmm{font-family:var(--num);font-size:13.5px;text-align:right;width:100%}
+.pills.seg{display:flex;flex-wrap:nowrap;gap:6px;margin-bottom:0}
+.pills.seg .pill{flex:1;text-align:center;padding:7px 0;cursor:pointer;user-select:none;white-space:nowrap}
+.field.off{opacity:.4;pointer-events:none}
+.spot-list{display:flex;flex-direction:column;gap:4px;max-height:220px;overflow:auto;padding:6px;background:var(--field);border:1px solid var(--line2);border-radius:5px}
+.spot-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--tx);cursor:pointer;min-height:24px}
+.spot-row input{width:15px;height:15px;accent-color:var(--c8);flex-shrink:0}
+.spot-row .sw{width:14px;height:14px;border-radius:3px;border:1px solid var(--line2);flex-shrink:0}
+.spot-row .sn{font:12px var(--num);color:var(--mut);width:18px;text-align:right;flex-shrink:0}
+.spot-row .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spot-empty{font:12px var(--num);color:var(--mut);padding:4px}
+.eye-grid{display:grid;grid-template-columns:56px 1fr 1fr;gap:6px;align-items:center}
+.eye-grid .eg-h{font-size:12px;color:var(--mut);text-align:center}
+.eye-grid .eg-r{font-size:12px;color:var(--mut)}
+.eye-grid .pill{text-align:center;padding:6px 0;cursor:pointer;user-select:none;color:var(--dim)}
+.eye-grid .pill.active{color:var(--c8)}
+#preview-canvas{max-width:none!important;max-height:none!important;flex-shrink:0}
+main.zoomed{display:block}
+main.zoomed #preview-wrap{width:max-content;min-width:100%}
 </style>
 </head>
 <body>
@@ -508,13 +526,79 @@ main{min-height:0;padding:32px;background-color:var(--well);background-image:lin
           <input type="number" id="bar-inset" min="0" step="0.5" value="5">
         </div>
       </div>
-      <p class="tile-note">Colour: spot <b style="color:var(--tx)">REGISTRATION</b> (100% of all inks)</p>
+      <div class="field">
+        <label>Bar colour</label>
+        <div class="pills seg" id="bar-mode"><div class="pill active" data-mode="reg">REGISTRATION</div><div class="pill" data-mode="spot">Each spot colour</div></div>
+      </div>
+      <p class="tile-note" id="bar-reg-note">Colour: spot <b style="color:var(--tx)">REGISTRATION</b> (100% of all inks)</p>
+      <div id="spot-opts" style="display:none;flex-direction:column;gap:10px">
+        <div class="field">
+          <label>Spot colours in artwork <span id="spot-count"></span></label>
+          <div id="spot-list" class="spot-list"><div class="spot-empty">Load a PDF to detect spot colours</div></div>
+        </div>
+        <div class="field">
+          <label>Label in bar</label>
+          <select id="bar-label"><option value="both">Number + name</option><option value="name">Spot name</option><option value="num">Number only</option><option value="none">No label</option></select>
+        </div>
+        <p class="tile-note">One bar pair per ticked spot, stacked in the same place and set to overprint, so every plate carries its own bearer bars and crosshairs. Each label is cut out of its own bar as real vector holes (no white text, nothing for overprint to hide) and staggered along the bar so no two overlap.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- 07 EYE MARK -->
+  <div>
+    <div class="sec-label">07 — Eye Mark</div>
+    <label class="bar-ck"><input type="checkbox" id="eye-on"> Add eye mark beside the bearer bar</label>
+    <div id="eye-opts" class="bar-opts off">
+      <div class="field">
+        <label>Size (W × H mm)</label>
+        <div class="pills seg" id="eye-size">
+          <div class="pill active" data-w="10" data-h="5">10×5</div><div class="pill" data-w="12" data-h="6">12×6</div><div class="pill" data-w="15" data-h="5">15×5</div><div class="pill" data-w="5" data-h="10">5×10</div>
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Width (mm)</label><input type="number" id="eye-w" min="0.5" step="0.5" value="10"></div>
+        <div class="field"><label>Height (mm)</label><input type="number" id="eye-h" min="0.5" step="0.5" value="5"></div>
+      </div>
+      <div class="field">
+        <label>Positions <span style="font-family:var(--ui);color:var(--mut)">tap each mark on / off</span></label>
+        <div id="eye-pos" class="eye-grid">
+          <span></span><span class="eg-h">Left bar</span><span class="eg-h">Right bar</span>
+          <span class="eg-r">Top</span><div class="pill" data-slot="left-top">●</div><div class="pill" data-slot="right-top">●</div>
+          <span class="eg-r">Middle</span><div class="pill active" data-slot="left-middle">●</div><div class="pill" data-slot="right-middle">●</div>
+          <span class="eg-r">Bottom</span><div class="pill" data-slot="left-bottom">●</div><div class="pill" data-slot="right-bottom">●</div>
+        </div>
+      </div>
+      <div class="field"><label>Placement</label>
+        <div class="pills seg" id="eye-place"><div class="pill active" data-place="in">Inside bar</div><div class="pill" data-place="out">Outside bar</div></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Style</label>
+          <div class="pills seg" id="eye-style"><div class="pill active" data-style="solid">Solid</div><div class="pill" data-style="stroke">Stroke</div></div>
+        </div>
+        <div class="field off" id="eye-sw-field"><label>Stroke (mm)</label><input type="number" id="eye-sw" min="0.05" step="0.05" value="0.25"></div>
+      </div>
+      <div class="row2">
+        <div class="field"><label>Gap from bar (mm)</label><input type="number" id="eye-off" min="0" step="0.5" value="2"></div>
+        <div class="field"><label>Top/bottom inset (mm)</label><input type="number" id="eye-inset" min="0" step="0.5" value="5"></div>
+      </div>
+      <div class="field">
+        <label>Colour</label>
+        <select id="eye-col"><option value="k">Black — 100% K</option><option value="reg">REGISTRATION (all inks)</option></select>
+      </div>
+      <p class="tile-note">Inside sits between the bar and the artwork (the layout widens if needed); Outside sits on the sheet edge side of the bar. Stroke is drawn inside the size, so the outer dimensions stay exact.</p>
     </div>
   </div>
 
   <div class="divider"></div>
 
   <div style="display:flex;flex-direction:column;gap:9px">
+    <div class="field">
+      <label>Preview zoom</label>
+      <div class="pills seg" id="zoom-pills"><div class="pill active" data-z="1">Fit</div><div class="pill" data-z="2">2×</div><div class="pill" data-z="4">4×</div><div class="pill" data-z="8">8×</div></div>
+    </div>
     <button class="btn-prev" id="btn-prev">↻  Refresh Preview</button>
     <div class="prog-wrap" id="prog-wrap"><div class="prog-bar" id="prog-bar"></div></div>
     <button class="btn-export" id="btn-export" disabled>↓  Export PDF</button>
@@ -565,6 +649,7 @@ let singleImgH      = 0;      // natural px height (PNG/JPEG)
 let singleFileType  = 'pdf';  // 'pdf' | 'eps' | 'png' | 'jpg'
 let singleSelPage   = 1;
 let singleRotation  = 0;  // degrees: 0 | 90 | 180 | 270
+let singleSpots     = [];  // spot colours found on the selected page
 
 // Multi mode columns: [{rawBytes, pdfJsDoc, imgBitmap, imgW, imgH, fileType, selPage, rotation, fileName, numPages}]
 let columns = [];
@@ -623,6 +708,7 @@ modeBtns.forEach(btn=>btn.addEventListener('click',()=>{
   colsHint.style.display    = mode==='multi' ?'block':'none';
   updateCentreGapVisibility();
   updateExportBtn();
+  refreshSpotList();
 }));
 
 // ─── Helpers ──────────────────────────────────────────────────
@@ -642,6 +728,7 @@ function getParams(){
     centreGapX: parseFloat(gapCXIn.value)||0,
     bg: bgSel.value,
     bars: readBars(),
+    eye: readEye(),
   };
 }
 
@@ -825,13 +912,19 @@ async function loadSingleFile(file){
     }
 
     singleSelPage=1; singleRotation=0;
+    singleSpots=singlePdfJsDoc?await detectSpotsSafe(singleRawBytes,0):[];
+    refreshSpotList();
     setActivePills(singleRotPills,0);
     singleControls.classList.add('visible');
     updateExportBtn();
     await renderPreview();
   }catch(e){setStatus('Error loading file: '+e.message,'err');console.error(e)}
 }
-singlePageSel.addEventListener('change',()=>{singleSelPage=parseInt(singlePageSel.value)});
+singlePageSel.addEventListener('change',async()=>{
+  singleSelPage=parseInt(singlePageSel.value);
+  singleSpots=singlePdfJsDoc?await detectSpotsSafe(singleRawBytes,singleSelPage-1):[];
+  refreshSpotList(); live();
+});
 
 // Single rotation pills
 singleRotPills.querySelectorAll('.rot-pill').forEach(pill=>{
@@ -897,7 +990,11 @@ function renderSlot(i){
     `;
     // Page select
     const ps=slot.querySelector('.slot-page-sel');
-    if(ps) ps.addEventListener('change',e=>{columns[i].selPage=parseInt(e.target.value)});
+    if(ps) ps.addEventListener('change',async e=>{
+      columns[i].selPage=parseInt(e.target.value);
+      columns[i].spots=columns[i].pdfJsDoc?await detectSpotsSafe(columns[i].rawBytes,columns[i].selPage-1):[];
+      refreshSpotList(); live();
+    });
     const di=slot.querySelector('.slot-dpi');
     if(di) di.addEventListener('input',e=>{columns[i].dpi=Math.min(2400,Math.max(36,parseFloat(e.target.value)||96))});
     // Rotation pills
@@ -912,7 +1009,7 @@ function renderSlot(i){
     slot.querySelector('.slot-remove').addEventListener('click',e=>{
       e.stopPropagation();
       columns.splice(i,1);
-      buildSlots();updateExportBtn();
+      buildSlots();updateExportBtn();refreshSpotList();
     });
   } else {
     // Empty slot — clickable to load
@@ -968,9 +1065,10 @@ async function loadColumnFile(idx,file){
     columns[idx]={
       rawBytes:bytes, pdfJsDoc:pjsDoc,
       imgBitmap, imgW, imgH, dpi, fileType:ft,
-      selPage:1, rotation:0, fileName:file.name, numPages
+      selPage:1, rotation:0, fileName:file.name, numPages,
+      spots: pjsDoc?await detectSpotsSafe(bytes,0):[]
     };
-    buildSlots();updateExportBtn();
+    buildSlots();updateExportBtn();refreshSpotList();
     setStatus(`Column ${idx+1} loaded — ${file.name}`,'ok');
     await renderPreview();
   }catch(e){setStatus('Error loading file','err');console.error(e)}
@@ -994,175 +1092,196 @@ buildSlots();
 // ─────────────────────────────────────────────────────────────
 btnPrev.addEventListener('click',renderPreview);
 
-// Render any source (PDF page via pdfjs, bitmap, or EPS placeholder) to a canvas.
-// Returns {canvas, mmW, mmH} — mmW/mmH are the natural dimensions in millimetres.
-// DPI_RASTER: raster images are embedded at this resolution.
-const DPI_RASTER = 150; // px/inch for preview scaling of raster images
-async function srcToCanvasRaw(ft, pdfJsDoc, imgBitmap, imgW, imgH, selPage, fileName, dpi=96){
-  const SCALE = 1.2;
-  if(ft==='pdf'||((ft==='eps')&&pdfJsDoc)){
-    const page = await pdfJsDoc.getPage(selPage);
-    const vp   = page.getViewport({scale:SCALE});
-    const off  = document.createElement('canvas');
-    off.width=Math.round(vp.width); off.height=Math.round(vp.height);
+// ─── High-resolution preview ──────────────────────────────────
+// Layout is worked out in mm, then drawn at the display's real pixel density
+// (devicePixelRatio × zoom). Sources are rendered at the scale actually needed.
+const PREV_MAX_SIDE=8192, PREV_MAX_AREA=16e6;   // canvas safety caps (incl. iOS)
+let prevZoom=1,_zoomCentre=false,_pr=1;           // _pr = backing px per CSS px
+const mainEl=document.querySelector('main');
+
+async function srcMm(ft,doc,imgW,imgH,selPage,dpi=96){
+  if(doc&&(ft==='pdf'||ft==='eps')){
+    const v=(await doc.getPage(selPage)).getViewport({scale:1});
+    return {mmW:v.width/72*25.4, mmH:v.height/72*25.4};
+  }
+  if(ft==='png'||ft==='jpg') return {mmW:imgW/dpi*25.4, mmH:imgH/dpi*25.4};
+  return {mmW:220/96*25.4, mmH:160/96*25.4};
+}
+
+// Stepwise halving keeps large reductions free of aliasing
+function downscaleTo(src,sw,sh,tw,th){
+  let cur=src,cw=sw,ch=sh;
+  while(cw>tw*2&&ch>th*2){
+    const nw=Math.round(cw/2),nh=Math.round(ch/2),c=document.createElement('canvas');
+    c.width=nw;c.height=nh;const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(cur,0,0,nw,nh);
+    cur=c;cw=nw;ch=nh;
+  }
+  const c=document.createElement('canvas');c.width=tw;c.height=th;
+  const x=c.getContext('2d');x.imageSmoothingQuality='high';x.drawImage(cur,0,0,tw,th);
+  return c;
+}
+
+// Render a source at k px/mm. Returns {canvas, mmW, mmH}.
+async function srcToCanvasRaw(ft,doc,bmp,imgW,imgH,selPage,fileName,dpi,k){
+  if(doc&&(ft==='pdf'||ft==='eps')){
+    const page=await doc.getPage(selPage);
+    const v1=page.getViewport({scale:1});
+    const s=Math.min(k*25.4/72, PREV_MAX_SIDE/Math.max(v1.width,v1.height), Math.sqrt(PREV_MAX_AREA/(v1.width*v1.height)));
+    const vp=page.getViewport({scale:s});
+    const off=document.createElement('canvas');
+    off.width=Math.max(1,Math.ceil(vp.width)); off.height=Math.max(1,Math.ceil(vp.height));
     await page.render({canvasContext:off.getContext('2d'),viewport:vp}).promise;
-    // mm from 72dpi points
-    const mmW = (vp.width /SCALE)/72*25.4;
-    const mmH = (vp.height/SCALE)/72*25.4;
-    return {canvas:off, mmW, mmH};
+    return {canvas:off, mmW:v1.width/72*25.4, mmH:v1.height/72*25.4};
   }
   if(ft==='png'||ft==='jpg'){
-    // size the preview canvas in preview px (same scale as PDF pages) so gaps stay proportional
-    const mmW=imgW/dpi*25.4, mmH=imgH/dpi*25.4, k=SCALE*72/25.4;
-    const off=document.createElement('canvas');
-    off.width=Math.max(1,Math.round(mmW*k)); off.height=Math.max(1,Math.round(mmH*k));
-    const c=off.getContext('2d'); c.imageSmoothingQuality='high';
-    c.drawImage(imgBitmap,0,0,off.width,off.height);
-    return {canvas:off, mmW, mmH};
+    const mmW=imgW/dpi*25.4, mmH=imgH/dpi*25.4;
+    const tw=Math.max(1,Math.round(mmW*k)), th=Math.max(1,Math.round(mmH*k));
+    if(tw>=imgW||th>=imgH) return {canvas:bmp, mmW, mmH}; // shown at/above native res: use the bitmap itself
+    return {canvas:downscaleTo(bmp,imgW,imgH,tw,th), mmW, mmH};
   }
-  // EPS with no PDF preview — draw a labelled placeholder
-  const W=220, H=160;
-  const off = document.createElement('canvas');
-  off.width=W; off.height=H;
-  const ctx = off.getContext('2d');
+  // EPS with no PDF preview — labelled placeholder
+  const sc=Math.min(8,Math.max(1,k*25.4/96)), W=220, H=160;
+  const off=document.createElement('canvas');
+  off.width=Math.round(W*sc); off.height=Math.round(H*sc);
+  const ctx=off.getContext('2d'); ctx.scale(sc,sc);
   ctx.fillStyle='#2a2a36'; ctx.fillRect(0,0,W,H);
   ctx.strokeStyle='#555'; ctx.lineWidth=1.5; ctx.strokeRect(2,2,W-4,H-4);
   ctx.fillStyle='#888'; ctx.font='bold 13px monospace'; ctx.textAlign='center';
   ctx.fillText('EPS',W/2,H/2-8);
   ctx.font='9px monospace';
   ctx.fillText(fileName.replace(/\.eps$/i,'').slice(0,24),W/2,H/2+10);
-  // parse %%BoundingBox from raw bytes for real mm dimensions
   return {canvas:off, mmW:W/96*25.4, mmH:H/96*25.4};
 }
 
+// Display size (CSS px per mm) and backing resolution (device px per mm)
+function previewTarget(mmW,mmH){
+  const cs=getComputedStyle(mainEl), narrow=matchMedia('(max-width:880px)').matches;
+  const padX=parseFloat(cs.paddingLeft)+parseFloat(cs.paddingRight);
+  const padY=parseFloat(cs.paddingTop)+parseFloat(cs.paddingBottom);
+  const reserve=previewInfo.offsetHeight+colLegend.offsetHeight+26;
+  const aw=Math.max(200,mainEl.clientWidth-padX-6);
+  const ah=Math.max(200,(narrow?innerHeight*0.7:mainEl.clientHeight)-padY-reserve-6);
+  const kCss=Math.min(aw/mmW,ah/mmH)*prevZoom;
+  const dpr=Math.max(1,window.devicePixelRatio||1);
+  const k=Math.min(kCss*dpr, PREV_MAX_SIDE/Math.max(mmW,mmH), Math.sqrt(PREV_MAX_AREA/(mmW*mmH)));
+  _pr=Math.max(0.5,k/kCss);
+  return {k,kCss};
+}
+function setupCanvas(T,mmW,mmH){
+  previewCanvas.width=Math.max(1,Math.round(mmW*T.k));
+  previewCanvas.height=Math.max(1,Math.round(mmH*T.k));
+  previewCanvas.style.width=(mmW*T.kCss).toFixed(2)+'px';
+  previewCanvas.style.height=(mmH*T.kCss).toFixed(2)+'px';
+  const ctx=previewCanvas.getContext('2d');
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  return ctx;
+}
+// Pre-rotate a source into one tile at exact device-pixel size, then stamp it
+function tileCanvas(src,deg,wPx,hPx){
+  const c=document.createElement('canvas');
+  c.width=Math.max(1,Math.round(wPx)); c.height=Math.max(1,Math.round(hPx));
+  drawRotated(c.getContext('2d'),src,deg,0,0,c.width,c.height);
+  return c;
+}
+
 async function renderPreviewNow(){
-  const SCALE=1.2;
-  const PX_PER_MM=SCALE*72/25.4;
   const p=getParams();
   btnPrev.disabled=true;
 
   try{
+    const has=mode==='single'?!!singleRawBytes:columns.some(c=>c.rawBytes);
+    if(!has){btnPrev.disabled=false;return}
+    setStatus('Rendering preview…','busy');
+    mainEl.classList.toggle('zoomed',prevZoom>1);
+    emptyState.style.display='none';
+    previewWrap.style.display='flex';
+
     if(mode==='single'){
-      if(!singleRawBytes){btnPrev.disabled=false;return}
-      setStatus('Rendering preview…','busy');
-
-      const {canvas:srcOff, mmW:srcMmW, mmH:srcMmH} = await srcToCanvas(
-        singleFileType, singlePdfJsDoc, singleImgBitmap,
-        singleImgW, singleImgH, singleSelPage,
-        singleFileName.textContent,singleDPI
-      );
-
+      const sm=await srcMm(singleFileType,singlePdfJsDoc,singleImgW,singleImgH,singleSelPage,singleDPI);
       const deg=singleRotation;
-      const naturalW=srcOff.width, naturalH=srcOff.height;
-      const cellW=(deg===90||deg===270)?naturalH:naturalW;
-      const cellH=(deg===90||deg===270)?naturalW:naturalH;
-
+      const {w:tW,h:tH}=rotatedSize(sm.mmW,sm.mmH,deg);
       const cols=p.cols,rows=p.rows;
-      const pxGX=p.gapX*PX_PER_MM,pxGY=p.gapY*PX_PER_MM;
-      let pxMX=p.marX*PX_PER_MM;const pxMY=p.marY*PX_PER_MM;
-      const pxCGX=p.centreGapX*PX_PER_MM;
-      const centreIdx=(cols%2===0)?cols/2:0;
+      const centreIdx=(cols%2===0)?cols/2:0, cg=centreIdx>0?p.centreGapX:0;
+      const layoutW=p.marX*2+cols*tW+(cols-1)*p.gapX+cg;
+      const bars=barLayout(p,layoutW);
+      const mX=p.marX+bars.side, mY=p.marY;
+      const totalW=layoutW+bars.side*2, totalH=mY*2+rows*tH+(rows-1)*p.gapY;
+      lastContent={w:totalW,h:totalH};
 
-      const bars=barLayout(p,(pxMX*2+cols*cellW+(cols-1)*pxGX+(centreIdx>0?pxCGX:0))/PX_PER_MM);pxMX+=bars.side*PX_PER_MM;
-      const totalW=pxMX*2+cols*cellW+(cols-1)*pxGX+(centreIdx>0?pxCGX:0);
-      const totalH=pxMY*2+rows*cellH+(rows-1)*pxGY;
-      const ds=Math.min(1,860/Math.max(totalW,totalH));
+      const T=previewTarget(totalW,totalH), k=T.k;
+      const {canvas:src}=await srcToCanvas(singleFileType,singlePdfJsDoc,singleImgBitmap,
+        singleImgW,singleImgH,singleSelPage,singleFileName.textContent,singleDPI,k);
+      const tile=tileCanvas(src,deg,tW*k,tH*k);
 
-      previewCanvas.width=Math.round(totalW*ds);lastContent={w:totalW/PX_PER_MM,h:totalH/PX_PER_MM};
-      previewCanvas.height=Math.round(totalH*ds);
-      const ctx=previewCanvas.getContext('2d');
-      paintBg(ctx,p.bg,previewCanvas.width,previewCanvas.height);
-
-      const dCW=cellW*ds,dCH=cellH*ds,gX=pxGX*ds,gY=pxGY*ds,mX=pxMX*ds,mY=pxMY*ds;
-      const cGX=pxCGX*ds;
-
-      const tileC=document.createElement('canvas');tileC.width=Math.max(1,Math.round(dCW));tileC.height=Math.max(1,Math.round(dCH));
-      drawRotated(tileC.getContext('2d'),srcOff,deg,0,0,tileC.width,tileC.height);
+      const ctx=setupCanvas(T,totalW,totalH);
+      const W=previewCanvas.width,H=previewCanvas.height;
+      paintBg(ctx,p.bg,W,H);
       for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
-        let xPos=mX+c*dCW+c*gX;
-        if(centreIdx>0&&c>=centreIdx) xPos+=cGX;
-        ctx.drawImage(tileC,xPos,mY+r*(dCH+gY),dCW,dCH);
+        const x=(mX+c*(tW+p.gapX)+(centreIdx>0&&c>=centreIdx?cg:0))*k;
+        const y=(mY+r*(tH+p.gapY))*k;
+        ctx.drawImage(tile,Math.round(x),Math.round(y));
       }
-      drawGapGuides(ctx,cols,rows,mX,mY,dCW,dCH,gX,gY,previewCanvas.width,previewCanvas.height,centreIdx,cGX);
-      drawBarsPreview(ctx,bars,previewCanvas.width,previewCanvas.height);
+      drawGapGuides(ctx,cols,rows,mX*k,mY*k,tW*k,tH*k,p.gapX*k,p.gapY*k,W,H,centreIdx,cg*k);
+      drawBarsPreview(ctx,bars,W,H);
 
       colLegend.innerHTML='';
-      const {w:effW,h:effH}=rotatedSize(srcMmW,srcMmH,deg);
-      const typeLabel = singleFileType.toUpperCase()+(singleImgBitmap?` @${Math.round(singleDPI)}dpi`:'');
+      const typeLabel=singleFileType.toUpperCase()+(singleImgBitmap?` @${Math.round(singleDPI)}dpi`:'');
       previewInfo.textContent=
-        `sheet ${sheetTxt()}${barTxt()}  ·  ${cols}×${rows}  ·  ${typeLabel}  ·  tile ${effW.toFixed(1)}×${effH.toFixed(1)}mm`+
+        `sheet ${sheetTxt()}${barTxt()}  ·  ${cols}×${rows}  ·  ${typeLabel}  ·  tile ${tW.toFixed(1)}×${tH.toFixed(1)}mm`+
         `  ·  gap ${p.gapX}×${p.gapY}mm  ·  margin ${p.marX}×${p.marY}mm`+
         (centreIdx>0&&p.centreGapX>0?`  ·  centre +${p.centreGapX}mm`:'')+
         (deg?`  ·  ${deg}°`:'');
 
     } else {
       const activeCols=columns.filter(c=>c.rawBytes);
-      if(activeCols.length===0){btnPrev.disabled=false;return}
-      setStatus('Rendering preview…','busy');
+      const ms=await Promise.all(activeCols.map(c=>srcMm(c.fileType,c.pdfJsDoc,c.imgW,c.imgH,c.selPage,c.dpi)));
+      const R=activeCols.map((c,i)=>{const r=rotatedSize(ms[i].mmW,ms[i].mmH,c.rotation);return {w:r.w,h:r.h,deg:c.rotation}});
+      const numCols=R.length, rows=p.rows;
+      const maxH=Math.max(...R.map(r=>r.h));
+      const centreIdx=(numCols%2===0)?numCols/2:0, cg=centreIdx>0?p.centreGapX:0;
+      const rowW=R.reduce((s,r)=>s+r.w,0)+(numCols-1)*p.gapX+cg;
+      const bars=barLayout(p,p.marX*2+rowW);
+      const mX=p.marX+bars.side, mY=p.marY;
+      const totalW=mX*2+rowW, totalH=mY*2+rows*maxH+(rows-1)*p.gapY;
+      lastContent={w:totalW,h:totalH};
 
-      const rendered=await Promise.all(activeCols.map(async (col,ci)=>{
-        const {canvas,mmW,mmH} = await srcToCanvas(
-          col.fileType, col.pdfJsDoc, col.imgBitmap,
-          col.imgW, col.imgH, col.selPage, col.fileName, col.dpi
-        );
-        const deg=col.rotation;
-        const cellW=(deg===90||deg===270)?canvas.height:canvas.width;
-        const cellH=(deg===90||deg===270)?canvas.width:canvas.height;
-        const {w:effMmW,h:effMmH}=rotatedSize(mmW,mmH,deg);
-        return {canvas, cellW, cellH, deg, effMmW, effMmH, fileType:col.fileType};
-      }));
+      const T=previewTarget(totalW,totalH), k=T.k;
+      const srcs=await Promise.all(activeCols.map(c=>srcToCanvas(c.fileType,c.pdfJsDoc,c.imgBitmap,
+        c.imgW,c.imgH,c.selPage,c.fileName,c.dpi,k)));
+      const tiles=R.map((r,i)=>tileCanvas(srcs[i].canvas,r.deg,r.w*k,r.h*k));
 
-      const numCols=rendered.length;
-      const rows=p.rows;
-      const maxCellH=Math.max(...rendered.map(r=>r.cellH));
-      const pxGX=p.gapX*PX_PER_MM,pxGY=p.gapY*PX_PER_MM;
-      let pxMX=p.marX*PX_PER_MM;const pxMY=p.marY*PX_PER_MM;
-      const pxCGX=p.centreGapX*PX_PER_MM;
-      const centreIdx=(numCols%2===0)?numCols/2:0;
-
-      const totalRowW=rendered.reduce((s,r)=>s+r.cellW,0)+(numCols-1)*pxGX+(centreIdx>0?pxCGX:0);
-      const bars=barLayout(p,(pxMX*2+totalRowW)/PX_PER_MM);pxMX+=bars.side*PX_PER_MM;
-      const totalW=pxMX*2+totalRowW;
-      const totalH=pxMY*2+rows*maxCellH+(rows-1)*pxGY;
-      const ds=Math.min(1,900/Math.max(totalW,totalH));
-
-      previewCanvas.width=Math.round(totalW*ds);lastContent={w:totalW/PX_PER_MM,h:totalH/PX_PER_MM};
-      previewCanvas.height=Math.round(totalH*ds);
-      const ctx=previewCanvas.getContext('2d');
-      paintBg(ctx,p.bg,previewCanvas.width,previewCanvas.height);
-
-      const mX=pxMX*ds,mY=pxMY*ds,gY=pxGY*ds,gX=pxGX*ds,cGX=pxCGX*ds;
+      const ctx=setupCanvas(T,totalW,totalH);
+      const W=previewCanvas.width,H=previewCanvas.height;
+      paintBg(ctx,p.bg,W,H);
       for(let r=0;r<rows;r++){
-        let xCursor=mX;
-        const yRow=mY+r*(maxCellH*ds+gY);
+        let xC=mX; const y0=mY+r*(maxH+p.gapY);
         for(let ci=0;ci<numCols;ci++){
-          const {canvas:src,cellW,cellH,deg}=rendered[ci];
-          const dCW=cellW*ds,dCH=cellH*ds;
-          const yOff=(maxCellH-cellH)*0.5*ds;
-          drawRotated(ctx,src,deg,xCursor,yRow+yOff,dCW,dCH);
-          ctx.strokeStyle=colColor(ci).hex+'55';ctx.lineWidth=1.5;
-          ctx.strokeRect(xCursor,yRow+yOff,dCW,dCH);
-          xCursor+=dCW+gX;
-          if(centreIdx>0&&ci+1===centreIdx) xCursor+=cGX;
+          const yOff=(maxH-R[ci].h)/2;
+          const x=Math.round(xC*k), y=Math.round((y0+yOff)*k);
+          ctx.drawImage(tiles[ci],x,y);
+          ctx.strokeStyle=colColor(ci).hex+'55';ctx.lineWidth=1.5*_pr;
+          ctx.strokeRect(x,y,tiles[ci].width,tiles[ci].height);
+          xC+=R[ci].w+p.gapX;
+          if(centreIdx>0&&ci+1===centreIdx) xC+=cg;
         }
       }
       if(p.gapY>0){
-        ctx.save();ctx.strokeStyle=guideCol(0.22);ctx.lineWidth=0.75;ctx.setLineDash([3,3]);
+        ctx.save();ctx.strokeStyle=guideCol(0.22);ctx.lineWidth=0.75*_pr;ctx.setLineDash([3*_pr,3*_pr]);
         for(let r=1;r<rows;r++){
-          const ly=mY+r*(maxCellH*ds+gY)-gY/2;
-          ctx.beginPath();ctx.moveTo(0,ly);ctx.lineTo(previewCanvas.width,ly);ctx.stroke();
+          const ly=(mY+r*(maxH+p.gapY)-p.gapY/2)*k;
+          ctx.beginPath();ctx.moveTo(0,ly);ctx.lineTo(W,ly);ctx.stroke();
         }
         ctx.restore();
       }
       if(centreIdx>0&&p.centreGapX>0){
         let cx=mX;
-        for(let ci=0;ci<centreIdx;ci++) cx+=rendered[ci].cellW*ds+(ci<centreIdx-1?gX:0);
-        const gapMid=cx+gX/2+cGX/2;
-        ctx.save();
-        ctx.strokeStyle=guideCol(0.55);ctx.lineWidth=1;ctx.setLineDash([4,2]);
-        ctx.beginPath();ctx.moveTo(gapMid,0);ctx.lineTo(gapMid,previewCanvas.height);ctx.stroke();
+        for(let ci=0;ci<centreIdx;ci++) cx+=R[ci].w+(ci<centreIdx-1?p.gapX:0);
+        const gapMid=(cx+(p.gapX+cg)/2)*k;
+        ctx.save();ctx.strokeStyle=guideCol(0.55);ctx.lineWidth=1*_pr;ctx.setLineDash([4*_pr,2*_pr]);
+        ctx.beginPath();ctx.moveTo(gapMid,0);ctx.lineTo(gapMid,H);ctx.stroke();
         ctx.restore();
       }
+      drawBarsPreview(ctx,bars,W,H);
 
       colLegend.innerHTML='';
       activeCols.forEach((col,ci)=>{
@@ -1172,14 +1291,16 @@ async function renderPreviewNow(){
           <span>Col ${ci+1} [${ft}]: ${esc(col.fileName.replace(/\.(pdf|eps|png|jpe?g)$/i,''))}${col.rotation?` (${col.rotation}°)`:''}</span>`;
         colLegend.appendChild(item);
       });
-      drawBarsPreview(ctx,bars,previewCanvas.width,previewCanvas.height);
       previewInfo.textContent=
         `sheet ${sheetTxt()}${barTxt()}  ·  ${numCols} cols × ${rows} rows  ·  gap ${p.gapX}×${p.gapY}mm  ·  margin ${p.marX}×${p.marY}mm`+
         (centreIdx>0&&p.centreGapX>0?`  ·  centre +${p.centreGapX}mm`:'');
     }
 
-    emptyState.style.display='none';
-    previewWrap.style.display='flex';
+    if(_zoomCentre){
+      _zoomCentre=false;
+      mainEl.scrollLeft=(mainEl.scrollWidth-mainEl.clientWidth)/2;
+      mainEl.scrollTop=(mainEl.scrollHeight-mainEl.clientHeight)/2;
+    }
     setStatus('Preview ready · sheet '+sheetTxt()+(lastBars.clamped?` · bar gap raised to ${lastBars.gap.toFixed(1)} mm to clear the layout`:''),'ok');
   }catch(e){
     setStatus('Preview error: '+e.message,'err');console.error(e);
@@ -1190,7 +1311,7 @@ async function renderPreviewNow(){
 function paintBg(ctx,bg,w,h){
   if(bg==='white'){ctx.fillStyle='#ffffff';ctx.fillRect(0,0,w,h);}
   else{
-    const cs=10;
+    const cs=Math.round(10*_pr);
     for(let y=0;y<h;y+=cs*2) for(let x=0;x<w;x+=cs*2){
       ctx.fillStyle='#d9dde2';ctx.fillRect(x,y,cs,cs);ctx.fillRect(x+cs,y+cs,cs,cs);
       ctx.fillStyle='#f1f3f5';ctx.fillRect(x+cs,y,cs,cs);ctx.fillRect(x,y+cs,cs,cs);
@@ -1199,27 +1320,27 @@ function paintBg(ctx,bg,w,h){
 }
 function drawGapGuides(ctx,cols,rows,mX,mY,cW,cH,gX,gY,W,H,centreIdx,cGX){
   ctx.save();
-  ctx.lineWidth=0.75;ctx.setLineDash([3,3]);
+  const lw=0.75*_pr,d=3*_pr;
+  ctx.lineWidth=lw;ctx.setLineDash([d,d]);
   // Regular column gap guides
   if(gX>0||cGX>0){
     ctx.strokeStyle=guideCol(0.28);
     for(let c=1;c<cols;c++){
       if(centreIdx>0&&c===centreIdx) continue; // centre gap drawn separately
-      // x position of gap centre: account for extra offset on right side of centre
       const extraLeft=centreIdx>0&&c>centreIdx?cGX:0;
       const lx=mX+c*cW+c*gX-gX/2+extraLeft;
       ctx.beginPath();ctx.moveTo(lx,0);ctx.lineTo(lx,H);ctx.stroke();
     }
   }
-  // Centre gap guide — brighter and slightly thicker
+  // Centre gap guide — middle of the regular gap + extra centre gap
   if(centreIdx>0&&cGX>0){
-    const lx=mX+centreIdx*cW+centreIdx*gX+cGX/2;
-    ctx.strokeStyle=guideCol(0.65);ctx.lineWidth=1;ctx.setLineDash([5,2]);
+    const lx=mX+centreIdx*cW+(centreIdx-1)*gX+(gX+cGX)/2;
+    ctx.strokeStyle=guideCol(0.65);ctx.lineWidth=1*_pr;ctx.setLineDash([5*_pr,2*_pr]);
     ctx.beginPath();ctx.moveTo(lx,0);ctx.lineTo(lx,H);ctx.stroke();
   }
   // Row gap guides
   if(gY>0){
-    ctx.strokeStyle=guideCol(0.28);ctx.lineWidth=0.75;ctx.setLineDash([3,3]);
+    ctx.strokeStyle=guideCol(0.28);ctx.lineWidth=lw;ctx.setLineDash([d,d]);
     for(let r=1;r<rows;r++){const ly=mY+r*cH+(r-0.5)*gY;ctx.beginPath();ctx.moveTo(0,ly);ctx.lineTo(W,ly);ctx.stroke()}
   }
   ctx.restore();
@@ -1357,7 +1478,7 @@ async function exportPDF(){
         drawTile(outPage, emb, isImage, x, y, srcW, srcH, deg);
         done++; setProgress(30+Math.round((done/total)*62));
       }
-      drawBarsPdf(outPage,bars,sheetPtW,sheetPtH);
+      await drawBarsPdf(outPage,bars,sheetPtW,sheetPtH);
       await saveAndDownload(outDoc, `step-repeat-${p.cols}x${p.rows}.pdf`);
 
     } else {
@@ -1405,13 +1526,13 @@ async function exportPDF(){
           done++; setProgress(42+Math.round((done/total)*50));
         }
       }
-      drawBarsPdf(outPage,bars,sheetPtW,sheetPtH);
+      await drawBarsPdf(outPage,bars,sheetPtW,sheetPtH);
       await saveAndDownload(outDoc, `step-repeat-${numCols}col-x${rows}row.pdf`);
     }
 
     setProgress(100);
     setTimeout(()=>setProgress(0),800);
-    setStatus('✓ Exported at full source quality'+(lastBars.on?` · bearer bars ${lastBars.bw}mm added in spot colour REGISTRATION`:' · no bearer bars (switch is off in section 06)')+(_exportWarn?' — '+_exportWarn:''),_exportWarn?'busy':'ok');
+    setStatus('✓ Exported at full source quality'+exportMarksMsg()+(_exportWarn?' — '+_exportWarn:''),_exportWarn?'busy':'ok');
 
   }catch(e){
     setStatus('Export failed: '+e.message,'err');
@@ -1489,13 +1610,17 @@ function rasterDPI(u8,ft){
 
 // Rendered source pages are cached per document/page/dpi
 const _srcCache=new WeakMap();
-function srcToCanvas(ft,doc,bmp,w,h,page,name,dpi=96){
-  const k=doc||bmp;
-  if(!k) return srcToCanvasRaw(ft,doc,bmp,w,h,page,name,dpi);
-  let m=_srcCache.get(k); if(!m) _srcCache.set(k,m=new Map());
-  const key=page+'|'+dpi;
-  if(!m.has(key)) m.set(key,srcToCanvasRaw(ft,doc,bmp,w,h,page,name,dpi).catch(e=>{m.delete(key);throw e}));
-  return m.get(key);
+function kQuant(k){return Math.pow(2,Math.ceil(Math.log2(Math.max(k,0.05))*2)/2)} // render in √2 steps, never below need
+function srcToCanvas(ft,doc,bmp,w,h,page,name,dpi=96,k=4){
+  const kq=kQuant(k), o=doc||bmp;
+  if(!o) return srcToCanvasRaw(ft,doc,bmp,w,h,page,name,dpi,kq);
+  let m=_srcCache.get(o); if(!m) _srcCache.set(o,m=new Map());
+  const key=page+'|'+dpi+'|'+kq;
+  if(m.has(key)){const v=m.get(key);m.delete(key);m.set(key,v);return v}
+  const pr=srcToCanvasRaw(ft,doc,bmp,w,h,page,name,dpi,kq).catch(e=>{m.delete(key);throw e});
+  m.set(key,pr);
+  while(m.size>3) m.delete(m.keys().next().value); // keep memory bounded across zoom levels
+  return pr;
 }
 
 // Serialise preview renders so rapid edits can't interleave
@@ -1596,10 +1721,12 @@ function applySkin(name,save){
 document.getElementById('skins').addEventListener('click',e=>{const b=e.target.closest('button');if(b)applySkin(b.dataset.skin,true)});
 applySkin(document.documentElement.dataset.skin||'workbench',false);
 
-// ─── Bearer bars ──────────────────────────────────────────────
+// ─── Bearer bars + eye marks ──────────────────────────────────
 // Bars sit on the outer edges of the sheet. The sheet widens to hold them, and the
 // artwork block is centred between them. Gap = distance between the bars' inner edges
 // (never smaller than the artwork block incl. its margins, so bars can't overlap it).
+// Eye marks sit beside a bar: Inside (between bar and artwork, room is made if the
+// margin is too small) or Outside (sheet widens on both sides to keep artwork centred).
 let lastBars={on:false};
 function readBars(){
   const on=document.getElementById('bar-on').checked, act=document.querySelector('#bar-w .pill.active');
@@ -1607,77 +1734,174 @@ function readBars(){
     gap:parseFloat(document.getElementById('bar-gap').value)||0,
     adj:parseFloat(document.getElementById('bar-adj').value)||0,
     hole:parseFloat(document.getElementById('bar-hole').value)||0,
-    inset:(v=>isNaN(v)?5:Math.max(0,v))(parseFloat(document.getElementById('bar-inset').value))};
+    inset:(v=>isNaN(v)?5:Math.max(0,v))(parseFloat(document.getElementById('bar-inset').value)),
+    mode:document.querySelector('#bar-mode .pill.active')?.dataset.mode||'reg',
+    label:document.getElementById('bar-label').value,
+    spots:getSpots().map((sp,i)=>({...sp,num:i+1})).filter(sp=>!spotOff.has(sp.name))};
+}
+function readEye(){
+  const g=id=>document.getElementById(id), num=(id,d,min)=>{const v=parseFloat(g(id).value);return isNaN(v)?d:Math.max(min,v)};
+  const act=id=>document.querySelector(`#${id} .pill.active`);
+  const slots=[...document.querySelectorAll('#eye-pos .pill.active')].map(x=>x.dataset.slot);
+  return {on:g('eye-on').checked,
+    w:num('eye-w',10,0.5), h:num('eye-h',5,0.5),
+    slots,
+    place:act('eye-place')?.dataset.place||'in',
+    style:act('eye-style')?.dataset.style||'solid',
+    sw:num('eye-sw',0.25,0.05), off:num('eye-off',2,0), inset:num('eye-inset',5,0),
+    col:g('eye-col').value};
 }
 function barLayout(p,layoutMmW){
-  const b=p.bars;
-  if(!b.on) return (lastBars={on:false,side:0,bw:0,gap:0,minGap:0,clamped:false});
-  const gap=b.gap>0?Math.max(b.gap,layoutMmW):layoutMmW;
-  return (lastBars={on:true,bw:b.w,gap,minGap:layoutMmW,side:b.w+(gap-layoutMmW)/2,
-    adj:b.adj,hole:b.hole,inset:b.inset,clamped:b.gap>0&&b.gap<layoutMmW-0.001});
+  const b=p.bars, e0=p.eye||{on:false}, e={...e0,on:e0.on&&(e0.slots||[]).length>0};
+  const eyeOut=e.on&&e.place==='out'?e.w+e.off:0;
+  const need=e.on&&e.place==='in'?Math.max(0,e.w+2*e.off-p.marX):0; // gap · mark · gap before the artwork
+  const minGap=layoutMmW+2*need;
+  if(!b.on) return (lastBars={on:false,bw:0,gap:minGap,minGap,side:eyeOut+need,eyeOut,clamped:false,eye:e});
+  const gap=b.gap>0?Math.max(b.gap,minGap):minGap;
+  const spot=b.mode==='spot'&&b.spots.length>0;
+  return (lastBars={on:true,bw:b.w,gap,minGap,side:eyeOut+b.w+(gap-layoutMmW)/2,eyeOut,
+    adj:b.adj,hole:b.hole,inset:b.inset,clamped:b.gap>0&&b.gap<minGap-0.001,eye:e,
+    mode:spot?'spot':'reg',wantSpot:b.mode==='spot',spots:spot?b.spots:[],label:b.label});
 }
-function barTxt(){return lastBars.on?`  ·  bearer bars ${lastBars.bw}mm (REGISTRATION), gap ${lastBars.gap.toFixed(1)}mm`:''}
+function barTxt(){
+  let t=lastBars.on?`  ·  bearer bars ${lastBars.bw}mm (${lastBars.mode==='spot'?lastBars.spots.length+' spot colour'+(lastBars.spots.length>1?'s':''):'REGISTRATION'}), gap ${lastBars.gap.toFixed(1)}mm`:'';
+  const e=lastBars.eye; if(e&&e.on&&e.slots.length) t+=`  ·  ${e.slots.length} eye mark${e.slots.length>1?'s':''} ${e.w}×${e.h}mm ${e.style} (${e.slots.join(', ')})`;
+  return t;
+}
+function exportMarksMsg(){
+  const e=lastBars.eye;
+  const eye=e&&e.on&&e.slots.length?` · ${e.slots.length} eye mark(s) ${e.w}×${e.h}mm ${e.style==='stroke'?'stroke':'solid'} in ${e.col==='reg'?'REGISTRATION':'100% K'}`:'';
+  const bm=!lastBars.on?' · no bearer bars (switch is off in section 06)'
+    :lastBars.mode==='spot'?` · ${lastBars.spots.length} bearer bar set${lastBars.spots.length>1?'s':''} (${lastBars.bw}mm, overprint) in ${lastBars.spots.map(x=>x.name).join(', ')}`
+    :` · bearer bars ${lastBars.bw}mm added in spot colour REGISTRATION`+(lastBars.wantSpot?' (no spot colours ticked/found)':'');
+  return bm+eye;
+}
 // Geometry in mm, y measured from the TOP of the sheet. Bars are full height ± adj, centred vertically.
 // Each bar has three crosshair holes: one at the middle, and one near each end, `inset` mm in from the page edge.
 function barGeom(bars,W,H){
-  const w=bars.bw, len=Math.max(5,H+bars.adj), y=(H-len)/2;
+  const w=bars.bw, eo=bars.eyeOut||0, len=Math.max(5,H+bars.adj), y=(H-len)/2;
   let d=bars.hole>0?bars.hole:w*0.6; d=Math.min(d,Math.max(0.2,w-0.2));
   const top=Math.max(y,0), bot=Math.min(y+len,H), ins=Math.min(bars.inset,(bot-top)/2);
   const ys=[H/2];
   if(ins>=d/2+0.2){ys.unshift(top+ins);ys.push(bot-ins)}
-  return [0,W-w].map(x=>({x,y,w,h:len,cx:x+w/2,r:d/2,ys}));
+  return [eo,W-eo-w].map(x=>({x,y,w,h:len,cx:x+w/2,r:d/2,ys}));
+}
+function eyeGeom(bars,W,H){
+  const e=bars.eye; if(!e||!e.on) return [];
+  const bw=bars.on?bars.bw:0, eo=bars.eyeOut||0, lx=eo, rx=W-eo-bw;
+  const X={left:e.place==='out'?lx-e.off-e.w:lx+bw+e.off, right:e.place==='out'?rx+bw+e.off:rx-e.off-e.w};
+  const ins=Math.min(e.inset,Math.max(0,(H-e.h)/2));
+  const Y={top:ins, middle:(H-e.h)/2, bottom:H-ins-e.h};
+  return e.slots.map(s=>{const [sd,ps]=s.split('-');return {x:X[sd],y:Y[ps],w:e.w,h:e.h}});
 }
 function drawBarsPreview(ctx,bars,Wpx,Hpx){
-  if(!bars.on) return;
   const k=Wpx/lastContent.w;           // canvas px per mm
-  ctx.save(); ctx.fillStyle='#000'; ctx.strokeStyle='#000'; ctx.lineWidth=Math.max(0.6,0.09*k);
-  for(const g of barGeom(bars,lastContent.w,lastContent.h)){
-    ctx.beginPath(); ctx.rect(g.x*k,g.y*k,g.w*k,g.h*k);
-    for(const cy of g.ys){ctx.moveTo((g.cx+g.r)*k,cy*k); ctx.arc(g.cx*k,cy*k,g.r*k,0,Math.PI*2,true)}
-    ctx.fill('evenodd');                // circles are true cutouts
-    ctx.beginPath();
-    for(const cy of g.ys){
-      ctx.moveTo((g.cx-g.r)*k,cy*k); ctx.lineTo((g.cx+g.r)*k,cy*k);
-      ctx.moveTo(g.cx*k,(cy-g.r)*k); ctx.lineTo(g.cx*k,(cy+g.r)*k);
+  if(bars.on&&bars.mode==='spot') drawSpotBarsPreview(ctx,bars,k);
+  else if(bars.on){
+    ctx.save(); ctx.fillStyle='#000'; ctx.strokeStyle='#000'; ctx.lineWidth=Math.max(0.6*_pr,0.09*k);
+    for(const g of barGeom(bars,lastContent.w,lastContent.h)){
+      ctx.beginPath(); ctx.rect(g.x*k,g.y*k,g.w*k,g.h*k);
+      for(const cy of g.ys){ctx.moveTo((g.cx+g.r)*k,cy*k); ctx.arc(g.cx*k,cy*k,g.r*k,0,Math.PI*2,true)}
+      ctx.fill('evenodd');                // circles are true cutouts
+      ctx.beginPath();
+      for(const cy of g.ys){
+        ctx.moveTo((g.cx-g.r)*k,cy*k); ctx.lineTo((g.cx+g.r)*k,cy*k);
+        ctx.moveTo(g.cx*k,(cy-g.r)*k); ctx.lineTo(g.cx*k,(cy+g.r)*k);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
+    ctx.restore();
   }
-  ctx.restore();
+  const eyes=eyeGeom(bars,lastContent.w,lastContent.h);
+  if(eyes.length){
+    const e=bars.eye; ctx.save(); ctx.fillStyle='#000'; ctx.strokeStyle='#000'; ctx.setLineDash([]);
+    for(const g of eyes){
+      if(e.style==='stroke'){
+        const s=Math.min(e.sw,g.w/2,g.h/2); ctx.lineWidth=Math.max(0.75*_pr,s*k); ctx.lineJoin='miter';
+        ctx.strokeRect((g.x+s/2)*k,(g.y+s/2)*k,(g.w-s)*k,(g.h-s)*k);
+      } else ctx.fillRect(g.x*k,g.y*k,g.w*k,g.h*k);
+    }
+    ctx.restore();
+  }
 }
-function drawBarsPdf(page,bars,sheetPtW,sheetPtH){
-  if(!bars.on) return;
-  const L=PDFLib,K=0.5522847498,M=PT_PER_MM,H=sheetPtH/M;
-  // Named spot colour "REGISTRATION": Separation space, 100% tint, CMYK alternate = C+M+Y+K 100%
-  const ctx=page.doc.context, CS='CS_REGISTRATION', res=page.node.normalizedEntries().Resources;
+// Named spot colour "REGISTRATION": Separation space, 100% tint, CMYK alternate = C+M+Y+K 100%
+function regCS(page){
+  const L=PDFLib, ctx=page.doc.context, CS='CS_REGISTRATION', res=page.node.normalizedEntries().Resources;
   let csd=res.lookup(L.PDFName.of('ColorSpace'));
   if(!csd){csd=ctx.obj({});res.set(L.PDFName.of('ColorSpace'),csd)}
   if(!csd.get(L.PDFName.of(CS))){
     const fn=ctx.obj({FunctionType:2,Domain:[0,1],C0:[0,0,0,0],C1:[1,1,1,1],N:1});
     csd.set(L.PDFName.of(CS),ctx.obj([L.PDFName.of('Separation'),L.PDFName.of('REGISTRATION'),L.PDFName.of('DeviceCMYK'),fn]));
   }
-  const nm=L.PDFName.of(CS),one=L.PDFNumber.of(1);
-  const ops=[L.pushGraphicsState(),
-    L.PDFOperator.of('cs',[nm]),L.PDFOperator.of('scn',[one]),   // fill  = REGISTRATION 100%
-    L.PDFOperator.of('CS',[nm]),L.PDFOperator.of('SCN',[one]),   // stroke = REGISTRATION 100%
-    L.setLineWidth(0.25)];
-  for(const g of barGeom(bars,sheetPtW/M,H)){
-    const x=g.x*M,w=g.w*M,yb=(H-g.y-g.h)*M,yt=(H-g.y)*M,cx=g.cx*M,r=g.r*M;
-    // bar clockwise, holes counter-clockwise => non-zero fill leaves the circles empty
-    ops.push(L.moveTo(x,yb),L.lineTo(x,yt),L.lineTo(x+w,yt),L.lineTo(x+w,yb),L.closePath());
-    for(const my of g.ys){
-      const cy=(H-my)*M;
-      ops.push(L.moveTo(cx+r,cy),
-        L.appendBezierCurve(cx+r,cy+K*r,cx+K*r,cy+r,cx,cy+r),
-        L.appendBezierCurve(cx-K*r,cy+r,cx-r,cy+K*r,cx-r,cy),
-        L.appendBezierCurve(cx-r,cy-K*r,cx-K*r,cy-r,cx,cy-r),
-        L.appendBezierCurve(cx+K*r,cy-r,cx+r,cy-K*r,cx+r,cy),L.closePath());
+  return L.PDFName.of(CS);
+}
+function setMarkColour(ops,page,col){
+  const L=PDFLib;
+  if(col==='reg'){
+    const nm=regCS(page),one=L.PDFNumber.of(1);
+    ops.push(L.PDFOperator.of('cs',[nm]),L.PDFOperator.of('scn',[one]),L.PDFOperator.of('CS',[nm]),L.PDFOperator.of('SCN',[one]));
+  } else {
+    const n=[0,0,0,1].map(v=>L.PDFNumber.of(v));
+    ops.push(L.PDFOperator.of('k',n),L.PDFOperator.of('K',n));   // DeviceCMYK 0/0/0/100
+  }
+}
+function barPathOps(g,H,ops){
+  const L=PDFLib,K=0.5522847498,M=PT_PER_MM;
+  const x=g.x*M,w=g.w*M,yb=(H-g.y-g.h)*M,yt=(H-g.y)*M,cx=g.cx*M,r=g.r*M;
+  ops.push(L.moveTo(x,yb),L.lineTo(x,yt),L.lineTo(x+w,yt),L.lineTo(x+w,yb),L.closePath());
+  for(const my of g.ys){
+    const cy=(H-my)*M;
+    ops.push(L.moveTo(cx+r,cy),
+      L.appendBezierCurve(cx+r,cy+K*r,cx+K*r,cy+r,cx,cy+r),
+      L.appendBezierCurve(cx-K*r,cy+r,cx-r,cy+K*r,cx-r,cy),
+      L.appendBezierCurve(cx-r,cy-K*r,cx-K*r,cy-r,cx,cy-r),
+      L.appendBezierCurve(cx+K*r,cy-r,cx+r,cy-K*r,cx+r,cy),L.closePath());
+  }
+  ops.push(L.fill());
+  for(const my of g.ys){
+    const cy=(H-my)*M;
+    ops.push(L.moveTo(cx-r,cy),L.lineTo(cx+r,cy),L.moveTo(cx,cy-r),L.lineTo(cx,cy+r));
+  }
+  ops.push(L.stroke());
+}
+async function drawBarsPdf(page,bars,sheetPtW,sheetPtH){
+  const L=PDFLib,K=0.5522847498,M=PT_PER_MM,H=sheetPtH/M,W=sheetPtW/M;
+  const eyes=eyeGeom(bars,W,H);
+  if(!bars.on&&!eyes.length) return;
+  const N=v=>L.PDFNumber.of(v);
+  const ops=[L.pushGraphicsState()];
+  if(bars.on&&bars.mode==='spot') await spotBarOps(page,bars,W,H,ops);
+  else if(bars.on){
+    setMarkColour(ops,page,'reg'); ops.push(L.setLineWidth(0.25));
+    for(const g of barGeom(bars,W,H)){
+      const x=g.x*M,w=g.w*M,yb=(H-g.y-g.h)*M,yt=(H-g.y)*M,cx=g.cx*M,r=g.r*M;
+      // bar clockwise, holes counter-clockwise => non-zero fill leaves the circles empty
+      ops.push(L.moveTo(x,yb),L.lineTo(x,yt),L.lineTo(x+w,yt),L.lineTo(x+w,yb),L.closePath());
+      for(const my of g.ys){
+        const cy=(H-my)*M;
+        ops.push(L.moveTo(cx+r,cy),
+          L.appendBezierCurve(cx+r,cy+K*r,cx+K*r,cy+r,cx,cy+r),
+          L.appendBezierCurve(cx-K*r,cy+r,cx-r,cy+K*r,cx-r,cy),
+          L.appendBezierCurve(cx-r,cy-K*r,cx-K*r,cy-r,cx,cy-r),
+          L.appendBezierCurve(cx+K*r,cy-r,cx+r,cy-K*r,cx+r,cy),L.closePath());
+      }
+      ops.push(L.fill());
+      for(const my of g.ys){
+        const cy=(H-my)*M;
+        ops.push(L.moveTo(cx-r,cy),L.lineTo(cx+r,cy),L.moveTo(cx,cy-r),L.lineTo(cx,cy+r));
+      }
+      ops.push(L.stroke());
     }
-    ops.push(L.fill());
-    for(const my of g.ys){
-      const cy=(H-my)*M;
-      ops.push(L.moveTo(cx-r,cy),L.lineTo(cx+r,cy),L.moveTo(cx,cy-r),L.lineTo(cx,cy+r));
+  }
+  if(eyes.length){
+    const e=bars.eye; setMarkColour(ops,page,e.col);
+    for(const g of eyes){
+      const x=g.x*M,y=(H-g.y-g.h)*M,w=g.w*M,h=g.h*M;
+      if(e.style==='stroke'){
+        const s=Math.min(e.sw,g.w/2,g.h/2)*M;   // stroke kept inside the mark's outer size
+        ops.push(L.setLineWidth(s),L.PDFOperator.of('j',[N(0)]),L.PDFOperator.of('re',[N(x+s/2),N(y+s/2),N(w-s),N(h-s)]),L.stroke());
+      } else ops.push(L.PDFOperator.of('re',[N(x),N(y),N(w),N(h)]),L.fill());
     }
-    ops.push(L.stroke());
   }
   ops.push(L.popGraphicsState());
   page.pushOperators(...ops);
@@ -1687,6 +1911,362 @@ document.getElementById('bar-w').addEventListener('click',e=>{
   const p=e.target.closest('.pill'); if(!p) return;
   document.querySelectorAll('#bar-w .pill').forEach(x=>x.classList.toggle('active',x===p));
 });
+
+// ─── Spot colour detection (from the loaded artwork) ──────────
+// Walks everything reachable from the selected page (resources, XObjects, patterns,
+// shadings, nested forms) and collects /Separation and /DeviceN colorants.
+// The original colour-space definition is kept so the bars use the file's exact spot.
+let spotOff=new Set();
+const PROCESS_NAMES=new Set(['Cyan','Magenta','Yellow','Black','All','None']);
+async function detectSpotsSafe(bytes,pageIdx){try{return await detectSpots(bytes,pageIdx)}catch(e){console.warn('Spot detection failed',e);return []}}
+async function detectSpots(bytes,pageIdx){
+  await loadPdfLib();
+  const L=PDFLib;
+  const doc=await L.PDFDocument.load(bytes,{updateMetadata:false,ignoreEncryption:true});
+  const page=doc.getPage(Math.max(0,Math.min(pageIdx,doc.getPageCount()-1)));
+  const ctx=doc.context, seen=new Set(), found=new Map();
+  const deref=o=>o instanceof L.PDFRef?ctx.lookup(o):o;
+  const nm=o=>{o=deref(o);return o instanceof L.PDFName?o.decodeText():null};
+  const SKIP=new Set(['Parent','P','Font','Metadata','Dest','Prev','Next','First','Last','StructParent','StructParents']);
+  function addSep(arr){
+    const name=nm(arr.get(1)); if(!name||PROCESS_NAMES.has(name)||found.has(name)) return;
+    let rgb=[128,128,128]; try{rgb=altToRGB(ctx,arr.get(2),evalFn(ctx,arr.get(3),[1]))}catch(_){}
+    found.set(name,{name,rgb,srcCtx:ctx,csArr:arr});
+  }
+  function addDevN(arr){
+    const names=deref(arr.get(1)); if(!(names instanceof L.PDFArray)) return;
+    const attrs=arr.size()>4?deref(arr.get(4)):null;
+    const cols=attrs instanceof L.PDFDict?deref(attrs.get(L.PDFName.of('Colorants'))):null;
+    const n=names.size();
+    for(let i=0;i<n;i++){
+      const name=nm(names.get(i)); if(!name||PROCESS_NAMES.has(name)||found.has(name)) continue;
+      const own=cols instanceof L.PDFDict?deref(cols.get(L.PDFName.of(name))):null;
+      if(own instanceof L.PDFArray&&nm(own.get(0))==='Separation'){addSep(own);continue}
+      try{
+        const z=new Array(n).fill(0), one=z.slice(); one[i]=1;
+        const c0=evalFn(ctx,arr.get(3),z), c1=evalFn(ctx,arr.get(3),one);
+        found.set(name,{name,rgb:altToRGB(ctx,arr.get(2),c1),srcCtx:ctx,alt:arr.get(2),c0,c1});
+      }catch(_){found.set(name,{name,rgb:[128,128,128],srcCtx:ctx,alt:null,c0:[0,0,0,0],c1:[0,0,0,1]})}
+    }
+  }
+  (function walk(o,depth){
+    if(depth>80||o==null) return;
+    if(o instanceof L.PDFRef){const k=o.tag||o.toString();if(seen.has(k))return;seen.add(k);o=ctx.lookup(o)}
+    if(o instanceof L.PDFArray){
+      const t=nm(o.get(0));
+      if(t==='Separation'&&o.size()>=4) addSep(o);
+      else if(t==='DeviceN'&&o.size()>=4) addDevN(o);
+      for(let i=0;i<o.size();i++) walk(o.get(i),depth+1);
+    } else {
+      const d=o instanceof L.PDFDict?o:(o&&o.dict instanceof L.PDFDict?o.dict:null);
+      if(d) for(const [k,v] of d.entries()) if(!SKIP.has(k.decodeText())) walk(v,depth+1);
+    }
+  })(page.node,0);
+  return [...found.values()];
+}
+
+// PDF function evaluation (types 0, 2, 3, 4) — used for spot preview colours
+function evalFn(ctx,f,inp){
+  const L=PDFLib, deref=o=>o instanceof L.PDFRef?ctx.lookup(o):o;
+  f=deref(f);
+  if(f instanceof L.PDFArray) return Array.from({length:f.size()},(_,i)=>evalFn(ctx,f.get(i),inp)[0]);
+  const d=f instanceof L.PDFDict?f:f.dict;
+  const val=k=>deref(d.get(L.PDFName.of(k)));
+  const arr=k=>{const v=val(k);return v instanceof L.PDFArray?v.asArray().map(x=>{x=deref(x);return x instanceof L.PDFNumber?x.asNumber():(x&&x.asNumber?x.asNumber():0)}):null};
+  const num=(k,dflt)=>{const v=val(k);return v instanceof L.PDFNumber?v.asNumber():dflt};
+  const dom=arr('Domain')||[0,1], rng=arr('Range');
+  const x=inp.map((v,i)=>Math.min(dom[2*i+1]??1,Math.max(dom[2*i]??0,v)));
+  const type=num('FunctionType',2);
+  let out;
+  if(type===2){
+    const c0=arr('C0')||[0], c1=arr('C1')||[1], n=num('N',1);
+    out=c0.map((a,i)=>a+Math.pow(x[0],n)*((c1[i]??1)-a));
+  } else if(type===3){
+    const fns=val('Functions'), bounds=arr('Bounds')||[], enc=arr('Encode')||[];
+    let i=0; while(i<bounds.length&&x[0]>=bounds[i]) i++;
+    const lo=i===0?dom[0]:bounds[i-1], hi=i===bounds.length?dom[1]:bounds[i];
+    const t=hi===lo?enc[2*i]:enc[2*i]+(x[0]-lo)/(hi-lo)*(enc[2*i+1]-enc[2*i]);
+    out=evalFn(ctx,fns.get(i),[t]);
+  } else if(type===4){
+    const code=new TextDecoder('latin1').decode(L.decodePDFRawStream(f).decode());
+    out=psCalc(code,x);
+    if(rng) out=out.slice(-rng.length/2);
+  } else if(type===0){
+    const size=arr('Size'), bps=num('BitsPerSample',8), m=inp.length;
+    const enc=arr('Encode')||size.flatMap(s=>[0,s-1]);
+    const no=rng.length/2, dec=arr('Decode')||rng, data=L.decodePDFRawStream(f).decode();
+    let idx=0,mul=1;
+    for(let i=0;i<m;i++){
+      const e=enc[2*i]+(x[i]-dom[2*i])/((dom[2*i+1]-dom[2*i])||1)*(enc[2*i+1]-enc[2*i]);
+      idx+=Math.max(0,Math.min(size[i]-1,Math.round(e)))*mul; mul*=size[i];
+    }
+    const max=Math.pow(2,bps)-1; out=[];
+    for(let j=0;j<no;j++){
+      const bit=(idx*no+j)*bps; let v=0;
+      for(let b=0;b<bps;b++){const bb=bit+b;v=v*2+((data[bb>>3]>>(7-(bb&7)))&1)}
+      out.push(dec[2*j]+v/max*(dec[2*j+1]-dec[2*j]));
+    }
+  } else out=[0];
+  if(rng) out=out.map((v,i)=>Math.min(rng[2*i+1]??v,Math.max(rng[2*i]??v,v)));
+  return out;
+}
+function psCalc(src,inp){
+  const toks=src.replace(/[{}]/g,m=>' '+m+' ').trim().split(/\s+/).filter(Boolean);
+  let i=0; const parse=()=>{const o=[];while(i<toks.length){const t=toks[i++];if(t==='{')o.push(parse());else if(t==='}')return o;else o.push(t)}return o};
+  let prog=parse(); if(prog.length===1&&Array.isArray(prog[0])) prog=prog[0];
+  const st=[...inp], D=Math.PI/180, b2=f=>{const b=st.pop(),a=st.pop();st.push(f(a,b))}, u=f=>st.push(f(st.pop()));
+  const run=code=>{for(const t of code){
+    if(Array.isArray(t)){st.push(t);continue}
+    const n=Number(t); if(!isNaN(n)){st.push(n);continue}
+    switch(t){
+      case 'true':st.push(true);break; case 'false':st.push(false);break;
+      case 'add':b2((a,b)=>a+b);break; case 'sub':b2((a,b)=>a-b);break; case 'mul':b2((a,b)=>a*b);break;
+      case 'div':b2((a,b)=>b?a/b:0);break; case 'idiv':b2((a,b)=>b?Math.trunc(a/b):0);break; case 'mod':b2((a,b)=>b?a%b:0);break;
+      case 'exp':b2((a,b)=>Math.pow(a,b));break; case 'atan':b2((a,b)=>{let r=Math.atan2(a,b)/D;return r<0?r+360:r});break;
+      case 'neg':u(a=>-a);break; case 'abs':u(Math.abs);break; case 'ceiling':u(Math.ceil);break; case 'floor':u(Math.floor);break;
+      case 'round':u(Math.round);break; case 'truncate':case 'cvi':u(Math.trunc);break; case 'cvr':break;
+      case 'sqrt':u(Math.sqrt);break; case 'sin':u(a=>Math.sin(a*D));break; case 'cos':u(a=>Math.cos(a*D));break;
+      case 'ln':u(Math.log);break; case 'log':u(Math.log10);break;
+      case 'dup':st.push(st[st.length-1]);break; case 'pop':st.pop();break;
+      case 'exch':{const b=st.pop(),a=st.pop();st.push(b,a)}break;
+      case 'copy':{const n=st.pop();st.push(...st.slice(st.length-n))}break;
+      case 'index':{const n=st.pop();st.push(st[st.length-1-n])}break;
+      case 'roll':{const j=st.pop(),n=st.pop();if(n>0){const a=st.splice(st.length-n,n),s=((j%n)+n)%n;st.push(...a.slice(n-s),...a.slice(0,n-s))}}break;
+      case 'eq':b2((a,b)=>a===b);break; case 'ne':b2((a,b)=>a!==b);break; case 'gt':b2((a,b)=>a>b);break;
+      case 'ge':b2((a,b)=>a>=b);break; case 'lt':b2((a,b)=>a<b);break; case 'le':b2((a,b)=>a<=b);break;
+      case 'and':b2((a,b)=>typeof a==='boolean'?a&&b:a&b);break; case 'or':b2((a,b)=>typeof a==='boolean'?a||b:a|b);break;
+      case 'xor':b2((a,b)=>typeof a==='boolean'?a!==b:a^b);break; case 'not':u(a=>typeof a==='boolean'?!a:~a);break;
+      case 'bitshift':b2((a,b)=>b>=0?a<<b:a>>-b);break;
+      case 'if':{const p=st.pop(),c=st.pop();if(c)run(p)}break;
+      case 'ifelse':{const p2=st.pop(),p1=st.pop(),c=st.pop();run(c?p1:p2)}break;
+    }
+  }};
+  run(prog); return st.map(Number);
+}
+function altToRGB(ctx,alt,v){
+  const L=PDFLib, deref=o=>o instanceof L.PDFRef?ctx.lookup(o):o; alt=deref(alt);
+  let name=alt instanceof L.PDFName?alt.decodeText():(alt instanceof L.PDFArray?deref(alt.get(0)).decodeText():'DeviceCMYK');
+  if(name==='ICCBased'){const st=deref(alt.get(1)),n=st.dict.get(L.PDFName.of('N'));const c=n?n.asNumber():v.length;name=c===1?'DeviceGray':c===3?'DeviceRGB':'DeviceCMYK'}
+  const c=x=>Math.round(Math.max(0,Math.min(1,x))*255);
+  if(name==='DeviceGray'||name==='CalGray'||name==='G') return [c(v[0]),c(v[0]),c(v[0])];
+  if(name==='DeviceRGB'||name==='CalRGB'||name==='RGB') return [c(v[0]),c(v[1]),c(v[2])];
+  if(name==='Lab'){
+    const fy=(v[0]+16)/116,fx=fy+v[1]/500,fz=fy-v[2]/200,f=t=>t>6/29?t*t*t:3*(6/29)**2*(t-4/29);
+    let X=0.9642*f(fx),Y=f(fy),Z=0.8249*f(fz);
+    const r=3.1339*X-1.6170*Y-0.4906*Z,g=-0.9785*X+1.9160*Y+0.0333*Z,b=0.0720*X-0.2290*Y+1.4057*Z;
+    const gm=t=>t<=0.0031308?12.92*t:1.055*Math.pow(Math.max(t,0),1/2.4)-0.055;
+    return [c(gm(r)),c(gm(g)),c(gm(b))];
+  }
+  const [C,Mg,Y,K]=[v[0]||0,v[1]||0,v[2]||0,v[3]||0];   // DeviceCMYK
+  return [c((1-C)*(1-K)),c((1-Mg)*(1-K)),c((1-Y)*(1-K))];
+}
+
+function getSpots(){
+  if(mode==='single') return singleSpots;
+  const m=new Map(); columns.forEach(c=>{if(c.rawBytes)(c.spots||[]).forEach(sp=>{if(!m.has(sp.name))m.set(sp.name,sp)})});
+  return [...m.values()];
+}
+function refreshSpotList(){
+  const list=document.getElementById('spot-list'), sp=getSpots();
+  document.getElementById('spot-count').textContent=sp.length?`${sp.length} found`:'';
+  if(!sp.length){list.innerHTML=`<div class="spot-empty">${(mode==='single'?singleRawBytes:columns.some(c=>c.rawBytes))?'No spot colours found on this page':'Load a PDF to detect spot colours'}</div>`;return}
+  list.innerHTML=sp.map((s,i)=>`<label class="spot-row" title="${esc(s.name)}"><input type="checkbox" data-name="${esc(s.name)}"${spotOff.has(s.name)?'':' checked'}>`+
+    `<span class="sn">${i+1}</span><span class="sw" style="background:rgb(${s.rgb.join(',')})"></span><span class="nm">${esc(s.name)}</span></label>`).join('');
+}
+document.getElementById('spot-list').addEventListener('change',e=>{
+  const n=e.target.dataset&&e.target.dataset.name; if(n==null) return;
+  if(e.target.checked) spotOff.delete(n); else spotOff.add(n);
+});
+pillGroup('bar-mode',false);
+document.getElementById('bar-mode').addEventListener('click',()=>{
+  const spot=document.querySelector('#bar-mode .pill.active')?.dataset.mode==='spot';
+  document.getElementById('spot-opts').style.display=spot?'flex':'none';
+  document.getElementById('bar-reg-note').style.display=spot?'none':'block';
+});
+
+// Labels: one per spot, staggered along the bar between the crosshair holes (mm from top)
+function barLabels(bars,g,H,measure){
+  if(bars.label==='none') return [];
+  const texts=bars.spots.map(s=>bars.label==='num'?String(s.num):bars.label==='name'?s.name:`${s.num}  ${s.name}`);
+  const top=Math.max(g.y,0)+1.5, bot=Math.min(g.y+g.h,H)-1.5, clear=g.r+1.2;
+  const segs=[]; let a=top;
+  for(const hy of [...g.ys].sort((p,q)=>p-q)){if(hy-clear>a)segs.push([a,hy-clear]);a=Math.max(a,hy+clear)}
+  if(bot>a) segs.push([a,bot]);
+  const GAP=2.5;
+  for(let size=Math.min(g.w*0.62,4);size>=0.9;size*=0.9){
+    const lens=texts.map(t=>measure(t,size)), place=segs.map(()=>[]);
+    let si=0,cur=segs.length?segs[0][0]:0,ok=true;
+    for(let i=0;i<texts.length;i++){
+      while(si<segs.length&&cur+lens[i]>segs[si][1]){si++;if(si<segs.length)cur=segs[si][0]}
+      if(si>=segs.length){ok=false;break}
+      place[si].push(i);cur+=lens[i]+GAP;
+    }
+    if(!ok) continue;
+    const out=[];
+    segs.forEach(([s0,s1],k)=>{ // spread labels evenly inside each segment
+      const ids=place[k]; if(!ids.length) return;
+      const sum=ids.reduce((t,i)=>t+lens[i],0), sp=(s1-s0-sum)/(ids.length+1);
+      let y=s0+sp; for(const i of ids){out[i]={text:texts[i],y0:y,len:lens[i],size};y+=lens[i]+sp}
+    });
+    return out;
+  }
+  return [];
+}
+// ─── Label outline font ───────────────────────────────────────
+// DejaVu Sans Condensed Bold (free licence), glyph outlines for ASCII + Latin-1, 1000 units/em.
+// Labels are built from these outlines and cut out of the bar path itself (even-odd fill),
+// so they are real holes in each plate — not text painted on top.
+const LABEL_FONT={cap:729,g:{" ":[313,""],"!":[410,"M126 729L284 729L284 449L262 245L148 245L126 449ZM126 174L284 174L284 0L126 0Z"],"\"":[469,"M383 729L383 458L279 458L279 729ZM190 729L190 458L86 458L86 729Z"],"#":[754,"M400 718L358 530L474 530L517 718L614 718L571 530L693 530L693 426L548 426L518 292L643 292L643 187L495 187L453 0L355 0L397 187L282 187L239 0L142 0L184 187L61 187L61 292L205 292L236 426L112 426L112 530L260 530L302 718ZM450 426L334 426L303 292L419 292Z"],"$":[626,"M350 -147L278 -147L278 0Q223 2 171.5 13.5Q120 25 71 45L71 173Q122 144 173.5 128.5Q225 113 278 111L278 263L264 266Q159 287 114.5 331Q70 375 70 457Q70 544 124 593.5Q178 643 278 647L278 760L350 760L350 649Q394 645 437.5 636.5Q481 628 525 615L525 491Q481 512 437.5 523.5Q394 535 350 537L350 397L363 394Q475 375 520 329Q565 283 565 194Q565 104 511.5 56Q458 8 350 1ZM278 408L278 536Q247 534 228 517Q209 500 209 474Q209 445 226.5 429Q244 413 278 408ZM350 249L350 113Q388 114 407 130Q426 146 426 178Q426 211 408.5 227.5Q391 244 350 249Z"],"%":[901,"M697 301Q666 301 649 271Q632 241 632 185Q632 129 649 99Q666 69 697 69Q729 69 746 99Q763 129 763 185Q763 241 746 271Q729 301 697 301ZM697 383Q779 383 826 330Q873 277 873 185Q873 93 826 39.5Q779 -14 697 -14Q616 -14 568.5 39.5Q521 93 521 185Q521 277 568.5 330Q616 383 697 383ZM294 -14L197 -14L607 742L705 742ZM204 742Q286 742 333 689Q380 636 380 544Q380 452 333 398.5Q286 345 204 345Q123 345 76 398.5Q29 452 29 544Q29 636 76 689Q123 742 204 742ZM204 660Q173 660 156 630Q139 600 139 544Q139 488 156 457.5Q173 427 204 427Q236 427 253 457.5Q270 488 270 544Q270 600 252.5 630Q235 660 204 660Z"],"&":[785,"M351 484L531 264Q554 298 566 340.5Q578 383 581 437L717 437Q710 348 686 278.5Q662 209 618 157L747 0L561 0L518 53Q472 19 421 2.5Q370 -14 312 -14Q197 -14 125.5 53.5Q54 121 54 228Q54 299 85.5 354Q117 409 188 461Q169 487 160.5 513Q152 539 152 567Q152 646 208 694Q264 742 356 742Q396 742 439.5 735Q483 728 530 714L530 578Q489 602 452 613Q415 624 380 624Q346 624 327.5 609.5Q309 595 309 569Q309 552 319.5 531Q330 510 351 484ZM264 363Q235 340 220.5 311Q206 282 206 247Q206 191 243.5 151.5Q281 112 333 112Q362 112 388 122Q414 132 436 152Z"],"'":[275,"M190 729L190 458L86 458L86 729Z"],"(":[411,"M339 -132L209 -132Q142 -11 109.5 97.5Q77 206 77 313Q77 420 109.5 529.5Q142 639 209 759L339 759Q283 643 255 532.5Q227 422 227 314Q227 206 255 95Q283 -16 339 -132Z"],")":[411,"M72 -132Q128 -16 156.5 95Q185 206 185 314Q185 422 156.5 532.5Q128 643 72 759L203 759Q270 639 302 529.5Q334 420 334 313Q334 206 302 97.5Q270 -11 203 -132Z"],"*":[470,"M453 594L308 510L453 425L419 356L273 446L273 278L198 278L198 446L51 356L18 425L165 510L18 594L51 663L198 574L198 742L273 742L273 574L419 663Z"],"+":[754,"M429 627L429 371L659 371L659 256L429 256L429 0L325 0L325 256L95 256L95 371L325 371L325 627Z"],",":[342,"M92 189L250 189L250 40L142 -142L48 -142L92 40Z"],"-":[374,"M49 359L325 359L325 217L49 217Z"],".":[342,"M92 189L250 189L250 0L92 0Z"],"/":[329,"M231 729L329 729L97 -93L0 -93Z"],"0":[626,"M414 365Q414 502 391 558Q368 614 313 614Q259 614 235.5 558Q212 502 212 365Q212 227 235.5 170.5Q259 114 313 114Q367 114 390.5 170.5Q414 227 414 365ZM583 364Q583 183 512.5 84.5Q442 -14 313 -14Q184 -14 113.5 84.5Q43 183 43 364Q43 545 113.5 643.5Q184 742 313 742Q442 742 512.5 643.5Q583 545 583 364Z"],"1":[626,"M105 130L255 130L255 601L102 566L102 694L254 729L415 729L415 130L564 130L564 0L105 0Z"],"2":[626,"M259 138L548 138L548 0L71 0L71 138L311 373Q343 405 358.5 436Q374 467 374 500Q374 551 343 582.5Q312 614 260 614Q221 614 173.5 595Q126 576 73 539L73 699Q130 720 186 731Q242 742 295 742Q413 742 478 684.5Q543 627 543 524Q543 464 515.5 412.5Q488 361 399 275Z"],"3":[626,"M419 393Q485 374 520 327Q555 280 555 207Q555 99 480 42.5Q405 -14 262 -14Q211 -14 160.5 -5Q110 4 60 22L60 167Q107 141 154 127.5Q201 114 247 114Q314 114 349.5 140Q385 166 385 214Q385 264 348.5 289.5Q312 315 240 315L173 315L173 436L244 436Q308 436 339 458Q370 480 370 526Q370 568 340 591Q310 614 254 614Q213 614 171.5 603.5Q130 593 88 573L88 711Q139 727 188 734.5Q237 742 284 742Q412 742 475.5 695.5Q539 649 539 555Q539 491 509 450.5Q479 410 419 393Z"],"4":[626,"M332 574L146 269L332 269ZM303 729L491 729L491 269L585 269L585 133L491 133L491 0L332 0L332 133L41 133L41 294Z"],"5":[626,"M95 729L516 729L516 591L230 591L230 478Q250 484 269.5 487Q289 490 310 490Q430 490 496.5 423.5Q563 357 563 238Q563 120 490.5 53Q418 -14 289 -14Q233 -14 178.5 -2Q124 10 69 34L69 182Q123 148 171 131Q219 114 262 114Q323 114 358.5 147.5Q394 181 394 238Q394 295 358.5 328.5Q323 362 262 362Q226 362 184.5 351.5Q143 341 95 319Z"],"6":[626,"M326 360Q281 360 259 328Q237 296 237 232Q237 168 259 136Q281 104 326 104Q371 104 393 136Q415 168 415 232Q415 296 393 328Q371 360 326 360ZM535 710L535 575Q493 597 456 607.5Q419 618 384 618Q309 618 266.5 571.5Q224 525 217 433Q246 457 280 469Q314 481 354 481Q455 481 516.5 415.5Q578 350 578 244Q578 127 509 56.5Q440 -14 324 -14Q196 -14 126 82Q56 178 56 354Q56 535 138 638Q220 741 362 741Q408 741 450.5 733.5Q493 726 535 710Z"],"7":[626,"M60 729L555 729L555 623L299 0L134 0L376 591L60 591Z"],"8":[626,"M313 326Q266 326 240.5 297.5Q215 269 215 215Q215 161 240.5 132.5Q266 104 313 104Q360 104 385.5 132.5Q411 161 411 215Q411 269 385.5 297.5Q360 326 313 326ZM190 388Q130 408 99.5 449.5Q69 491 69 553Q69 646 131 694Q193 742 313 742Q433 742 494.5 694Q556 646 556 553Q556 491 525.5 449.5Q495 408 436 388Q502 368 536 321.5Q570 275 570 205Q570 97 505.5 41.5Q441 -14 313 -14Q186 -14 120.5 41.5Q55 97 55 205Q55 275 89 321.5Q123 368 190 388ZM229 534Q229 491 251 467.5Q273 444 313 444Q353 444 374.5 467.5Q396 491 396 534Q396 578 374.5 601Q353 624 313 624Q273 624 251 600.5Q229 577 229 534Z"],"9":[626,"M90 16L90 151Q130 130 167 119.5Q204 109 240 109Q316 109 358 155.5Q400 202 408 294Q378 270 344 257.5Q310 245 271 245Q170 245 108 310Q46 375 46 482Q46 600 115 670.5Q184 741 300 741Q428 741 498.5 645Q569 549 569 373Q569 192 486.5 89Q404 -14 261 -14Q215 -14 172.5 -6.5Q130 1 90 16ZM299 367Q343 367 365.5 399Q388 431 388 495Q388 559 365.5 591Q343 623 299 623Q254 623 231.5 591Q209 559 209 495Q209 431 231.5 399Q254 367 299 367Z"],":":[360,"M101 547L259 547L259 358L101 358ZM101 189L259 189L259 0L101 0Z"],";":[360,"M101 189L259 189L259 40L150 -142L57 -142L101 40ZM101 547L259 547L259 358L101 358Z"],"<":[754,"M659 475L235 313L659 152L659 30L95 256L95 371L659 597Z"],"=":[754,"M95 482L659 482L659 367L95 367ZM95 260L659 260L659 144L95 144Z"],">":[754,"M95 475L95 597L659 371L659 256L95 30L95 152L520 313Z"],"?":[522,"M312 246L153 246L153 270Q153 310 167.5 341Q182 372 229 420L257 448Q282 474 293.5 496.5Q305 519 305 541Q305 575 284 594.5Q263 614 225 614Q189 614 148 597.5Q107 581 62 549L62 702Q115 723 159 732.5Q203 742 244 742Q351 742 407.5 693.5Q464 645 464 552Q464 504 446.5 466Q429 428 388 385L360 357Q330 327 321 308.5Q312 290 312 268ZM153 174L312 174L312 0L153 0Z"],"@":[900,"M365 263Q365 203 388 168.5Q411 134 451 134Q490 134 513.5 169Q537 204 537 263Q537 322 513.5 356.5Q490 391 450 391Q411 391 388 356.5Q365 322 365 263ZM545 116Q532 82 503 62.5Q474 43 435 43Q359 43 312 104Q265 165 265 262Q265 360 312 421Q359 482 435 482Q474 482 503 462.5Q532 443 545 408L545 472L637 472L637 134Q692 143 723 192Q754 241 754 318Q754 367 741.5 409.5Q729 452 703 488Q661 547 598.5 579.5Q536 612 463 612Q412 612 365 597Q318 582 279 553Q214 505 178 429.5Q142 354 142 265Q142 192 165 128.5Q188 65 233 16Q277 -32 334 -57Q391 -82 455 -82Q511 -82 566.5 -59Q622 -36 661 3L708 -76Q652 -124 587.5 -149Q523 -174 456 -174Q375 -174 302.5 -142Q230 -110 174 -49Q118 12 89 92.5Q60 173 60 265Q60 354 89.5 434.5Q119 515 174 576Q230 637 303.5 670Q377 703 456 703Q555 703 635 661.5Q715 620 770 541Q802 493 819 437Q836 381 836 320Q836 188 764.5 114.5Q693 41 562 41L545 41Z"],"A":[696,"M481 133L216 133L174 0L4 0L248 729L449 729L692 0L522 0ZM258 268L438 268L349 558Z"],"B":[686,"M345 447Q385 447 406 466.5Q427 486 427 524Q427 562 406 581.5Q385 601 345 601L252 601L252 447ZM351 128Q402 128 428 152Q454 176 454 224Q454 271 428 295Q402 319 351 319L252 319L252 128ZM508 390Q563 373 593 325.5Q623 278 623 209Q623 104 558.5 52Q494 0 363 0L83 0L83 729L336 729Q473 729 534.5 683Q596 637 596 536Q596 483 573.5 445.5Q551 408 508 390Z"],"C":[660,"M603 40Q556 13 505.5 -0.5Q455 -14 400 -14Q236 -14 140.5 87.5Q45 189 45 364Q45 539 140.5 640.5Q236 742 400 742Q455 742 505.5 728.5Q556 715 603 688L603 537Q556 573 510 589.5Q464 606 414 606Q323 606 271.5 541.5Q220 477 220 364Q220 251 271.5 186.5Q323 122 414 122Q464 122 510 138.5Q556 155 603 191Z"],"D":[747,"M252 587L252 142L312 142Q416 142 470.5 199Q525 256 525 365Q525 474 471 530.5Q417 587 312 587ZM83 729L261 729Q411 729 484 705.5Q557 682 609 625Q655 576 677.5 511.5Q700 447 700 365Q700 283 677.5 218Q655 153 609 104Q556 47 482.5 23.5Q409 0 261 0L83 0Z"],"E":[615,"M83 729L539 729L539 587L252 587L252 451L522 451L522 309L252 309L252 142L549 142L549 0L83 0Z"],"F":[615,"M83 729L539 729L539 587L252 587L252 451L522 451L522 309L252 309L252 0L83 0Z"],"G":[738,"M672 54Q609 20 541 3Q473 -14 400 -14Q236 -14 140.5 87.5Q45 189 45 364Q45 540 142.5 641Q240 742 410 742Q475 742 535 728.5Q595 715 648 688L648 537Q593 572 539 589Q485 606 430 606Q329 606 274.5 543Q220 480 220 364Q220 248 272.5 185Q325 122 422 122Q449 122 471.5 125.5Q494 129 512 137L512 279L409 279L409 405L672 405Z"],"H":[753,"M83 729L252 729L252 451L501 451L501 729L670 729L670 0L501 0L501 309L252 309L252 0L83 0Z"],"I":[334,"M83 729L252 729L252 0L83 0Z"],"J":[334,"M83 729L252 729L252 71Q252 -65 185.5 -132.5Q119 -200 -16 -200L-50 -200L-50 -58L-24 -58Q29 -58 56 -25.5Q83 7 83 71Z"],"K":[697,"M83 729L252 729L252 463L496 729L692 729L376 384L725 0L513 0L252 287L252 0L83 0Z"],"L":[573,"M83 729L252 729L252 142L549 142L549 0L83 0Z"],"M":[896,"M83 729L298 729L447 339L598 729L812 729L812 0L652 0L652 533L501 140L394 140L243 533L243 0L83 0Z"],"N":[753,"M83 729L271 729L510 229L510 729L670 729L670 0L481 0L243 500L243 0L83 0Z"],"O":[765,"M382 606Q305 606 262.5 542.5Q220 479 220 364Q220 249 262.5 185.5Q305 122 382 122Q460 122 502.5 185.5Q545 249 545 364Q545 479 502.5 542.5Q460 606 382 606ZM382 742Q541 742 630.5 641.5Q720 541 720 364Q720 187 630.5 86.5Q541 -14 382 -14Q225 -14 135 86.5Q45 187 45 364Q45 541 135 641.5Q225 742 382 742Z"],"P":[659,"M83 729L363 729Q489 729 556 667Q623 605 623 491Q623 376 556 314.5Q489 253 363 253L252 253L252 0L83 0ZM252 593L252 389L345 389Q395 389 421.5 415.5Q448 442 448 491Q448 540 421.5 566.5Q395 593 345 593Z"],"Q":[765,"M400 -13L387 -13Q225 -13 135 86.5Q45 186 45 364Q45 541 135 641.5Q225 742 382 742Q542 742 631 642.5Q720 543 720 364Q720 241 672.5 152Q625 63 537 18L669 -146L508 -146ZM382 606Q305 606 262.5 542.5Q220 479 220 364Q220 247 261.5 184.5Q303 122 382 122Q460 122 502.5 185.5Q545 249 545 364Q545 479 502.5 542.5Q460 606 382 606Z"],"R":[693,"M323 406Q376 406 399 428Q422 450 422 500Q422 550 399 571.5Q376 593 323 593L252 593L252 406ZM252 276L252 0L83 0L83 729L341 729Q471 729 531 680.5Q591 632 591 528Q591 456 560 409.5Q529 363 465 341Q500 332 527.5 301Q555 270 583 207L675 0L495 0L415 181Q391 236 366 256Q341 276 300 276Z"],"S":[648,"M539 706L539 552Q485 579 433.5 592.5Q382 606 336 606Q276 606 247 587.5Q218 569 218 530Q218 500 237.5 484Q257 468 309 456L380 440Q490 416 536 366Q582 316 582 224Q582 104 518 45Q454 -14 321 -14Q259 -14 196 -1Q133 12 70 38L70 197Q133 160 191.5 141Q250 122 305 122Q360 122 389.5 142.5Q419 163 419 201Q419 235 399 253.5Q379 272 319 287L254 303Q156 327 110 378Q64 429 64 516Q64 625 127.5 683.5Q191 742 310 742Q364 742 421 733Q478 724 539 706Z"],"T":[614,"M4 729L609 729L609 587L392 587L392 0L222 0L222 587L4 587Z"],"U":[730,"M83 729L252 729L252 292Q252 202 278.5 163Q305 124 365 124Q426 124 452.5 163Q479 202 479 292L479 729L648 729L648 292Q648 137 578 61.5Q508 -14 365 -14Q222 -14 152.5 61.5Q83 137 83 292Z"],"V":[696,"M4 729L174 729L349 191L522 729L692 729L449 0L248 0Z"],"W":[993,"M27 729L189 729L302 199L415 729L578 729L690 199L804 729L965 729L810 0L615 0L496 554L378 0L183 0Z"],"X":[694,"M448 372L676 0L500 0L346 249L194 0L17 0L245 372L26 729L203 729L346 494L490 729L667 729Z"],"Y":[651,"M-9 729L176 729L326 469L475 729L661 729L411 307L411 0L241 0L241 307Z"],"Z":[652,"M51 729L602 729L602 615L250 142L612 142L612 0L41 0L41 114L393 587L51 587Z"],"[":[411,"M77 760L350 760L350 650L227 650L227 -22L350 -22L350 -132L77 -132Z"],"\\":[329,"M231 -93L0 729L97 729L329 -93Z"],"]":[411,"M334 -132L61 -132L61 -22L185 -22L185 650L61 650L61 760L334 760Z"],"^":[754,"M431 729L663 457L557 457L377 604L197 457L91 457L323 729Z"],"_":[450,"M450 -143L450 -236L0 -236L0 -143Z"],"`":[450,"M166 800L290 616L204 616L42 800Z"],"a":[607,"M296 246Q247 246 222 227.5Q197 209 197 173Q197 140 217 121Q237 102 273 102Q317 102 347.5 137.5Q378 173 378 226L378 246ZM537 312L537 0L378 0L378 81Q346 31 306.5 8.5Q267 -14 210 -14Q134 -14 86.5 35.5Q39 85 39 164Q39 260 98.5 305Q158 350 285 350L378 350L378 364Q378 405 348.5 424.5Q319 444 257 444Q206 444 162.5 432.5Q119 421 82 399L82 532Q132 546 183 553Q234 560 285 560Q418 560 477.5 501.5Q537 443 537 312Z"],"b":[644,"M337 113Q388 113 414.5 154Q441 195 441 273Q441 351 414.5 392Q388 433 337 433Q287 433 260 392Q233 351 233 273Q233 195 260 154Q287 113 337 113ZM233 467Q266 515 305.5 537.5Q345 560 396 560Q487 560 545.5 479.5Q604 399 604 273Q604 146 545.5 66Q487 -14 396 -14Q345 -14 305.5 8.5Q266 31 233 79L233 0L76 0L76 760L233 760Z"],"c":[533,"M473 530L473 387Q441 412 408.5 423.5Q376 435 342 435Q276 435 239.5 392.5Q203 350 203 273Q203 196 239.5 153.5Q276 111 342 111Q379 111 412 123Q445 135 473 159L473 16Q437 1 398.5 -6.5Q360 -14 322 -14Q189 -14 114 62Q39 138 39 273Q39 408 114 484Q189 560 322 560Q361 560 398.5 552.5Q436 545 473 530Z"],"d":[644,"M411 467L411 760L569 760L569 0L411 0L411 79Q378 31 339 8.5Q300 -14 248 -14Q157 -14 99 66Q41 146 41 273Q41 399 99 479.5Q157 560 248 560Q299 560 338.5 537.5Q378 515 411 467ZM307 113Q357 113 384 154Q411 195 411 273Q411 351 384 392Q357 433 307 433Q257 433 230.5 392Q204 351 204 273Q204 195 230.5 154Q257 113 307 113Z"],"e":[610,"M567 275L567 225L199 225Q205 164 239 133Q273 102 335 102Q385 102 437 118.5Q489 135 543 168L543 33Q488 10 432 -2Q376 -14 320 -14Q187 -14 113 61.5Q39 137 39 273Q39 407 111.5 483.5Q184 560 312 560Q428 560 497.5 482.5Q567 405 567 275ZM405 333Q405 383 379 413.5Q353 444 311 444Q265 444 236.5 415.5Q208 387 201 333Z"],"f":[391,"M399 760L399 645L312 645Q279 645 266 631.5Q253 618 253 585L253 547L387 547L387 422L253 422L253 0L95 0L95 422L17 422L17 547L95 547L95 585Q95 674 140 717Q185 760 279 760Z"],"g":[644,"M411 93Q378 45 339 22.5Q300 0 248 0Q158 0 99.5 79Q41 158 41 280Q41 402 99.5 480.5Q158 559 248 559Q300 559 339 536.5Q378 514 411 466L411 547L569 547L569 55Q569 -77 494 -146.5Q419 -216 276 -216Q230 -216 187 -208Q144 -200 101 -184L101 -48Q142 -74 181.5 -87Q221 -100 261 -100Q338 -100 374.5 -62.5Q411 -25 411 55ZM307 433Q258 433 231 393Q204 353 204 280Q204 205 230 166Q256 127 307 127Q356 127 383.5 167Q411 207 411 280Q411 353 383.5 393Q356 433 307 433Z"],"h":[641,"M570 333L570 0L412 0L412 54L412 254Q412 326 409 352.5Q406 379 399 392Q390 409 374 418.5Q358 428 338 428Q289 428 261 386Q233 344 233 269L233 0L76 0L76 760L233 760L233 467Q269 515 309 537.5Q349 560 397 560Q482 560 526 502Q570 444 570 333Z"],"i":[308,"M76 547L233 547L233 0L76 0ZM76 760L233 760L233 617L76 617Z"],"j":[308,"M76 547L233 547L233 10Q233 -100 186 -158Q139 -216 48 -216L-29 -216L-29 -101L-2 -101Q42 -101 59 -78.5Q76 -56 76 10ZM76 760L233 760L233 617L76 617Z"],"k":[598,"M76 760L233 760L233 346L414 547L597 547L356 296L616 0L425 0L233 228L233 0L76 0Z"],"l":[308,"M76 760L233 760L233 0L76 0Z"],"m":[938,"M532 456Q562 507 603 533.5Q644 560 693 560Q778 560 822.5 502Q867 444 867 333L867 0L708 0L708 285Q709 292 709 298.5Q709 305 709 318Q709 376 694 402Q679 428 644 428Q600 428 575.5 387Q551 346 550 269L550 0L392 0L392 285Q392 376 377.5 402Q363 428 327 428Q282 428 257.5 387Q233 346 233 269L233 0L75 0L75 547L233 547L233 467Q262 513 299.5 536.5Q337 560 382 560Q433 560 472.5 532.5Q512 505 532 456Z"],"n":[641,"M570 333L570 0L412 0L412 54L412 255Q412 326 409 352.5Q406 379 399 392Q390 409 374 418.5Q358 428 338 428Q289 428 261 386Q233 344 233 269L233 0L76 0L76 547L233 547L233 467Q269 515 309 537.5Q349 560 397 560Q482 560 526 502Q570 444 570 333Z"],"o":[618,"M310 435Q257 435 230 393.5Q203 352 203 273Q203 194 230 152.5Q257 111 310 111Q361 111 388.5 152.5Q416 194 416 273Q416 352 388.5 393.5Q361 435 310 435ZM310 560Q437 560 508.5 484Q580 408 580 273Q580 138 508.5 62Q437 -14 310 -14Q183 -14 111 62Q39 138 39 273Q39 408 111 484Q183 560 310 560Z"],"p":[644,"M233 79L233 -208L76 -208L76 547L233 547L233 467Q266 515 305.5 537.5Q345 560 396 560Q487 560 545.5 479.5Q604 399 604 273Q604 146 545.5 66Q487 -14 396 -14Q345 -14 305.5 8.5Q266 31 233 79ZM337 433Q287 433 260 392Q233 351 233 273Q233 195 260 154Q287 113 337 113Q388 113 414.5 154Q441 195 441 273Q441 351 414.5 392Q388 433 337 433Z"],"q":[644,"M307 433Q257 433 230.5 392Q204 351 204 273Q204 195 230.5 154Q257 113 307 113Q357 113 384 154Q411 195 411 273Q411 351 384 392Q357 433 307 433ZM411 79Q378 31 339 8.5Q300 -14 248 -14Q157 -14 99 66Q41 146 41 273Q41 399 99 479Q157 559 248 559Q300 559 339 536.5Q378 514 411 466L411 547L569 547L569 -208L411 -208Z"],"r":[444,"M441 398Q420 409 400 414Q380 419 359 419Q298 419 265.5 376Q233 333 233 252L233 0L76 0L76 547L233 547L233 457Q263 511 302.5 535.5Q342 560 397 560Q405 560 414 559.5Q423 559 441 556Z"],"s":[536,"M460 530L460 397Q410 420 362.5 432Q315 444 274 444Q229 444 207.5 431.5Q186 419 186 393Q186 372 202 361Q218 350 261 344L289 340Q410 323 451.5 284Q493 245 493 161Q493 74 435 30Q377 -14 262 -14Q213 -14 161 -5.5Q109 3 54 20L54 153Q101 127 150.5 114.5Q200 102 251 102Q297 102 320.5 116Q344 130 344 158Q344 182 328 193.5Q312 205 264 211L236 215Q131 229 88.5 269Q46 309 46 389Q46 476 100 518Q154 560 265 560Q308 560 356 552.5Q404 545 460 530Z"],"t":[430,"M248 702L248 547L410 547L410 422L248 422L248 190Q248 152 261 138.5Q274 125 315 125L396 125L396 0L261 0Q168 0 129 43Q90 86 90 190L90 422L12 422L12 547L90 547L90 702Z"],"u":[641,"M70 213L70 547L229 547L229 492Q229 448 228.5 380.5Q228 313 228 291Q228 225 231 196Q234 167 241 154Q251 137 266.5 127.5Q282 118 302 118Q352 118 380 160Q408 202 408 277L408 547L565 547L565 0L408 0L408 79Q372 31 332 8.5Q292 -14 245 -14Q160 -14 115 44Q70 102 70 213Z"],"v":[586,"M14 547L171 547L293 169L416 547L573 547L380 0L207 0Z"],"w":[831,"M32 547L185 547L267 170L350 547L481 547L564 174L647 547L800 547L670 0L499 0L416 376L333 0L161 0Z"],"x":[580,"M200 280L22 547L189 547L290 385L392 547L558 547L380 281L567 0L400 0L290 173L180 0L14 0Z"],"y":[586,"M11 547L168 547L301 176L413 547L570 547L363 -52Q332 -143 290.5 -179.5Q249 -216 181 -216L90 -216L90 -101L139 -101Q179 -101 197.5 -87Q216 -73 226 -36L230 -21Z"],"z":[523,"M51 547L481 547L481 425L222 125L481 125L481 0L41 0L41 122L300 422L51 422Z"],"{":[641,"M528 -53L528 -163L433 -163Q337 -163 293 -120Q249 -77 249 17L249 111Q249 184 225.5 212.5Q202 241 139 241L112 241L112 350L139 350Q202 350 225.5 378.5Q249 407 249 480L249 580Q249 674 293 717Q337 760 433 760L528 760L528 650L498 650Q436 650 417 628.5Q398 607 398 538L398 457Q398 380 378.5 345.5Q359 311 311 299Q359 286 378.5 251Q398 216 398 140L398 59Q398 -11 417 -32Q436 -53 498 -53Z"],"|":[329,"M214 764L214 -236L114 -236L114 764Z"],"}":[641,"M112 -53L143 -53Q205 -53 223.5 -32Q242 -11 242 59L242 140Q242 216 262 251Q282 286 331 299Q282 311 262 345.5Q242 380 242 457L242 538Q242 607 223.5 628.5Q205 650 143 650L112 650L112 760L208 760Q304 760 348 717Q392 674 392 580L392 480Q392 407 415.5 378.5Q439 350 501 350L528 350L528 241L501 241Q439 241 415.5 212.5Q392 184 392 111L392 17Q392 -77 348 -120Q304 -163 208 -163L112 -163Z"],"~":[754,"M659 415L659 296Q612 257 573 240Q534 223 491 223Q444 223 381 251Q375 254 372 256Q369 257 362 260Q294 290 253 290Q214 290 176.5 271Q139 252 95 212L95 331Q143 370 182 387Q221 404 263 404Q310 404 373 375Q379 373 382 371Q385 370 392 367Q460 337 501 337Q539 337 576 355.5Q613 374 659 415Z"],"\u00a0":[313,""],"\u00a1":[410,"M126 -182L126 98L148 302L262 302L284 98L284 -182ZM126 373L126 547L284 547L284 373Z"],"\u00a2":[626,"M309 419Q274 397 257 361.5Q240 326 240 273Q240 220 257 183.5Q274 147 309 127ZM510 530L510 387Q478 411 446.5 423Q415 435 386 435L380 435L380 111Q419 112 452 124Q485 136 510 159L510 16Q474 1 442 -6.5Q410 -14 384 -14L380 -14L380 -153L309 -153L309 -12Q193 7 135 81Q77 155 77 281Q77 400 136 471Q195 542 309 559L309 699L380 699L380 559Q411 558 443.5 550.5Q476 543 510 530Z"],"\u00a3":[626,"M546 716L546 576Q516 595 483 604.5Q450 614 417 614Q365 614 340 583.5Q315 553 315 489L315 406L479 406L479 289L315 289L315 130L552 130L552 0L55 0L55 130L155 130L155 289L69 289L69 406L155 406L155 489Q155 621 210.5 681.5Q266 742 387 742Q428 742 467.5 735.5Q507 729 546 716Z"],"\u00a4":[572,"M191 131L100 30L33 105L124 206Q111 230 105 256Q99 282 99 313Q99 344 105.5 370Q112 396 125 419L33 519L101 594L191 493Q213 508 236.5 515Q260 522 287 522Q311 522 334.5 515.5Q358 509 383 495L474 596L541 521L450 420Q463 393 469 366Q475 339 475 313Q475 282 468.5 256.5Q462 231 449 208L540 107L473 32L381 133Q361 118 337.5 111Q314 104 287 104Q262 104 238 110.5Q214 117 191 131ZM287 206Q327 206 355 237Q383 268 383 313Q383 358 355 389Q327 420 287 420Q247 420 219 389Q191 358 191 313Q191 268 218.5 237Q246 206 287 206Z"],"\u00a5":[626,"M597 203L397 203L397 0L229 0L229 203L30 203L30 298L229 298L229 330L208 372L30 372L30 466L158 466L11 729L187 729L313 504L440 729L616 729L468 466L597 466L597 372L418 372L397 330L397 298L597 298Z"],"\u00a6":[329,"M214 699L214 329L114 329L114 699ZM214 199L214 -171L114 -171L114 199Z"],"\u00a7":[450,"M389 714L389 603Q345 622 310.5 631.5Q276 641 251 641Q218 641 201.5 629Q185 617 185 594Q185 562 267 523Q279 518 284 515Q376 472 411 429.5Q446 387 446 326Q446 269 421.5 230Q397 191 345 168Q379 148 395.5 120.5Q412 93 412 57Q412 -14 359 -54.5Q306 -95 212 -95Q175 -95 135 -88Q95 -81 51 -67L51 49Q101 29 141 18.5Q181 8 206 8Q235 8 252 20Q269 32 269 52Q269 86 190 122Q174 129 166 133Q77 175 41.5 219Q6 263 6 326Q6 377 30.5 414.5Q55 452 104 477Q72 502 57.5 529Q43 556 43 593Q43 663 93.5 702.5Q144 742 232 742Q269 742 308.5 735Q348 728 389 714ZM191 418Q161 404 146 385.5Q131 367 131 343Q131 310 158.5 286Q186 262 266 230Q294 241 309.5 260.5Q325 280 325 305Q325 338 294.5 364Q264 390 191 418Z"],"\u00a8":[450,"M86 774L190 774L190 654L86 654ZM260 774L363 774L363 654L260 654Z"],"\u00a9":[900,"M582 550L582 445Q556 463 532 471.5Q508 480 482 480Q433 480 405 448.5Q377 417 377 362Q377 306 405 275Q433 244 482 244Q511 244 536 253Q561 262 582 279L582 175Q553 164 524 158.5Q495 153 468 153Q375 153 319.5 210Q264 267 264 362Q264 457 319.5 514Q375 571 468 571Q499 571 527 566Q555 561 582 550ZM450 650Q397 650 351.5 628.5Q306 607 267 565Q229 522 210 471.5Q191 421 191 362Q191 303 210 252.5Q229 202 267 159Q305 117 351 96Q397 75 450 75Q504 75 549.5 96Q595 117 633 159Q671 202 690 252.5Q709 303 709 362Q709 421 690 471.5Q671 522 633 565Q594 608 548.5 629Q503 650 450 650ZM450 725Q517 725 574.5 698Q632 671 680 618Q728 565 751.5 501Q775 437 775 362Q775 288 751.5 224Q728 160 680 107Q632 54 574.5 27Q517 0 450 0Q383 0 325.5 27Q268 54 220 107Q172 160 148.5 224Q125 288 125 362Q125 437 148.5 501Q172 565 220 618Q268 671 325.5 698Q383 725 450 725Z"],"\u00aa":[507,"M77 280L435 280L435 182L77 182ZM283 528Q224 528 201 515Q178 502 178 472Q178 447 193 433Q208 419 233 419Q272 419 297 447Q322 475 322 517L322 528ZM440 569L440 350L332 350L332 412Q308 375 277.5 357.5Q247 340 205 340Q142 340 105.5 372.5Q69 405 69 462Q69 531 115.5 563Q162 595 261 595L321 595L321 605Q321 632 301.5 646.5Q282 661 245 661Q207 661 170.5 652.5Q134 644 99 627L99 715Q139 729 176 735.5Q213 742 247 742Q345 742 392.5 699.5Q440 657 440 569Z"],"\u00ab":[581,"M286 519L286 401L157 293L286 185L286 67L69 247L69 338ZM497 519L497 401L368 293L497 185L497 67L280 247L280 338Z"],"\u00ac":[754,"M95 444L659 444L659 140L556 140L556 328L95 328Z"],"\u00ad":[374,"M49 359L325 359L325 217L49 217Z"],"\u00ae":[900,"M450 650Q397 650 351.5 628.5Q306 607 267 565Q229 522 210 471.5Q191 421 191 362Q191 303 210 252.5Q229 202 267 159Q305 117 351 96Q397 75 450 75Q504 75 549.5 96Q595 117 633 159Q671 202 690 252.5Q709 303 709 362Q709 421 690 471.5Q671 522 633 565Q594 608 548.5 629Q503 650 450 650ZM425 506L410 506L410 405L425 405Q459 405 476.5 418Q494 431 494 456Q494 481 477 493.5Q460 506 425 506ZM441 573Q519 573 557 544Q595 515 595 456Q595 414 572 386.5Q549 359 507 351Q525 340 540.5 320.5Q556 301 569 273L617 165L517 165L470 269Q453 307 440.5 323Q428 339 415 339L410 339L410 165L316 165L316 573ZM450 725Q517 725 574.5 698Q632 671 680 618Q728 565 751.5 501Q775 437 775 362Q775 288 751.5 224Q728 160 680 107Q632 54 574.5 27Q517 0 450 0Q383 0 325.5 27Q268 54 220 107Q172 160 148.5 224Q125 288 125 362Q125 437 148.5 501Q172 565 220 618Q268 671 325.5 698Q383 725 450 725Z"],"\u00af":[450,"M86 760L363 760L363 668L86 668Z"],"\u00b0":[450,"M225 670Q193 670 171 645.5Q149 621 149 586Q149 551 171 527Q193 503 225 503Q257 503 279 527Q301 551 301 586Q301 621 278.5 645.5Q256 670 225 670ZM225 749Q254 749 281 736.5Q308 724 329 701Q350 678 360.5 648.5Q371 619 371 586Q371 553 360.5 523.5Q350 494 330 472Q309 449 281.5 436.5Q254 424 224 424Q162 424 120 470.5Q78 517 78 586Q78 655 120.5 702Q163 749 225 749Z"],"\u00b1":[754,"M429 627L429 454L659 454L659 339L429 339L429 166L325 166L325 339L95 339L95 454L325 454L325 627ZM95 116L659 116L659 0L95 0Z"],"\u00b2":[394,"M181 408L344 408L344 326L48 326L48 401L186 531Q212 557 223.5 576.5Q235 596 235 615Q235 640 219 655Q203 670 177 670Q150 670 118.5 659Q87 648 51 625L51 716Q89 729 124.5 735.5Q160 742 193 742Q263 742 302.5 710.5Q342 679 342 625Q342 590 326.5 560.5Q311 531 266 489Z"],"\u00b3":[394,"M260 547Q301 538 323 511Q345 484 345 445Q345 382 301.5 350.5Q258 319 170 319Q134 319 101.5 324.5Q69 330 40 341L40 426Q68 408 96.5 399Q125 390 151 390Q193 390 216 405.5Q239 421 239 450Q239 481 215 496Q191 511 142 511L109 511L109 578L146 578Q189 578 209 589.5Q229 601 229 626Q229 648 211.5 659Q194 670 159 670Q136 670 109 663.5Q82 657 51 644L51 725Q80 733 113 737.5Q146 742 185 742Q258 742 297 715Q336 688 336 636Q336 603 316 579.5Q296 556 260 547Z"],"\u00b4":[450,"M284 800L409 800L247 616L160 616Z"],"\u00b5":[662,"M77 -209L77 547L235 547L235 229Q235 172 257 144.5Q279 117 324 117Q369 117 391 144.5Q413 172 413 229L413 547L571 547L571 181Q571 146 578.5 132.5Q586 119 603 119Q611 119 618 121.5Q625 124 634 130L634 8Q610 -3 589.5 -8.5Q569 -14 550 -14Q511 -14 486 4Q461 22 446 63Q425 24 395.5 5Q366 -14 327 -14Q294 -14 271 -2.5Q248 9 235 32L235 -209Z"],"\u00b6":[572,"M266 729L494 729L494 -96L411 -96L411 657L327 657L327 -96L244 -96L244 317Q154 329 105.5 382.5Q57 436 57 523Q57 616 114 672.5Q171 729 266 729Z"],"\u00b7":[342,"M92 442L250 442L250 253L92 253Z"],"\u00b8":[450,"M265 0Q290 -30 302 -56Q314 -82 314 -105Q314 -151 287 -173.5Q260 -196 204 -196Q183 -196 161 -192.5Q139 -189 116 -183L115 -109Q137 -117 155.5 -120.5Q174 -124 188 -124Q213 -124 227.5 -113Q242 -102 242 -82Q242 -69 232.5 -49Q223 -29 204 0Z"],"\u00b9":[394,"M62 403L153 403L153 657L54 632L54 710L155 734L254 734L254 403L344 403L344 326L62 326Z"],"\u00ba":[507,"M254 742Q348 742 402 688Q456 634 456 541Q456 448 402 394.5Q348 341 254 341Q160 341 105.5 394.5Q51 448 51 541Q51 634 105.5 688Q160 742 254 742ZM73 280L435 280L435 182L73 182ZM254 659Q217 659 197 628.5Q177 598 177 541Q177 484 197 454Q217 424 254 424Q291 424 311 454Q331 484 331 541Q331 598 311 628.5Q291 659 254 659Z"],"\u00bb":[581,"M295 519L512 338L512 247L295 67L295 185L424 293L295 401ZM85 519L301 338L301 247L85 67L85 185L213 293L85 401Z"],"\u00bc":[932,""],"\u00bd":[932,""],"\u00be":[932,""],"\u00bf":[522,"M214 300L373 300L373 276Q373 236 358.5 205.5Q344 175 296 126L268 98Q244 73 232.5 50.5Q221 28 221 5Q221 -29 242 -48.5Q263 -68 301 -68Q336 -68 377.5 -51.5Q419 -35 464 -3L464 -156Q411 -177 366.5 -186.5Q322 -196 282 -196Q174 -196 118 -147.5Q62 -99 62 -6Q62 42 79 80Q96 118 138 161L166 189Q195 219 204.5 237.5Q214 256 214 278ZM373 373L214 373L214 547L373 547Z"],"\u00c0":[696,""],"\u00c1":[696,""],"\u00c2":[696,""],"\u00c3":[696,""],"\u00c4":[696,""],"\u00c5":[696,"M454 715L692 0L522 0L481 133L216 133L174 0L4 0L243 715Q233 731 228 749.5Q223 768 223 789Q223 846 260 887Q297 928 349 928Q399 928 436 887Q473 846 473 789Q473 766 468.5 747.5Q464 729 454 715ZM291 789Q291 763 308 744Q325 725 349 725Q372 725 389 744Q406 763 406 789Q406 815 389 834Q372 853 349 853Q325 853 308 834Q291 815 291 789ZM258 268L438 268L349 558Z"],"\u00c6":[976,"M392 604L279 306L445 306L445 604ZM274 729L901 729L901 587L614 587L614 451L884 451L884 309L614 309L614 142L911 142L911 0L445 0L445 171L228 171L163 0L0 0Z"],"\u00c7":[660,""],"\u00c8":[615,""],"\u00c9":[615,""],"\u00ca":[615,""],"\u00cb":[615,""],"\u00cc":[334,""],"\u00cd":[334,""],"\u00ce":[334,""],"\u00cf":[334,""],"\u00d0":[754,"M260 587L260 430L363 430L363 303L260 303L260 142L320 142Q424 142 479 199Q534 256 534 365Q534 474 479 530.5Q424 587 320 587ZM91 729L269 729Q419 729 491.5 705.5Q564 682 617 625Q663 576 685.5 511.5Q708 447 708 365Q708 283 685.5 218Q663 153 617 104Q564 47 490.5 23.5Q417 0 269 0L91 0L91 303L15 303L15 430L91 430Z"],"\u00d1":[753,""],"\u00d2":[765,""],"\u00d3":[765,""],"\u00d4":[765,""],"\u00d5":[765,""],"\u00d6":[765,""],"\u00d7":[754,"M642 525L451 313L642 102L568 20L377 231L187 20L112 102L303 313L112 525L187 607L377 395L568 607Z"],"\u00d8":[765,"M266 181Q288 151 317 136.5Q346 122 382 122Q460 122 502.5 185.5Q545 249 545 364Q545 397 542 425.5Q539 454 532 478ZM498 550Q476 578 447 592Q418 606 382 606Q305 606 262.5 542.5Q220 479 220 364Q220 333 223 305Q226 277 232 255ZM110 119Q77 168 61 229Q45 290 45 364Q45 541 135 641.5Q225 742 382 742Q450 742 504.5 724Q559 706 604 668L691 765L741 709L652 612Q687 563 703.5 501Q720 439 720 364Q720 187 630.5 86.5Q541 -14 382 -14Q315 -14 259 5Q203 24 158 63L69 -36L20 19Z"],"\u00d9":[730,""],"\u00da":[730,""],"\u00db":[730,""],"\u00dc":[730,""],"\u00dd":[651,""],"\u00de":[664,"M252 126L252 0L83 0L83 729L252 729L252 602L363 602Q489 602 556 540.5Q623 479 623 364Q623 250 556 188Q489 126 363 126ZM252 467L252 262L345 262Q395 262 421.5 288.5Q448 315 448 364Q448 413 421.5 440Q395 467 345 467Z"],"\u00df":[647,"M76 544Q76 652 135 706Q194 760 314 760Q429 760 488 705Q547 650 547 544L547 509Q481 504 449 485Q417 466 417 430Q417 412 428 398Q439 384 480 359L510 341Q561 310 584.5 268.5Q608 227 608 170Q608 78 558 32Q508 -14 406 -14Q377 -14 347 -8Q317 -2 284 10L284 129Q309 116 334 109Q359 102 383 102Q415 102 434.5 119.5Q454 137 454 165Q454 188 441.5 204.5Q429 221 386 248L355 267Q317 291 298.5 324Q280 357 280 401Q280 458 310.5 496.5Q341 535 405 559Q404 601 383 622.5Q362 644 322 644Q278 644 255.5 617Q233 590 233 537L233 0L76 0Z"],"\u00e0":[607,""],"\u00e1":[607,""],"\u00e2":[607,""],"\u00e3":[607,""],"\u00e4":[607,""],"\u00e5":[607,""],"\u00e6":[943,"M738 333Q738 383 712 413.5Q686 444 644 444Q598 444 570 415.5Q542 387 535 333ZM296 246Q247 246 222 227.5Q197 209 197 173Q197 140 217 121Q237 102 273 102Q317 102 347.5 137.5Q378 173 378 226L378 246ZM82 532Q134 546 183 553Q232 560 274 560Q341 560 388.5 541Q436 522 467 484Q501 521 546 540.5Q591 560 644 560Q761 560 830.5 482.5Q900 405 900 275L900 225L532 225Q538 164 572 133Q606 102 668 102Q718 102 770 118.5Q822 135 877 168L877 33Q821 10 765 -2Q709 -14 653 -14Q575 -14 516.5 12Q458 38 427 87Q382 35 333 10.5Q284 -14 223 -14Q138 -14 88.5 34Q39 82 39 164Q39 260 98.5 305Q158 350 285 350L378 350L378 364Q378 405 348.5 424.5Q319 444 257 444Q206 444 162.5 432.5Q119 421 82 399Z"],"\u00e7":[533,""],"\u00e8":[610,""],"\u00e9":[610,""],"\u00ea":[610,""],"\u00eb":[610,""],"\u00ec":[308,""],"\u00ed":[308,""],"\u00ee":[308,""],"\u00ef":[308,""],"\u00f0":[618,"M404 363Q380 376 356.5 382.5Q333 389 310 389Q258 389 230.5 356.5Q203 324 203 265Q203 193 231.5 152Q260 111 310 111Q361 111 388.5 152.5Q416 194 416 273Q416 295 413 317.5Q410 340 404 363ZM481 537Q533 471 556.5 408Q580 345 580 273Q580 138 508.5 62Q437 -14 310 -14Q183 -14 111 62Q39 138 39 273Q39 386 105 450.5Q171 515 287 515Q307 515 324 512Q341 509 357 502L274 609L110 551L94 614L229 661L146 760L301 760L350 703L515 759L530 696L392 649Z"],"\u00f1":[641,""],"\u00f2":[618,""],"\u00f3":[618,""],"\u00f4":[618,""],"\u00f5":[618,""],"\u00f6":[618,""],"\u00f7":[754,"M310 193L445 193L445 42L310 42ZM310 585L445 585L445 434L310 434ZM95 371L659 371L659 256L95 256Z"],"\u00f8":[618,"M376 408Q363 422 347 428.5Q331 435 310 435Q257 435 230 393.5Q203 352 203 273Q203 253 204.5 237Q206 221 209 208ZM240 140Q254 125 271.5 118Q289 111 310 111Q361 111 388.5 152.5Q416 194 416 273Q416 294 414.5 310.5Q413 327 410 341ZM98 77Q68 115 53.5 164Q39 213 39 273Q39 408 111 484Q183 560 310 560Q356 560 395.5 549.5Q435 539 468 517L533 594L581 545L519 472Q549 433 564.5 383.5Q580 334 580 273Q580 138 508.5 62Q437 -14 310 -14Q262 -14 222.5 -3Q183 8 148 30L83 -46L34 0Z"],"\u00f9":[641,""],"\u00fa":[641,""],"\u00fb":[641,""],"\u00fc":[641,""],"\u00fd":[586,""],"\u00fe":[644,"M233 79L233 -208L76 -208L76 760L233 760L233 467Q266 515 305.5 537.5Q345 560 396 560Q487 560 545.5 479.5Q604 399 604 273Q604 146 545.5 66Q487 -14 396 -14Q345 -14 305.5 8.5Q266 31 233 79ZM337 433Q287 433 260 392Q233 351 233 273Q233 195 260 154Q287 113 337 113Q388 113 414.5 154Q441 195 441 273Q441 351 414.5 392Q388 433 337 433Z"],"\u00ff":[586,""]}};
+const CAP=LABEL_FONT.cap/1000;
+const _glyphs={};
+function glyph(ch){
+  if(_glyphs[ch]) return _glyphs[ch];
+  const src=LABEL_FONT.g[ch]||LABEL_FONT.g['?'], cmds=[]; let cx=0,cy=0,sx=0,sy=0;
+  for(const m of src[1].matchAll(/([MLQCZ])([^MLQCZ]*)/g)){
+    const n=m[2].trim()?m[2].trim().split(/\s+/).map(Number):[];
+    if(m[1]==='M'){cmds.push({t:'M',p:n});cx=sx=n[0];cy=sy=n[1]}
+    else if(m[1]==='L'){cmds.push({t:'L',p:n});cx=n[0];cy=n[1]}
+    else if(m[1]==='Q'){ // quadratic → cubic
+      const [qx,qy,ex,ey]=n;
+      cmds.push({t:'C',p:[cx+2/3*(qx-cx),cy+2/3*(qy-cy),ex+2/3*(qx-ex),ey+2/3*(qy-ey),ex,ey]});cx=ex;cy=ey;
+    } else if(m[1]==='C'){cmds.push({t:'C',p:n});cx=n[4];cy=n[5]}
+    else {cmds.push({t:'Z',p:[]});cx=sx;cy=sy}
+  }
+  return (_glyphs[ch]={adv:src[0],cmds});
+}
+function measureLabel(t,size){let a=0;for(const ch of t)a+=glyph(ch).adv;return a/1000*size}
+// Outline of a label running up the bar (reads bottom → top), in sheet mm (y down).
+// (bx,by) = baseline start, bottom end of the label.
+function labelOutline(text,size,bx,by){
+  const sc=size/1000,out=[];let u=0;
+  for(const ch of text){
+    const g=glyph(ch);
+    for(const c of g.cmds){const q=[];for(let i=0;i<c.p.length;i+=2)q.push(bx-c.p[i+1]*sc,by-(c.p[i]+u)*sc);out.push({t:c.t,p:q})}
+    u+=g.adv;
+  }
+  return out;
+}
+function labelGeom(g,Lb){return labelOutline(Lb.text,Lb.size,g.cx+CAP*Lb.size/2,Lb.y0+Lb.len)}
+function drawSpotBarsPreview(ctx,bars,k){
+  const W=lastContent.w,H=lastContent.h;
+  for(const g of barGeom(bars,W,H)){
+    const yT=Math.max(0,g.y), yB=Math.min(H,g.y+g.h);
+    const x0=Math.floor(g.x*k)-2, y0=Math.floor(yT*k)-2, w=Math.ceil(g.w*k)+5, h=Math.ceil((yB-yT)*k)+5;
+    const off=document.createElement('canvas'); off.width=Math.max(1,w); off.height=Math.max(1,h);
+    const o=off.getContext('2d'), labs=barLabels(bars,g,H,measureLabel);
+    ctx.save(); ctx.globalCompositeOperation='multiply';  // stacked overprinting plates
+    bars.spots.forEach((sp,si)=>{
+      o.setTransform(1,0,0,1,0,0); o.clearRect(0,0,w,h); o.translate(-x0,-y0);
+      o.fillStyle=o.strokeStyle=`rgb(${sp.rgb.join(',')})`; o.lineWidth=Math.max(0.6*_pr,0.09*k);
+      o.beginPath(); o.rect(g.x*k,g.y*k,g.w*k,g.h*k);
+      for(const cy of g.ys){o.moveTo((g.cx+g.r)*k,cy*k);o.arc(g.cx*k,cy*k,g.r*k,0,Math.PI*2,true)}
+      if(labs[si]) for(const c of labelGeom(g,labs[si])){   // label outlines = holes in the same path
+        const q=c.p.map(v=>v*k);
+        if(c.t==='M')o.moveTo(q[0],q[1]); else if(c.t==='L')o.lineTo(q[0],q[1]);
+        else if(c.t==='C')o.bezierCurveTo(q[0],q[1],q[2],q[3],q[4],q[5]); else o.closePath();
+      }
+      o.fill('evenodd');
+      o.beginPath();
+      for(const cy of g.ys){o.moveTo((g.cx-g.r)*k,cy*k);o.lineTo((g.cx+g.r)*k,cy*k);o.moveTo(g.cx*k,(cy-g.r)*k);o.lineTo(g.cx*k,(cy+g.r)*k)}
+      o.stroke();
+      ctx.drawImage(off,x0,y0);
+    });
+    ctx.restore();
+  }
+}
+// One Separation colour space per spot, copied from the source file (exact name + alternate)
+const _spotCS=new WeakMap();
+function spotCS(page,sp,i){
+  const L=PDFLib, ctx=page.doc.context, res=page.node.normalizedEntries().Resources;
+  let m=_spotCS.get(page.doc); if(!m) _spotCS.set(page.doc,m=new Map());
+  let ref=m.get(sp.name);
+  if(!ref){
+    let arr;
+    const cp=o=>L.PDFObjectCopier.for(sp.srcCtx,ctx).copy(o);
+    if(sp.csArr) arr=cp(sp.csArr);
+    else arr=ctx.obj([L.PDFName.of('Separation'),L.PDFName.of(sp.name),sp.alt?cp(sp.alt):L.PDFName.of('DeviceCMYK'),
+      ctx.obj({FunctionType:2,Domain:[0,1],C0:sp.c0,C1:sp.c1,N:1})]);
+    ref=ctx.register(arr); m.set(sp.name,ref);
+  }
+  let csd=res.lookup(L.PDFName.of('ColorSpace'));
+  if(!csd){csd=ctx.obj({});res.set(L.PDFName.of('ColorSpace'),csd)}
+  const key=L.PDFName.of('CS_SPOT'+i); csd.set(key,ref);
+  return key;
+}
+async function spotBarOps(page,bars,W,H,ops){
+  const L=PDFLib, M=PT_PER_MM, N=v=>L.PDFNumber.of(v), ctx=page.doc.context, K=0.5522847498;
+  const gs=page.node.newExtGState('GSop',ctx.obj({Type:'ExtGState',OP:true,op:true,OPM:1}));
+  ops.push(L.PDFOperator.of('gs',[gs]),L.setLineWidth(0.25));
+  const geo=barGeom(bars,W,H), labs=geo.map(g=>barLabels(bars,g,H,measureLabel));
+  const P=(x,y)=>[x*M,(H-y)*M];
+  bars.spots.forEach((sp,si)=>{
+    const nm=spotCS(page,sp,si);
+    ops.push(L.PDFOperator.of('cs',[nm]),L.PDFOperator.of('scn',[N(1)]),L.PDFOperator.of('CS',[nm]),L.PDFOperator.of('SCN',[N(1)]));
+    geo.forEach((g,gi)=>{
+      // one compound path: bar + crosshair holes + label glyph outlines, filled even-odd => true cut-outs
+      const x=g.x*M,w=g.w*M,yb=(H-g.y-g.h)*M,yt=(H-g.y)*M,cx=g.cx*M,r=g.r*M;
+      ops.push(L.moveTo(x,yb),L.lineTo(x,yt),L.lineTo(x+w,yt),L.lineTo(x+w,yb),L.closePath());
+      for(const my of g.ys){
+        const cy=(H-my)*M;
+        ops.push(L.moveTo(cx+r,cy),
+          L.appendBezierCurve(cx+r,cy+K*r,cx+K*r,cy+r,cx,cy+r),
+          L.appendBezierCurve(cx-K*r,cy+r,cx-r,cy+K*r,cx-r,cy),
+          L.appendBezierCurve(cx-r,cy-K*r,cx-K*r,cy-r,cx,cy-r),
+          L.appendBezierCurve(cx+K*r,cy-r,cx+r,cy-K*r,cx+r,cy),L.closePath());
+      }
+      const Lb=labs[gi][si];
+      if(Lb) for(const c of labelGeom(g,Lb)){
+        if(c.t==='M') ops.push(L.moveTo(...P(c.p[0],c.p[1])));
+        else if(c.t==='L') ops.push(L.lineTo(...P(c.p[0],c.p[1])));
+        else if(c.t==='C') ops.push(L.appendBezierCurve(...P(c.p[0],c.p[1]),...P(c.p[2],c.p[3]),...P(c.p[4],c.p[5])));
+        else ops.push(L.closePath());
+      }
+      ops.push(L.PDFOperator.of('f*'));
+      for(const my of g.ys){
+        const cy=(H-my)*M;
+        ops.push(L.moveTo(cx-r,cy),L.lineTo(cx+r,cy),L.moveTo(cx,cy-r),L.lineTo(cx,cy+r));
+      }
+      ops.push(L.stroke());
+    });
+  });
+}
+
+// ─── Eye mark + zoom controls ─────────────────────────────────
+function pillGroup(id,multi){
+  const g=document.getElementById(id);
+  g.addEventListener('click',e=>{
+    const p=e.target.closest('.pill'); if(!p) return;
+    if(multi){
+      if(p.classList.contains('active')&&g.querySelectorAll('.pill.active').length===1) return; // keep at least one
+      p.classList.toggle('active');
+    } else g.querySelectorAll('.pill').forEach(x=>x.classList.toggle('active',x===p));
+  });
+}
+['eye-size','eye-place','eye-style','zoom-pills'].forEach(id=>pillGroup(id,false));
+document.getElementById('eye-pos').addEventListener('click',e=>{const p=e.target.closest('.pill');if(p)p.classList.toggle('active')});
+const eyeWIn=document.getElementById('eye-w'), eyeHIn=document.getElementById('eye-h');
+document.getElementById('eye-size').addEventListener('click',e=>{
+  const p=e.target.closest('.pill'); if(!p) return; eyeWIn.value=p.dataset.w; eyeHIn.value=p.dataset.h;
+});
+function syncEyeSizePills(){
+  const w=+eyeWIn.value,h=+eyeHIn.value;
+  document.querySelectorAll('#eye-size .pill').forEach(p=>p.classList.toggle('active',+p.dataset.w===w&&+p.dataset.h===h));
+}
+eyeWIn.addEventListener('input',syncEyeSizePills); eyeHIn.addEventListener('input',syncEyeSizePills);
+document.getElementById('eye-style').addEventListener('click',()=>{
+  document.getElementById('eye-sw-field').classList.toggle('off',document.querySelector('#eye-style .pill.active')?.dataset.style!=='stroke');
+});
+document.getElementById('eye-on').addEventListener('change',e=>document.getElementById('eye-opts').classList.toggle('off',!e.target.checked));
+document.getElementById('zoom-pills').addEventListener('click',e=>{
+  const p=e.target.closest('.pill'); if(!p) return; prevZoom=+p.dataset.z||1; _zoomCentre=true;
+});
+// Re-render at the new resolution when the preview area changes size (or the browser zoom / DPR changes)
+let _mainSz='';
+new ResizeObserver(()=>{
+  const narrow=matchMedia('(max-width:880px)').matches;
+  const s=narrow?String(mainEl.clientWidth):mainEl.clientWidth+'x'+mainEl.clientHeight;
+  if(s===_mainSz) return; const first=!_mainSz; _mainSz=s; if(!first) live();
+}).observe(mainEl);
 </script>
 </body>
 </html>
