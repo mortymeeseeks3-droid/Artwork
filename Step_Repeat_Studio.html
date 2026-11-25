@@ -511,9 +511,19 @@ main.zoomed #preview-wrap{width:max-content;min-width:100%}
           <label>Gap between bars (mm)</label>
           <input type="number" id="bar-gap" min="0" step="0.5" placeholder="auto">
         </div>
-        <div class="field">
+        <div class="field" id="bar-adj-field">
           <label>Height adjust (±mm)</label>
           <input type="number" id="bar-adj" step="0.5" value="0">
+        </div>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label>Bar height (mm)</label>
+          <input type="number" id="bar-len" min="5" step="0.5" placeholder="auto">
+        </div>
+        <div class="field">
+          <label>Align</label>
+          <div class="pills seg" id="bar-align"><div class="pill" data-al="top">Top</div><div class="pill active" data-al="centre">Mid</div><div class="pill" data-al="bottom">Bot</div></div>
         </div>
       </div>
       <div class="row2">
@@ -1096,7 +1106,7 @@ btnPrev.addEventListener('click',renderPreview);
 // Layout is worked out in mm, then drawn at the display's real pixel density
 // (devicePixelRatio × zoom). Sources are rendered at the scale actually needed.
 const PREV_MAX_SIDE=8192, PREV_MAX_AREA=16e6;   // canvas safety caps (incl. iOS)
-let prevZoom=1,_zoomCentre=false,_pr=1;           // _pr = backing px per CSS px
+let prevZoom=1,_zoomCentre=false,_pr=1,_labDrop=false;           // _pr = backing px per CSS px
 const mainEl=document.querySelector('main');
 
 async function srcMm(ft,doc,imgW,imgH,selPage,dpi=96){
@@ -1191,7 +1201,7 @@ async function renderPreviewNow(){
   try{
     const has=mode==='single'?!!singleRawBytes:columns.some(c=>c.rawBytes);
     if(!has){btnPrev.disabled=false;return}
-    setStatus('Rendering preview…','busy');
+    setStatus('Rendering preview…','busy'); _labDrop=false;
     mainEl.classList.toggle('zoomed',prevZoom>1);
     emptyState.style.display='none';
     previewWrap.style.display='flex';
@@ -1301,7 +1311,7 @@ async function renderPreviewNow(){
       mainEl.scrollLeft=(mainEl.scrollWidth-mainEl.clientWidth)/2;
       mainEl.scrollTop=(mainEl.scrollHeight-mainEl.clientHeight)/2;
     }
-    setStatus('Preview ready · sheet '+sheetTxt()+(lastBars.clamped?` · bar gap raised to ${lastBars.gap.toFixed(1)} mm to clear the layout`:''),'ok');
+    setStatus('Preview ready · sheet '+sheetTxt()+(lastBars.clamped?` · bar gap raised to ${lastBars.gap.toFixed(1)} mm to clear the layout`:'')+(_labDrop?' · bar too short for every label — some colours unlabelled (lengthen the bar or use Number only)':''),_labDrop?'busy':'ok');
   }catch(e){
     setStatus('Preview error: '+e.message,'err');console.error(e);
   }
@@ -1635,6 +1645,7 @@ function sheetTxt(){
   const t=`${lastContent.w.toFixed(1)} × ${lastContent.h.toFixed(1)} mm`;
   const el=document.getElementById('sheet-size'); if(el) el.textContent=t;
   const g=document.getElementById('bar-gap'); if(g) g.placeholder=lastBars.on?`auto (${lastBars.minGap.toFixed(1)})`:'auto';
+  const bl=document.getElementById('bar-len'); if(bl) bl.placeholder=`auto (${(lastContent.h+(parseFloat(document.getElementById('bar-adj').value)||0)).toFixed(1)})`;
   return t;
 }
 
@@ -1733,6 +1744,8 @@ function readBars(){
   return {on, w:act?+act.dataset.bw:5,
     gap:parseFloat(document.getElementById('bar-gap').value)||0,
     adj:parseFloat(document.getElementById('bar-adj').value)||0,
+    len:Math.max(0,parseFloat(document.getElementById('bar-len').value)||0),
+    align:document.querySelector('#bar-align .pill.active')?.dataset.al||'centre',
     hole:parseFloat(document.getElementById('bar-hole').value)||0,
     inset:(v=>isNaN(v)?5:Math.max(0,v))(parseFloat(document.getElementById('bar-inset').value)),
     mode:document.querySelector('#bar-mode .pill.active')?.dataset.mode||'reg',
@@ -1760,7 +1773,7 @@ function barLayout(p,layoutMmW){
   const gap=b.gap>0?Math.max(b.gap,minGap):minGap;
   const spot=b.mode==='spot'&&b.spots.length>0;
   return (lastBars={on:true,bw:b.w,gap,minGap,side:eyeOut+b.w+(gap-layoutMmW)/2,eyeOut,
-    adj:b.adj,hole:b.hole,inset:b.inset,clamped:b.gap>0&&b.gap<minGap-0.001,eye:e,
+    adj:b.adj,len:b.len,align:b.align,hole:b.hole,inset:b.inset,clamped:b.gap>0&&b.gap<minGap-0.001,eye:e,
     mode:spot?'spot':'reg',wantSpot:b.mode==='spot',spots:spot?b.spots:[],label:b.label});
 }
 function barTxt(){
@@ -1779,10 +1792,13 @@ function exportMarksMsg(){
 // Geometry in mm, y measured from the TOP of the sheet. Bars are full height ± adj, centred vertically.
 // Each bar has three crosshair holes: one at the middle, and one near each end, `inset` mm in from the page edge.
 function barGeom(bars,W,H){
-  const w=bars.bw, eo=bars.eyeOut||0, len=Math.max(5,H+bars.adj), y=(H-len)/2;
+  const w=bars.bw, eo=bars.eyeOut||0;
+  // manual height (if set) overrides auto = sheet height ± adjust
+  const len=bars.len>0?Math.max(5,bars.len):Math.max(5,H+bars.adj);
+  const y=bars.len>0&&bars.align==='top'?0:bars.len>0&&bars.align==='bottom'?H-len:(H-len)/2;
   let d=bars.hole>0?bars.hole:w*0.6; d=Math.min(d,Math.max(0.2,w-0.2));
   const top=Math.max(y,0), bot=Math.min(y+len,H), ins=Math.min(bars.inset,(bot-top)/2);
-  const ys=[H/2];
+  const ys=[(top+bot)/2];   // middle crosshair = centre of the bar itself
   if(ins>=d/2+0.2){ys.unshift(top+ins);ys.push(bot-ins)}
   return [eo,W-eo-w].map(x=>({x,y,w,h:len,cx:x+w/2,r:d/2,ys}));
 }
@@ -2099,6 +2115,11 @@ document.getElementById('spot-list').addEventListener('change',e=>{
   if(e.target.checked) spotOff.delete(n); else spotOff.add(n);
 });
 pillGroup('bar-mode',false);
+pillGroup('bar-align',false);
+document.getElementById('bar-len').addEventListener('input',e=>{
+  const manual=parseFloat(e.target.value)>0;
+  document.getElementById('bar-adj-field').classList.toggle('off',manual);
+});
 document.getElementById('bar-mode').addEventListener('click',()=>{
   const spot=document.querySelector('#bar-mode .pill.active')?.dataset.mode==='spot';
   document.getElementById('spot-opts').style.display=spot?'flex':'none';
@@ -2119,10 +2140,10 @@ function barLabels(bars,g,H,measure){
     let si=0,cur=segs.length?segs[0][0]:0,ok=true;
     for(let i=0;i<texts.length;i++){
       while(si<segs.length&&cur+lens[i]>segs[si][1]){si++;if(si<segs.length)cur=segs[si][0]}
-      if(si>=segs.length){ok=false;break}
+      if(si>=segs.length){ok=false;if(size*0.9>=0.9)break;continue}
       place[si].push(i);cur+=lens[i]+GAP;
     }
-    if(!ok) continue;
+    if(!ok&&size*0.9>=0.9) continue;   // shrink and retry; at minimum size keep the ones that fit
     const out=[];
     segs.forEach(([s0,s1],k)=>{ // spread labels evenly inside each segment
       const ids=place[k]; if(!ids.length) return;
@@ -2175,6 +2196,7 @@ function drawSpotBarsPreview(ctx,bars,k){
     const x0=Math.floor(g.x*k)-2, y0=Math.floor(yT*k)-2, w=Math.ceil(g.w*k)+5, h=Math.ceil((yB-yT)*k)+5;
     const off=document.createElement('canvas'); off.width=Math.max(1,w); off.height=Math.max(1,h);
     const o=off.getContext('2d'), labs=barLabels(bars,g,H,measureLabel);
+    if(bars.label!=='none'&&bars.spots.some((_,i)=>!labs[i])) _labDrop=true;
     ctx.save(); ctx.globalCompositeOperation='multiply';  // stacked overprinting plates
     bars.spots.forEach((sp,si)=>{
       o.setTransform(1,0,0,1,0,0); o.clearRect(0,0,w,h); o.translate(-x0,-y0);
