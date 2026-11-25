@@ -528,19 +528,19 @@ main.zoomed #preview-wrap{width:max-content;min-width:100%}
       </div>
       <div class="field">
         <label>Bar colour</label>
-        <div class="pills seg" id="bar-mode"><div class="pill active" data-mode="reg">REGISTRATION</div><div class="pill" data-mode="spot">Each spot colour</div></div>
+        <div class="pills seg" id="bar-mode"><div class="pill active" data-mode="reg">REGISTRATION</div><div class="pill" data-mode="spot">Every colour</div></div>
       </div>
       <p class="tile-note" id="bar-reg-note">Colour: <b style="color:var(--tx)">REGISTRATION</b> = C100 M100 Y100 K100</p>
       <div id="spot-opts" style="display:none;flex-direction:column;gap:10px">
         <div class="field">
-          <label>Spot colours in artwork <span id="spot-count"></span></label>
+          <label>Colours in artwork (CMYK + spots) <span id="spot-count"></span></label>
           <div id="spot-list" class="spot-list"><div class="spot-empty">Load a PDF to detect spot colours</div></div>
         </div>
         <div class="field">
           <label>Label in bar</label>
           <select id="bar-label"><option value="both">Number + name</option><option value="name">Spot name</option><option value="num">Number only</option><option value="none">No label</option></select>
         </div>
-        <p class="tile-note">One bar pair per ticked spot, stacked in the same place and set to overprint, so every plate carries its own bearer bars and crosshairs. Each label is cut out of its own bar as real vector holes (no white text, nothing for overprint to hide) and staggered along the bar so no two overlap.</p>
+        <p class="tile-note">One bar pair per ticked colour — Cyan, Magenta, Yellow, Black and every spot in the file — stacked in the same place and all set to overprint, so every plate carries its own bearer bars and crosshairs. Each label is cut out of its own bar as real vector holes (no white text, nothing for overprint to hide) and staggered along the bar so no two overlap.</p>
       </div>
     </div>
   </div>
@@ -1737,7 +1737,7 @@ function readBars(){
     inset:(v=>isNaN(v)?5:Math.max(0,v))(parseFloat(document.getElementById('bar-inset').value)),
     mode:document.querySelector('#bar-mode .pill.active')?.dataset.mode||'reg',
     label:document.getElementById('bar-label').value,
-    spots:getSpots().map((sp,i)=>({...sp,num:i+1})).filter(sp=>!spotOff.has(sp.name))};
+    spots:getBarColours().map((sp,i)=>({...sp,num:i+1})).filter(sp=>!spotOff.has(sp.name))};
 }
 function readEye(){
   const g=id=>document.getElementById(id), num=(id,d,min)=>{const v=parseFloat(g(id).value);return isNaN(v)?d:Math.max(min,v)};
@@ -1764,7 +1764,7 @@ function barLayout(p,layoutMmW){
     mode:spot?'spot':'reg',wantSpot:b.mode==='spot',spots:spot?b.spots:[],label:b.label});
 }
 function barTxt(){
-  let t=lastBars.on?`  ·  bearer bars ${lastBars.bw}mm (${lastBars.mode==='spot'?lastBars.spots.length+' spot colour'+(lastBars.spots.length>1?'s':''):'REGISTRATION CMYK'}), gap ${lastBars.gap.toFixed(1)}mm`:'';
+  let t=lastBars.on?`  ·  bearer bars ${lastBars.bw}mm (${lastBars.mode==='spot'?lastBars.spots.length+' colour'+(lastBars.spots.length>1?'s':''):'REGISTRATION CMYK'}), gap ${lastBars.gap.toFixed(1)}mm`:'';
   const e=lastBars.eye; if(e&&e.on&&e.slots.length) t+=`  ·  ${e.slots.length} eye mark${e.slots.length>1?'s':''} ${e.w}×${e.h}mm ${e.style} (${e.slots.join(', ')})`;
   return t;
 }
@@ -1773,7 +1773,7 @@ function exportMarksMsg(){
   const eye=e&&e.on&&e.slots.length?` · ${e.slots.length} eye mark(s) ${e.w}×${e.h}mm ${e.style==='stroke'?'stroke':'solid'} in ${e.spot?e.spot.name:e.col==='reg'?'REGISTRATION (CMYK 100×4)':'100% K'}`:'';
   const bm=!lastBars.on?' · no bearer bars (switch is off in section 06)'
     :lastBars.mode==='spot'?` · ${lastBars.spots.length} bearer bar set${lastBars.spots.length>1?'s':''} (${lastBars.bw}mm, overprint) in ${lastBars.spots.map(x=>x.name).join(', ')}`
-    :` · bearer bars ${lastBars.bw}mm added in REGISTRATION (C100 M100 Y100 K100)`+(lastBars.wantSpot?' (no spot colours ticked/found)':'');
+    :` · bearer bars ${lastBars.bw}mm added in REGISTRATION (C100 M100 Y100 K100)`+(lastBars.wantSpot?' (no colours ticked)':'');
   return bm+eye;
 }
 // Geometry in mm, y measured from the TOP of the sheet. Bars are full height ± adj, centred vertically.
@@ -2075,6 +2075,12 @@ function refreshEyeColours(){
     (sp.length?'<optgroup label="Spot colours in artwork">'+sp.map((s,i)=>`<option value="spot:${esc(s.name)}">${i+1}  ${esc(s.name)}</option>`).join('')+'</optgroup>':'');
   sel.value=[...sel.options].some(o=>o.value===cur)?cur:'k';
 }
+// Process plates for 'Every colour' bars: single-channel DeviceCMYK, overprinted (OPM 1)
+const PROCESS_PLATES=[
+  {name:'Cyan',process:[1,0,0,0],rgb:[0,174,239]},{name:'Magenta',process:[0,1,0,0],rgb:[236,0,140]},
+  {name:'Yellow',process:[0,0,1,0],rgb:[255,242,0]},{name:'Black',process:[0,0,0,1],rgb:[35,31,32]}];
+function anyLoaded(){return mode==='single'?!!singleRawBytes:columns.some(c=>c.rawBytes)}
+function getBarColours(){return anyLoaded()?[...PROCESS_PLATES,...getSpots()]:[]}
 function getSpots(){
   if(mode==='single') return singleSpots;
   const m=new Map(); columns.forEach(c=>{if(c.rawBytes)(c.spots||[]).forEach(sp=>{if(!m.has(sp.name))m.set(sp.name,sp)})});
@@ -2082,9 +2088,9 @@ function getSpots(){
 }
 function refreshSpotList(){
   refreshEyeColours();
-  const list=document.getElementById('spot-list'), sp=getSpots();
-  document.getElementById('spot-count').textContent=sp.length?`${sp.length} found`:'';
-  if(!sp.length){list.innerHTML=`<div class="spot-empty">${(mode==='single'?singleRawBytes:columns.some(c=>c.rawBytes))?'No spot colours found on this page':'Load a PDF to detect spot colours'}</div>`;return}
+  const list=document.getElementById('spot-list'), sp=getBarColours(), ns=getSpots().length;
+  document.getElementById('spot-count').textContent=sp.length?`4 process + ${ns} spot${ns===1?'':'s'}`:'';
+  if(!sp.length){list.innerHTML='<div class="spot-empty">Load artwork to list its colours</div>';return}
   list.innerHTML=sp.map((s,i)=>`<label class="spot-row" title="${esc(s.name)}"><input type="checkbox" data-name="${esc(s.name)}"${spotOff.has(s.name)?'':' checked'}>`+
     `<span class="sn">${i+1}</span><span class="sw" style="background:rgb(${s.rgb.join(',')})"></span><span class="nm">${esc(s.name)}</span></label>`).join('');
 }
@@ -2215,8 +2221,11 @@ async function spotBarOps(page,bars,W,H,ops){
   const geo=barGeom(bars,W,H), labs=geo.map(g=>barLabels(bars,g,H,measureLabel));
   const P=(x,y)=>[x*M,(H-y)*M];
   bars.spots.forEach((sp,si)=>{
-    const nm=spotCS(page,sp,si);
-    ops.push(L.PDFOperator.of('cs',[nm]),L.PDFOperator.of('scn',[N(1)]),L.PDFOperator.of('CS',[nm]),L.PDFOperator.of('SCN',[N(1)]));
+    if(sp.process){const n=sp.process.map(N);ops.push(L.PDFOperator.of('k',n),L.PDFOperator.of('K',n))}
+    else{
+      const nm=spotCS(page,sp,si);
+      ops.push(L.PDFOperator.of('cs',[nm]),L.PDFOperator.of('scn',[N(1)]),L.PDFOperator.of('CS',[nm]),L.PDFOperator.of('SCN',[N(1)]));
+    }
     geo.forEach((g,gi)=>{
       // one compound path: bar + crosshair holes + label glyph outlines, filled even-odd => true cut-outs
       const x=g.x*M,w=g.w*M,yb=(H-g.y-g.h)*M,yt=(H-g.y)*M,cx=g.cx*M,r=g.r*M;
