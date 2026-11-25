@@ -1213,9 +1213,10 @@ async function renderPreviewNow(){
       const cols=p.cols,rows=p.rows;
       const centreIdx=(cols%2===0)?cols/2:0, cg=centreIdx>0?p.centreGapX:0;
       const layoutW=p.marX*2+cols*tW+(cols-1)*p.gapX+cg;
-      const bars=barLayout(p,layoutW);
-      const mX=p.marX+bars.side, mY=p.marY;
-      const totalW=layoutW+bars.side*2, totalH=mY*2+rows*tH+(rows-1)*p.gapY;
+      const layoutH=p.marY*2+rows*tH+(rows-1)*p.gapY;
+      const bars=barLayout(p,layoutW,layoutH);
+      const mX=p.marX+bars.side, mY=p.marY+bars.top;
+      const totalW=layoutW+bars.side*2, totalH=layoutH+bars.top*2;
       lastContent={w:totalW,h:totalH};
 
       const T=previewTarget(totalW,totalH), k=T.k;
@@ -1250,9 +1251,10 @@ async function renderPreviewNow(){
       const maxH=Math.max(...R.map(r=>r.h));
       const centreIdx=(numCols%2===0)?numCols/2:0, cg=centreIdx>0?p.centreGapX:0;
       const rowW=R.reduce((s,r)=>s+r.w,0)+(numCols-1)*p.gapX+cg;
-      const bars=barLayout(p,p.marX*2+rowW);
-      const mX=p.marX+bars.side, mY=p.marY;
-      const totalW=mX*2+rowW, totalH=mY*2+rows*maxH+(rows-1)*p.gapY;
+      const layoutH=p.marY*2+rows*maxH+(rows-1)*p.gapY;
+      const bars=barLayout(p,p.marX*2+rowW,layoutH);
+      const mX=p.marX+bars.side, mY=p.marY+bars.top;
+      const totalW=mX*2+rowW, totalH=layoutH+bars.top*2;
       lastContent={w:totalW,h:totalH};
 
       const T=previewTarget(totalW,totalH), k=T.k;
@@ -1470,7 +1472,7 @@ async function exportPDF(){
       const cGXpt=p.centreGapX*PT_PER_MM;
 
       const contentMmW=tileWmm*p.cols+(p.cols-1)*p.gapX+(centreIdx>0?p.centreGapX:0);
-      const bars=barLayout(p,p.marX*2+contentMmW);p.marX+=bars.side;
+      const bars=barLayout(p,p.marX*2+contentMmW,p.marY*2+p.rows*tileHmm+(p.rows-1)*p.gapY);p.marX+=bars.side;p.marY+=bars.top;
       const {sheetPtW,sheetPtH} = calcSheet(p, contentMmW, tileHmm, p.cols);
 
       const outPage = outDoc.addPage([sheetPtW,sheetPtH]);
@@ -1512,7 +1514,7 @@ async function exportPDF(){
       const centreIdx  = (numCols%2===0)?numCols/2:0;
       const cGXpt      = p.centreGapX*PT_PER_MM;
       const totalRowPtW = embedData.reduce((s,e)=>s+e.tileW,0) + (numCols-1)*p.gapX*PT_PER_MM + (centreIdx>0?cGXpt:0);
-      const bars=barLayout(p,p.marX*2+totalRowPtW/PT_PER_MM);p.marX+=bars.side;
+      const bars=barLayout(p,p.marX*2+totalRowPtW/PT_PER_MM,p.marY*2+rows*(maxTileH/PT_PER_MM)+(rows-1)*p.gapY);p.marX+=bars.side;p.marY+=bars.top;
       const {sheetPtW,sheetPtH} = calcSheet(p, totalRowPtW/PT_PER_MM, maxTileH/PT_PER_MM, numCols);
 
       const outPage = outDoc.addPage([sheetPtW,sheetPtH]);
@@ -1645,7 +1647,7 @@ function sheetTxt(){
   const t=`${lastContent.w.toFixed(1)} × ${lastContent.h.toFixed(1)} mm`;
   const el=document.getElementById('sheet-size'); if(el) el.textContent=t;
   const g=document.getElementById('bar-gap'); if(g) g.placeholder=lastBars.on?`auto (${lastBars.minGap.toFixed(1)})`:'auto';
-  const bl=document.getElementById('bar-len'); if(bl) bl.placeholder=`auto (${(lastContent.h+(parseFloat(document.getElementById('bar-adj').value)||0)).toFixed(1)})`;
+  const bl=document.getElementById('bar-len'); if(bl) bl.placeholder=`auto (${(lastContent.h-2*(lastBars.top||0)+(parseFloat(document.getElementById('bar-adj').value)||0)).toFixed(1)})`;
   return t;
 }
 
@@ -1764,15 +1766,19 @@ function readEye(){
     sw:num('eye-sw',0.25,0.05), off:num('eye-off',2,0), inset:num('eye-inset',5,0),
     col:g('eye-col').value, spot:eyeSpot()};
 }
-function barLayout(p,layoutMmW){
+// Bars longer than the job make the sheet taller: the extra is split top/bottom and
+// the artwork stays centred, so the sheet height always equals the bar length.
+function barLayout(p,layoutMmW,layoutMmH=0){
   const b=p.bars, e0=p.eye||{on:false}, e={...e0,on:e0.on&&(e0.slots||[]).length>0};
   const eyeOut=e.on&&e.place==='out'?e.w+e.off:0;
   const need=e.on&&e.place==='in'?Math.max(0,e.w+2*e.off-p.marX):0; // gap · mark · gap before the artwork
   const minGap=layoutMmW+2*need;
-  if(!b.on) return (lastBars={on:false,bw:0,gap:minGap,minGap,side:eyeOut+need,eyeOut,clamped:false,eye:e});
+  if(!b.on) return (lastBars={on:false,bw:0,gap:minGap,minGap,side:eyeOut+need,top:0,eyeOut,clamped:false,eye:e});
+  const lenEff=b.len>0?Math.max(5,b.len):Math.max(5,layoutMmH+b.adj);
+  const top=Math.max(0,(lenEff-layoutMmH)/2);
   const gap=b.gap>0?Math.max(b.gap,minGap):minGap;
   const spot=b.mode==='spot'&&b.spots.length>0;
-  return (lastBars={on:true,bw:b.w,gap,minGap,side:eyeOut+b.w+(gap-layoutMmW)/2,eyeOut,
+  return (lastBars={on:true,bw:b.w,gap,minGap,side:eyeOut+b.w+(gap-layoutMmW)/2,top,lenEff,eyeOut,
     adj:b.adj,len:b.len,align:b.align,hole:b.hole,inset:b.inset,clamped:b.gap>0&&b.gap<minGap-0.001,eye:e,
     mode:spot?'spot':'reg',wantSpot:b.mode==='spot',spots:spot?b.spots:[],label:b.label});
 }
@@ -1794,8 +1800,8 @@ function exportMarksMsg(){
 function barGeom(bars,W,H){
   const w=bars.bw, eo=bars.eyeOut||0;
   // manual height (if set) overrides auto = sheet height ± adjust
-  const len=bars.len>0?Math.max(5,bars.len):Math.max(5,H+bars.adj);
-  const y=bars.len>0&&bars.align==='top'?0:bars.len>0&&bars.align==='bottom'?H-len:(H-len)/2;
+  const len=Math.min(bars.lenEff||H,H);   // sheet already grown to fit a longer bar
+  const y=len>=H-0.001?0:bars.len>0&&bars.align==='top'?0:bars.len>0&&bars.align==='bottom'?H-len:(H-len)/2;
   let d=bars.hole>0?bars.hole:w*0.6; d=Math.min(d,Math.max(0.2,w-0.2));
   const top=Math.max(y,0), bot=Math.min(y+len,H), ins=Math.min(bars.inset,(bot-top)/2);
   const ys=[(top+bot)/2];   // middle crosshair = centre of the bar itself
